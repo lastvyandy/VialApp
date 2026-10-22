@@ -63,7 +63,7 @@ fun CompleteProfileScreen(
     val canContinue =
         firstName.isNotBlank() &&
                 lastName.isNotBlank() &&
-                selectedLicense != null &&
+                (selectedLicense == "B" || selectedLicense == "C") &&
                 !loading
 
 
@@ -172,7 +172,7 @@ fun CompleteProfileScreen(
             emoji = "🚗",
             title = "Clase B",
             subtitle = "Automóviles y vehículos particulares",
-            selected = selectedLicense == "Clase B",
+            selected = selectedLicense == "B",
             onClick = {
                 selectedLicense = "B"
             }
@@ -188,7 +188,7 @@ fun CompleteProfileScreen(
             subtitle = "Motocicletas y vehículos similares",
             selected = selectedLicense == "C",
             onClick = {
-                selectedLicense = "Clase C"
+                selectedLicense = "C"
             }
         )
 
