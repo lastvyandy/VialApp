@@ -1,17 +1,15 @@
 package cl.vialapp.app.data.api
 
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
-import retrofit2.http.POST
 import retrofit2.http.GET
 import retrofit2.http.Header
-import retrofit2.http.Body
 import retrofit2.http.PATCH
-import retrofit2.http.Query
+import retrofit2.http.POST
 import retrofit2.http.Path
-
-
+import retrofit2.http.Query
 
 interface VialApi {
 
@@ -21,7 +19,6 @@ interface VialApi {
         @Field("username") email: String,
         @Field("password") password: String
     ): Response<LoginResponse>
-
 
     @GET("users/me")
     suspend fun getMe(
@@ -47,28 +44,22 @@ interface VialApi {
     @GET("tests/")
     suspend fun getTests(
         @Header("Authorization") authorization: String,
-
-        @Query("clase_licencia")
-        licenseClass: String? = null,
-
-        @Query("categoria")
-        category: String? = null
+        @Query("clase_licencia") licenseClass: String? = null,
+        @Query("categoria") category: String? = null
     ): Response<TestsResponse>
 
     @POST("tests/{testId}/attempts/start")
     suspend fun startExam(
         @Header("Authorization") authorization: String,
-        @retrofit2.http.Path("testId") testId: Int
+        @Path("testId") testId: Int
     ): Response<StartExamResponse>
-
 
     @PATCH("tests/attempts/{attemptId}/answers")
     suspend fun saveExamAnswers(
         @Header("Authorization") authorization: String,
-        @retrofit2.http.Path("attemptId") attemptId: Int,
+        @Path("attemptId") attemptId: Int,
         @Body request: SaveAnswersRequest
     ): Response<ExamAttemptResponse>
-
 
     @GET("tests/active-attempt")
     suspend fun getActiveAttempt(
@@ -100,12 +91,18 @@ interface VialApi {
 
     @GET("tests/{testId}/study")
     suspend fun getStudyTest(
-        @Header("Authorization")
-        authorization: String,
-
-        @Path("testId")
-        testId: Int
+        @Header("Authorization") authorization: String,
+        @Path("testId") testId: Int
     ): Response<StudyTestResponse>
 
+    @GET("users/me/gamification")
+    suspend fun getGamificationProgress(
+        @Header("Authorization") authorization: String
+    ): Response<GamificationProgressResponse>
 
+    @POST("users/me/gamification/games")
+    suspend fun recordGameEvent(
+        @Header("Authorization") authorization: String,
+        @Body request: GamificationGameEventRequest
+    ): Response<GamificationEventResponse>
 }
