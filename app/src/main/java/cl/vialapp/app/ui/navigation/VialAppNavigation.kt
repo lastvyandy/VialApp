@@ -41,6 +41,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import cl.vialapp.app.R
 import cl.vialapp.app.data.api.ApiClient
+import cl.vialapp.app.data.api.LicenseClassUpdateRequest
 import cl.vialapp.app.data.api.MascotSelectionRequest
 import cl.vialapp.app.data.api.UserResponse
 import cl.vialapp.app.data.session.SessionManager
@@ -53,6 +54,7 @@ import cl.vialapp.app.ui.games.crossroads.CrossroadsChaosScreen
 import cl.vialapp.app.ui.games.signhunt.SignHuntScreen
 import cl.vialapp.app.ui.home.HomeScreen
 import cl.vialapp.app.ui.mascot.MascotSelectionScreen
+import cl.vialapp.app.ui.profile.LicenseClassPickerDialog
 import cl.vialapp.app.ui.practice.PracticeScreen
 import cl.vialapp.app.ui.progress.ProgressScreen
 import cl.vialapp.app.ui.settings.StudySettingsScreen
@@ -865,6 +867,8 @@ fun VialAppNavigation(
                         navController.navigate("mascot_selection")
                     },
 
+                    onUserUpdated = onUserUpdated,
+
                     onLogout =
                         onLogout
                 )
@@ -955,6 +959,7 @@ fun ProfileScreen(
     user: UserResponse,
     onStudySettings: () -> Unit,
     onChangeMascot: () -> Unit,
+    onUserUpdated: (UserResponse) -> Unit,
     onLogout: () -> Unit
 ) {
     val fullName =
@@ -980,6 +985,57 @@ fun ProfileScreen(
                     ?: "Usuario"
             }
 
+
+    val context = LocalContext.current
+    val sessionManager = remember(context) { SessionManager(context) }
+    val scope = rememberCoroutineScope()
+    var showLicenseDialog by remember { mutableStateOf(false) }
+    var savingLicense by remember { mutableStateOf(false) }
+    var licenseError by remember { mutableStateOf<String?>(null) }
+
+    if (showLicenseDialog) {
+        LicenseClassPickerDialog(
+            currentLicense = user.licenseClass,
+            isSaving = savingLicense,
+            error = licenseError,
+            onDismiss = {
+                if (!savingLicense) {
+                    showLicenseDialog = false
+                    licenseError = null
+                }
+            },
+            onConfirm = { licenseClass ->
+                if (!savingLicense) {
+                    savingLicense = true
+                    licenseError = null
+                    scope.launch {
+                        try {
+                            val token = sessionManager.getAccessToken()
+                            if (token.isNullOrBlank()) {
+                                licenseError = "Tu sesión expiró. Vuelve a iniciar sesión."
+                            } else {
+                                val response = ApiClient.api.updateLicenseClass(
+                                    authorization = "Bearer $token",
+                                    request = LicenseClassUpdateRequest(licenseClass)
+                                )
+                                val updatedUser = response.body()
+                                if (response.isSuccessful && updatedUser != null) {
+                                    onUserUpdated(updatedUser)
+                                    showLicenseDialog = false
+                                } else {
+                                    licenseError = "No se pudo cambiar la clase. Inténtalo nuevamente."
+                                }
+                            }
+                        } catch (e: Exception) {
+                            licenseError = "No se pudo conectar con VialApp. Revisa internet."
+                        } finally {
+                            savingLicense = false
+                        }
+                    }
+                }
+            }
+        )
+    }
 
     LazyColumn(
         modifier =
@@ -1201,7 +1257,8 @@ fun ProfileScreen(
                                 ?.let {
                                     "Clase $it"
                                 }
-                                ?: "No seleccionada"
+                                ?: "No seleccionada",
+                        onAction = { showLicenseDialog = true }
                     )
                 }
             }
@@ -1454,7 +1511,8 @@ fun ProfileScreen(
 private fun ProfileInfoRow(
     emoji: String,
     label: String,
-    value: String
+    value: String,
+    onAction: (() -> Unit)? = null
 ) {
     Row(
         modifier =
@@ -1539,6 +1597,12 @@ private fun ProfileInfoRow(
                 fontWeight =
                     FontWeight.SemiBold
             )
+        }
+
+        if (onAction != null) {
+            TextButton(onClick = onAction) {
+                Text("Cambiar", color = ProfileBlue, fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }

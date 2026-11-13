@@ -73,7 +73,7 @@ fun HomeScreen(
 
 
 
-    LaunchedEffect(user.id) {
+    LaunchedEffect(user.id, user.licenseClass) {
 
         dashboardLoading = true
 

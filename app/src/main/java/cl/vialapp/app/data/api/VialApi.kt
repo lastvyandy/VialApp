@@ -47,6 +47,12 @@ interface VialApi {
         @Body request: MascotSelectionRequest
     ): Response<UserResponse>
 
+    @PATCH("users/me")
+    suspend fun updateLicenseClass(
+        @Header("Authorization") authorization: String,
+        @Body request: LicenseClassUpdateRequest
+    ): Response<UserResponse>
+
     @GET("tests/")
     suspend fun getTests(
         @Header("Authorization") authorization: String,
