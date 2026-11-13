@@ -1313,7 +1313,7 @@ fun ProfileScreen(
                             fontSize = 16.sp
                         )
                         Text(
-                            text = if (user.mascotId == "mister_pelao") "Mister Pelao" else "Carvier",
+                            text = if (user.mascotId == "mister_pelao") "Don Pelao" else "Carvier",
                             color = ProfileGray,
                             fontSize = 13.sp
                         )
