@@ -23,7 +23,6 @@ import cl.vialapp.app.data.api.UserResponse
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.gamification.HomeXpCard
-import cl.vialapp.app.ui.home.HomeMascotCard
 
 private val HomeBlue = Color(0xFF2563EB)
 private val HomeDark = Color(0xFF172033)
@@ -217,14 +216,16 @@ fun HomeScreen(
         }
 
         // Compañero elegido: no modifica ni sincroniza el progreso.
-        if (user.mascotId == "carvier" || user.mascotId == "mister_pelao") {
-            item {
-                HomeMascotCard(
-                    mascotId = user.mascotId,
-                    licenseClass = user.licenseClass
-                )
+        user.mascotId
+            ?.takeIf { it == "carvier" || it == "mister_pelao" }
+            ?.let { mascotId ->
+                item {
+                    HomeMascotCard(
+                        mascotId = mascotId,
+                        licenseClass = user.licenseClass
+                    )
+                }
             }
-        }
 
         // Tarjeta principal
         item {
