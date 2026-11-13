@@ -51,14 +51,21 @@ data class GameRunResult(
     val syncedWithBackend: Boolean
 )
 
+
 class GameProgressStore(
-    context: Context
+    context: Context,
+    userKey: String? = null
 ) {
     private val preferences =
         context.getSharedPreferences(
-            PREFERENCES_NAME,
+            if (userKey.isNullOrBlank()) {
+                PREFERENCES_NAME
+            } else {
+                "${PREFERENCES_NAME}_$userKey"
+            },
             Context.MODE_PRIVATE
         )
+
 
     fun getHighScore(
         gameId: String
@@ -282,6 +289,87 @@ class GameProgressStore(
         markStudyDay(today)
         return earnedXp
     }
+
+
+    /**
+     * Registra un examen completado usando la recompensa
+     * confirmada por el backend.
+     *
+     * La XP, los puntos y el nivel dependen de FastAPI.
+     * Las rachas y misiones siguen siendo locales
+     * hasta que migremos esas funcionalidades.
+     */
+    fun recordConfirmedExamCompletion(
+        testId: Int,
+        attemptId: Int?,
+        reward: GamificationEventResponse
+    ): Int {
+
+        // 1. Actualizar el progreso global con los
+        // valores oficiales devueltos por FastAPI.
+        applyRemoteProgress(
+            GamificationProgressResponse(
+                totalXp = reward.totalXp,
+                totalPoints = reward.totalPoints,
+                gamesPlayed = reward.gamesPlayed,
+                level = reward.level,
+                xpInLevel = reward.xpInLevel,
+                xpToNextLevel = reward.xpToNextLevel
+            )
+        )
+
+        // 2. Registrar la actividad local del examen
+        // sin sumar XP otra vez.
+        if (attemptId != null) {
+
+            val attemptKey =
+                "rewarded_exam_attempt_$attemptId"
+
+            val alreadyRecorded =
+                preferences.getBoolean(attemptKey, false)
+
+            if (!alreadyRecorded) {
+
+                val today = LocalDate.now()
+
+                val dailyTestKey =
+                    "exam_daily_${today}_test_$testId"
+
+                val editor = preferences.edit()
+                    .putBoolean(attemptKey, true)
+                    .putInt(
+                        dailyTestKey,
+                        preferences.getInt(dailyTestKey, 0) + 1
+                    )
+                    .putInt(
+                        dailyExamsKey(today),
+                        preferences.getInt(
+                            dailyExamsKey(today), 0
+                        ) + 1
+                    )
+                    .putInt(
+                        KEY_TOTAL_EXAM_COMPLETIONS,
+                        preferences.getInt(
+                            KEY_TOTAL_EXAM_COMPLETIONS, 0
+                        ) + 1
+                    )
+
+                editor.apply()
+
+                // La racha solo avanza por estudio real.
+                markStudyDay(today)
+            }
+        }
+
+        // 3. No anunciar una recompensa nuevamente
+        // si el backend indica un evento duplicado.
+        return if (!reward.duplicate) {
+            reward.xpAwarded.coerceAtLeast(0)
+        } else {
+            0
+        }
+    }
+
 
     fun awardXpOnce(
         eventKey: String,

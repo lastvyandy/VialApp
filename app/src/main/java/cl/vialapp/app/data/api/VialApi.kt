@@ -100,9 +100,22 @@ interface VialApi {
         @Header("Authorization") authorization: String
     ): Response<GamificationProgressResponse>
 
+
     @POST("users/me/gamification/games")
     suspend fun recordGameEvent(
         @Header("Authorization") authorization: String,
         @Body request: GamificationGameEventRequest
+    ): Response<GamificationEventResponse>
+
+    // Consultar la misión diaria del usuario.
+    @GET("users/me/gamification/missions/today")
+    suspend fun getTodayMission(
+        @Header("Authorization") authorization: String
+    ): Response<DailyMissionResponse>
+
+    // Reclamar la recompensa de una misión completada.
+    @POST("users/me/gamification/missions/today/claim")
+    suspend fun claimTodayMission(
+        @Header("Authorization") authorization: String
     ): Response<GamificationEventResponse>
 }

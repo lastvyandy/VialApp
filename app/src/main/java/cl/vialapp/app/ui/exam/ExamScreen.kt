@@ -39,7 +39,10 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import cl.vialapp.app.data.api.ExamCorrectionResponse
-
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 private val VialBlue = Color(0xFF2563EB)
 private val VialDark = Color(0xFF172033)
@@ -47,9 +50,11 @@ private val VialGray = Color(0xFF64748B)
 private val VialBackground = Color(0xFFF4F7FB)
 
 
+
 @Composable
 fun ExamScreen(
     testId: Int,
+    userKey: String,
     onBack: () -> Unit
 ) {
 
@@ -64,10 +69,23 @@ fun ExamScreen(
     val scope =
         rememberCoroutineScope()
 
+    /*
+ * Controla el guardado secuencial de respuestas.
+ * Evita peticiones simultáneas que puedan
+ * sobrescribir respuestas más recientes.
+ */
+    val saveMutex = remember {
+        Mutex()
+    }
+
+
+
+
     val progressStore =
-        remember {
+        remember(context, userKey) {
             GameProgressStore(
-                context
+                context = context,
+                userKey = userKey
             )
         }
 
@@ -178,6 +196,28 @@ fun ExamScreen(
 
 
     /*
+     * Guarda las respuestas de forma secuencial.
+     *
+     * Si otro guardado está en curso, espera su turno.
+     * Al obtener el Mutex, utiliza las respuestas
+     * más recientes, evitando enviar datos antiguos.
+     */
+    suspend fun saveLatestAnswers() {
+        saveMutex.withLock {
+            val currentAttemptId = attempt?.attemptId
+                ?: return@withLock
+
+            saveAnswers(
+                sessionManager = sessionManager,
+                attemptId = currentAttemptId,
+                answers = latestAnswers
+            )
+        }
+    }
+
+
+
+    /*
      * ENVÍO FINAL DEL EXAMEN.
      */
     suspend fun submitCurrentExam() {
@@ -232,17 +272,25 @@ fun ExamScreen(
                 )
 
 
+            /*
+ * Coordinar el envío final con los guardados.
+ *
+ * Si hay un guardado en curso, esperamos
+ * a que termine antes de finalizar el examen.
+ */
             val response =
-                ApiClient.api.submitExam(
-                    authorization =
-                        "Bearer $token",
+                saveMutex.withLock {
+                    ApiClient.api.submitExam(
+                        authorization =
+                            "Bearer $token",
 
-                    testId =
-                        currentAttempt.testId,
+                        testId =
+                            currentAttempt.testId,
 
-                    request =
-                        request
-                )
+                        request =
+                            request
+                    )
+                }
 
 
             if (response.isSuccessful) {
@@ -253,24 +301,43 @@ fun ExamScreen(
                 if (body != null) {
 
                     /*
-                     * XP GLOBAL DE VIALAPP
-                     *
-                     * Solo premiamos cuando el backend confirmó
-                     * correctamente la finalización.
-                     *
-                     * GameProgressStore evita:
-                     * - premiar dos veces el mismo attempt_id;
-                     * - farmear el mismo test infinitamente.
-                     */
-                    examXpEarned =
-                        progressStore
-                            .recordExamCompletion(
-                                testId =
-                                    currentAttempt.testId,
+  * XP GLOBAL DE VIALAPP
+  *
+  * FastAPI calcula y registra la recompensa.
+  * Android utiliza los datos confirmados
+  * por el backend.
+  */
+                    val confirmedReward = body.gamification
 
-                                attemptId =
-                                    currentAttempt.attemptId
+                    android.util.Log.d(
+                        "VIALAPP_XP",
+                        "Gamification presente: ${confirmedReward != null}, " +
+                                "XP otorgada: ${confirmedReward?.xpAwarded}, " +
+                                "XP total: ${confirmedReward?.totalXp}, " +
+                                "Duplicado: ${confirmedReward?.duplicate}"
+                    )
+
+                    if (confirmedReward != null) {
+
+                        examXpEarned =
+                            progressStore.recordConfirmedExamCompletion(
+                                testId = currentAttempt.testId,
+                                attemptId = currentAttempt.attemptId,
+                                reward = confirmedReward
                             )
+
+                    } else {
+
+                        // Compatibilidad con servidores que todavía
+                        // no incluyan gamification en la respuesta.
+                        // No inventamos ni sumamos XP local.
+                        examXpEarned = 0
+
+                        progressStore.syncFromBackend(
+                            api = ApiClient.api,
+                            token = token
+                        )
+                    }
 
                     result =
                         body
@@ -562,6 +629,16 @@ fun ExamScreen(
 
                 } else {
 
+                    if (body.conflict || body.attempt.testId != testId) {
+
+                        error =
+                            "Tienes otro examen en curso. " +
+                                    "Debes continuar o finalizar ese examen " +
+                                    "antes de comenzar uno diferente."
+
+                        return@LaunchedEffect
+                    }
+
                     exam =
                         body.test
 
@@ -712,13 +789,42 @@ fun ExamScreen(
                     false
             },
 
+
             onLeaveAndResume = {
 
-                showExitDialog =
-                    false
+                showExitDialog = false
+                saving = true
 
-                onBack()
+                scope.launch {
+
+                    try {
+
+                        // Esperar cualquier guardado anterior
+                        // y guardar las respuestas más recientes.
+                        saveLatestAnswers()
+
+                        // Salir solamente si el guardado terminó.
+                        onBack()
+
+                    } catch (e: Exception) {
+
+                        if (e is kotlinx.coroutines.CancellationException) {
+                            throw e
+                        }
+
+                        actionError =
+                            "No se pudieron guardar tus respuestas. " +
+                                    "Comprueba tu conexión e inténtalo otra vez."
+
+                        e.printStackTrace()
+
+                    } finally {
+
+                        saving = false
+                    }
+                }
             },
+
 
             onFinish = {
 
@@ -1365,69 +1471,60 @@ fun ExamScreen(
 
 
                         Button(
+
                             enabled =
-                                selectedAnswers
-                                    .isNotEmpty() &&
-                                        !saving &&
+                                selectedAnswers.isNotEmpty() &&
                                         !submitting &&
-                                        remainingSeconds >
-                                        0,
+                                        remainingSeconds > 0,
 
                             onClick = {
 
-                                scope.launch {
+                                /*
+                                 * ÚLTIMA PREGUNTA:
+                                 * enviar el examen completo.
+                                 */
+                                if (currentQuestionIndex == questions.lastIndex) {
 
-                                    /*
-                                     * ÚLTIMA PREGUNTA:
-                                     * enviamos directamente.
-                                     */
-                                    if (
-                                        currentQuestionIndex ==
-                                        questions.lastIndex
-                                    ) {
-
+                                    scope.launch {
                                         submitCurrentExam()
-
-                                        return@launch
                                     }
 
+                                } else {
 
-                                    saving =
-                                        true
+                                    /*
+                                     * AVANCE INMEDIATO:
+                                     * No esperamos al servidor para
+                                     * mostrar la siguiente pregunta.
+                                     */
+                                    currentQuestionIndex++
 
-                                    actionError =
-                                        ""
+                                    actionError = ""
 
-                                    try {
+                                    /*
+                                     * Guardado en segundo plano.
+                                     *
+                                     * saveLatestAnswers utiliza Mutex,
+                                     * por lo que las peticiones no
+                                     * se ejecutan simultáneamente.
+                                     */
+                                    scope.launch {
 
-                                        saveAnswers(
-                                            sessionManager =
-                                                sessionManager,
+                                        try {
 
-                                            attemptId =
-                                                attempt
-                                                    ?.attemptId,
+                                            saveLatestAnswers()
 
-                                            answers =
-                                                answers
-                                        )
+                                        } catch (e: Exception) {
 
+                                            if (e is kotlinx.coroutines.CancellationException) {
+                                                throw e
+                                            }
 
-                                        currentQuestionIndex++
+                                            actionError =
+                                                "No se pudo guardar una respuesta. " +
+                                                        "Revisa tu conexión antes de salir."
 
-                                    } catch (
-                                        e: Exception
-                                    ) {
-
-                                        actionError =
-                                            "No se pudo guardar tu respuesta."
-
-                                        e.printStackTrace()
-
-                                    } finally {
-
-                                        saving =
-                                            false
+                                            e.printStackTrace()
+                                        }
                                     }
                                 }
                             },

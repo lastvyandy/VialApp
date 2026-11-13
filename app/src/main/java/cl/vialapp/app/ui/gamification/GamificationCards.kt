@@ -17,6 +17,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.CircularProgressIndicator
+import cl.vialapp.app.data.api.ApiClient
+import cl.vialapp.app.data.api.DailyMissionResponse
+import cl.vialapp.app.data.api.GamificationProgressResponse
+import cl.vialapp.app.data.session.SessionManager
+import kotlinx.coroutines.launch
 import cl.vialapp.app.data.games.DailyMissionSnapshot
 import cl.vialapp.app.data.games.GameProgressSnapshot
 import cl.vialapp.app.data.games.GameProgressStore
@@ -42,17 +48,20 @@ private val GamificationRed =
     Color(0xFFDC2626)
 
 
+
 @Composable
 fun HomeXpCard(
+    userKey: String,
     onProgress: () -> Unit
 ) {
     val context =
         LocalContext.current
 
     val store =
-        remember {
+        remember(context, userKey) {
             GameProgressStore(
-                context
+                context = context,
+                userKey = userKey
             )
         }
 
@@ -82,8 +91,8 @@ fun HomeXpCard(
         val streak =
             store.streakSnapshot()
 
-        val mission =
-            store.dailyMissionSnapshot()
+        //val mission =
+            //store.dailyMissionSnapshot()
 
 
         Column(
@@ -122,24 +131,184 @@ fun HomeXpCard(
             )
 
 
+            RemoteDailyMissionSection(
+                userKey = userKey,
+                store = store,
+                onXpUpdated = {
+                    refreshKey++
+                }
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun RemoteDailyMissionSection(
+    userKey: String,
+    store: GameProgressStore,
+    onXpUpdated: () -> Unit
+) {
+    val context = LocalContext.current
+    val sessionManager = remember(context) {
+        SessionManager(context)
+    }
+    val scope = rememberCoroutineScope()
+
+    var mission by remember(userKey) {
+        mutableStateOf<DailyMissionResponse?>(null)
+    }
+    var loading by remember(userKey) {
+        mutableStateOf(true)
+    }
+    var claiming by remember(userKey) {
+        mutableStateOf(false)
+    }
+    var error by remember(userKey) {
+        mutableStateOf<String?>(null)
+    }
+
+    // Consultar la misión oficial de FastAPI.
+    LaunchedEffect(userKey) {
+        loading = true
+        error = null
+        mission = null
+
+        try {
+            val token = sessionManager.getAccessToken()
+
+            if (token.isNullOrBlank()) {
+                error = "No hay una sesión activa."
+            } else {
+                val response = ApiClient.api.getTodayMission(
+                    authorization = "Bearer $token"
+                )
+
+                if (response.isSuccessful) {
+                    mission = response.body()
+
+                    if (mission == null) {
+                        error = "La misión no está disponible."
+                    }
+                } else {
+                    error = "Error al cargar la misión (HTTP ${response.code()})."
+                }
+            }
+        } catch (e: Exception) {
+            error = "No se pudo conectar con el servidor."
+        } finally {
+            loading = false
+        }
+    }
+
+    if (loading) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = GamificationBlue
+            )
+
+            Spacer(Modifier.width(12.dp))
+
+            Text(
+                text = "Cargando misión diaria...",
+                color = GamificationGray
+            )
+        }
+    } else {
+        val currentMission = mission
+
+        if (currentMission == null) {
+            Text(
+                text = error ?: "Misión no disponible.",
+                color = GamificationRed
+            )
+        } else {
+            val missionSnapshot = DailyMissionSnapshot(
+                id = currentMission.id,
+                title = currentMission.title,
+                description = currentMission.description,
+                rewardXp = currentMission.rewardXp,
+                progress = currentMission.progress,
+                goal = currentMission.goal.coerceAtLeast(1),
+                detail = "Avance: ${currentMission.progress}/${currentMission.goal}",
+                completed = currentMission.completed,
+                claimed = currentMission.claimed
+            )
+
             HomeDailyMissionCard(
-                mission =
-                    mission,
-
+                mission = missionSnapshot,
                 onClaim = {
-
-                    val earned =
-                        store
-                            .claimDailyMissionReward()
-
-                    if (
-                        earned > 0
+                    if (!claiming && currentMission.completed &&
+                        !currentMission.claimed
                     ) {
+                        claiming = true
+                        error = null
 
-                        refreshKey++
+                        scope.launch {
+                            try {
+                                val token = sessionManager.getAccessToken()
+
+                                if (token.isNullOrBlank()) {
+                                    error = "No hay una sesión activa."
+                                } else {
+                                    val response = ApiClient.api.claimTodayMission(
+                                        authorization = "Bearer $token"
+                                    )
+
+                                    if (response.isSuccessful) {
+                                        val reward = response.body()
+
+                                        if (reward != null) {
+                                            // XP confirmada por FastAPI.
+                                            store.applyRemoteProgress(
+                                                GamificationProgressResponse(
+                                                    totalXp = reward.totalXp,
+                                                    totalPoints = reward.totalPoints,
+                                                    gamesPlayed = reward.gamesPlayed,
+                                                    level = reward.level,
+                                                    xpInLevel = reward.xpInLevel,
+                                                    xpToNextLevel = reward.xpToNextLevel
+                                                )
+                                            )
+
+                                            onXpUpdated()
+                                        } else {
+                                            error = "Respuesta vacía del servidor."
+                                        }
+                                    } else {
+                                        error = if (response.code() == 409) {
+                                            "La misión aún no está completada en el servidor."
+                                        } else {
+                                            "No se pudo reclamar la recompensa (HTTP ${response.code()})."
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                error = "Error de conexión al reclamar la misión."
+                            } finally {
+                                claiming = false
+                            }
+                        }
                     }
                 }
             )
+
+            if (claiming) {
+                Text(
+                    text = "Registrando recompensa...",
+                    color = GamificationGray
+                )
+            }
+
+            if (error != null) {
+                Text(
+                    text = error ?: "",
+                    color = GamificationRed
+                )
+            }
         }
     }
 }
@@ -965,15 +1134,19 @@ private fun HomeDailyMissionCard(
 }
 
 
+
 @Composable
-fun ProgressGamificationSection() {
+fun ProgressGamificationSection(
+    userKey: String
+) {
     val context =
         LocalContext.current
 
     val store =
-        remember {
+        remember(context, userKey) {
             GameProgressStore(
-                context
+                context = context,
+                userKey = userKey
             )
         }
 

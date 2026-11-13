@@ -82,6 +82,7 @@ private data class CrossroadScenario(
 
 @Composable
 fun CrossroadsChaosScreen(
+    userKey: String,
     onBack: () -> Unit
 ) {
     val context =
@@ -91,8 +92,11 @@ fun CrossroadsChaosScreen(
         LocalHapticFeedback.current
 
     val progressStore =
-        remember {
-            GameProgressStore(context)
+        remember(context, userKey) {
+            GameProgressStore(
+                context = context,
+                userKey = userKey
+            )
         }
 
     var sourceScenarios by remember {

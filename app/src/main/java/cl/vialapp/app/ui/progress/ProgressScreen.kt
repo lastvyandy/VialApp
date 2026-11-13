@@ -31,7 +31,9 @@ private val ProgressBackground = Color(0xFFF4F7FB)
 
 
 @Composable
-fun ProgressScreen() {
+fun ProgressScreen(
+    userKey: String
+) {
 
     val context =
         LocalContext.current
@@ -176,18 +178,21 @@ fun ProgressScreen() {
 
         else -> {
 
+
             ProgressContent(
-                stats =
-                    stats!!
+                stats = stats!!,
+                userKey = userKey
             )
         }
     }
 }
 
 
+
 @Composable
 private fun ProgressContent(
-    stats: AdvancedStatsResponse
+    stats: AdvancedStatsResponse,
+    userKey: String
 ) {
 
     val summary =
@@ -218,8 +223,9 @@ private fun ProgressContent(
 
 
         item {
-
-            ProgressGamificationSection()
+            ProgressGamificationSection(
+                userKey = userKey
+            )
         }
 
         /*

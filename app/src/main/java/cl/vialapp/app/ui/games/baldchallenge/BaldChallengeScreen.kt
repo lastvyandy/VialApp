@@ -50,9 +50,11 @@ private val GamePurple = Color(0xFF7C3AED)
 private val GameBackground = Color(0xFFF4F7FB)
 
 
+
 @Composable
 fun BaldChallengeScreen(
     testId: Int,
+    userKey: String,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -120,8 +122,11 @@ fun BaldChallengeScreen(
      * Más adelante podremos sincronizar estos datos
      * con backend sin cambiar la lógica del juego.
      */
-    val progressStore = remember {
-        GameProgressStore(context)
+    val progressStore = remember(context, userKey) {
+        GameProgressStore(
+            context = context,
+            userKey = userKey
+        )
     }
 
     var highScore by remember {

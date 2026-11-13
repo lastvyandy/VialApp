@@ -31,3 +31,32 @@ data class GamificationEventResponse(
     @SerializedName("points_awarded") val pointsAwarded: Int = 0,
     @SerializedName("duplicate") val duplicate: Boolean = false
 )
+
+data class DailyMissionResponse(
+    @SerializedName("id")
+    val id: String,
+
+    @SerializedName("title")
+    val title: String,
+
+    @SerializedName("description")
+    val description: String,
+
+    @SerializedName("reward_xp")
+    val rewardXp: Int,
+
+    @SerializedName("goal")
+    val goal: Int,
+
+    @SerializedName("date")
+    val date: String,
+
+    @SerializedName("progress")
+    val progress: Int,
+
+    @SerializedName("completed")
+    val completed: Boolean,
+
+    @SerializedName("claimed")
+    val claimed: Boolean
+)

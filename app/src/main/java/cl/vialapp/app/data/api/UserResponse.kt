@@ -22,6 +22,10 @@ data class UserResponse(
     @SerializedName("profile_completed")
     val profileCompleted: Boolean,
 
+
     @SerializedName("is_premium")
-    val isPremium: Boolean
+    val isPremium: Boolean,
+
+    @SerializedName("premium_license_classes")
+    val premiumLicenseClasses: List<String> = emptyList()
 )

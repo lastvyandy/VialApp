@@ -426,6 +426,9 @@ fun VialAppNavigation(
                     licenseClass =
                         user.licenseClass,
 
+                    userKey =
+                        user.id,
+
                     onOpenBaldChallenge = { testId ->
 
                         navController.navigate(
@@ -472,6 +475,9 @@ fun VialAppNavigation(
                         testId =
                             testId,
 
+                        userKey =
+                            user.id,
+
                         onBack = {
 
                             navController.popBackStack()
@@ -499,7 +505,10 @@ fun VialAppNavigation(
                     "games/crossroads"
             ) {
 
+
                 CrossroadsChaosScreen(
+                    userKey = user.id,
+
                     onBack = {
 
                         navController.popBackStack()
@@ -706,6 +715,9 @@ fun VialAppNavigation(
                         testId =
                             testId,
 
+                        userKey =
+                            user.id,
+
                         onBack = {
 
                             navController
@@ -739,7 +751,9 @@ fun VialAppNavigation(
                 route = "stats"
             ) {
 
-                ProgressScreen()
+                ProgressScreen(
+                    userKey = user.id
+                )
             }
 
 

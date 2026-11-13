@@ -109,15 +109,12 @@ fun StudySetupScreen(
     val context =
         LocalContext.current
 
-    val store =
-        remember {
-            StudyPreferencesStore(
-                context =
-                    context,
-                userKey =
-                    userKey
-            )
-        }
+    val store = remember(context, userKey) {
+        StudyPreferencesStore(
+            context = context,
+            userKey = userKey
+        )
+    }
 
     val initial =
         store.get()

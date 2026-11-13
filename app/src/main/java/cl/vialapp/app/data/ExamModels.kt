@@ -151,7 +151,10 @@ data class ExamSubmitResponse(
     @SerializedName("is_practice_result")
     val isPracticeResult: Boolean? = null,
 
-    val resultados: List<ExamQuestionResult> = emptyList()
+    val resultados: List<ExamQuestionResult> = emptyList(),
+
+    // XP y progreso confirmados por el backend
+    val gamification: GamificationEventResponse? = null
 )
 
 

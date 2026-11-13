@@ -43,27 +43,77 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
-    val progressStore = remember { GameProgressStore(context) }
 
-    var stats by remember { mutableStateOf<AdvancedStatsResponse?>(null) }
-    var activeAttempt by remember { mutableStateOf<ExamAttemptResponse?>(null) }
-    var dashboardLoading by remember { mutableStateOf(true) }
+    val progressStore = remember(context, user.id) {
+        GameProgressStore(
+            context = context,
+            userKey = user.id
+        )
+    }
 
-    LaunchedEffect(Unit) {
+    var stats by remember {
+        mutableStateOf<AdvancedStatsResponse?>(null)
+    }
+
+    var activeAttempt by remember {
+        mutableStateOf<ExamAttemptResponse?>(null)
+    }
+
+    var dashboardLoading by remember {
+        mutableStateOf(true)
+    }
+
+    var xpLoaded by remember(user.id) {
+        mutableStateOf(false)
+    }
+
+    var xpLoadFailed by remember(user.id) {
+        mutableStateOf(false)
+    }
+
+
+
+    LaunchedEffect(user.id) {
+
         dashboardLoading = true
+
+        xpLoaded = false
+        xpLoadFailed = false
+
         val token = sessionManager.getAccessToken()
 
         if (token == null) {
+            xpLoadFailed = true
             dashboardLoading = false
             return@LaunchedEffect
         }
 
-        // Sincronizar XP y gamificación con el backend al cargar el Home
+
+// Cargar XP oficial desde FastAPI
         try {
-            progressStore.syncFromBackend(ApiClient.api, token)
+            val xpResponse = ApiClient.api.getGamificationProgress(
+                authorization = "Bearer $token"
+            )
+
+            val remoteProgress =
+                if (xpResponse.isSuccessful) {
+                    xpResponse.body()
+                } else {
+                    null
+                }
+
+            if (remoteProgress != null) {
+                progressStore.applyRemoteProgress(remoteProgress)
+                xpLoaded = true
+            } else {
+                xpLoadFailed = true
+            }
+
         } catch (e: Exception) {
+            xpLoadFailed = true
             e.printStackTrace()
         }
+
 
         // Estadísticas avanzadas
         try {
@@ -102,6 +152,19 @@ fun HomeScreen(
     val summary = stats?.summary
     val priorityCategory = stats?.categories?.firstOrNull()
 
+    val hasPremiumForLicense =
+        user.isPremium ||
+                user.premiumLicenseClasses.any { premiumClass ->
+                    premiumClass.trim()
+                        .removePrefix("Clase ")
+                        .equals(
+                            user.licenseClass
+                                ?.trim()
+                                ?.removePrefix("Clase "),
+                            ignoreCase = true
+                        )
+                }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -129,7 +192,7 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "$licenseText · ${if (user.isPremium) "Premium" else "Cuenta gratuita"}",
+                        text = "$licenseText · ${if (hasPremiumForLicense) "Premium" else "Cuenta gratuita"}",
                         color = HomeGray,
                         fontSize = 14.sp
                     )
@@ -268,9 +331,45 @@ fun HomeScreen(
             }
         }
 
+
         item {
-            HomeXpCard(onProgress = onProgress)
+            when {
+                xpLoaded -> {
+                    HomeXpCard(
+                        userKey = user.id,
+                        onProgress = onProgress
+                    )
+                }
+
+                xpLoadFailed -> {
+                    Text(
+                        text = "No se pudo sincronizar tu experiencia.",
+                        color = HomeRed
+                    )
+                }
+
+                else -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = HomeBlue
+                        )
+
+                        Spacer(
+                            modifier = Modifier.width(12.dp)
+                        )
+
+                        Text(
+                            text = "Cargando experiencia...",
+                            color = HomeGray
+                        )
+                    }
+                }
+            }
         }
+
 
         // Tu ruta de hoy
         item {

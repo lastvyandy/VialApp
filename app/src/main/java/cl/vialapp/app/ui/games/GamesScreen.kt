@@ -29,6 +29,7 @@ private val GamesBackground = Color(0xFFF4F7FB)
 @Composable
 fun GamesScreen(
     licenseClass: String?,
+    userKey: String,
     onOpenBaldChallenge: (Int) -> Unit,
     onOpenCrossroadsChaos: () -> Unit,
     onBack: () -> Unit
@@ -39,7 +40,13 @@ fun GamesScreen(
 
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
-    val progressStore = remember { GameProgressStore(context) }
+
+    val progressStore = remember(context, userKey) {
+        GameProgressStore(
+            context = context,
+            userKey = userKey
+        )
+    }
 
     val gameProgress = progressStore.snapshot()
 
