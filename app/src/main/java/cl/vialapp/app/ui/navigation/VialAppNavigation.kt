@@ -2,7 +2,6 @@ package cl.vialapp.app.ui.navigation
 
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +53,7 @@ import cl.vialapp.app.ui.games.crossroads.CrossroadsChaosScreen
 import cl.vialapp.app.ui.games.signhunt.SignHuntScreen
 import cl.vialapp.app.ui.home.HomeScreen
 import cl.vialapp.app.ui.mascot.MascotSelectionScreen
+import cl.vialapp.app.ui.mascot.MascotPortrait
 import cl.vialapp.app.ui.profile.LicenseClassPickerDialog
 import cl.vialapp.app.ui.practice.PracticeScreen
 import cl.vialapp.app.ui.progress.ProgressScreen
@@ -1292,17 +1291,15 @@ fun ProfileScreen(
                     modifier = Modifier.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Image(
-                        painter = painterResource(
-                            if (user.mascotId == "mister_pelao") {
-                                R.drawable.mascot_mister_pelao
-                            } else {
-                                R.drawable.mascot_carvier
-                            }
-                        ),
+                    MascotPortrait(
+                        drawable = if (user.mascotId == "mister_pelao") {
+                            R.drawable.mascot_mister_pelao
+                        } else {
+                            R.drawable.mascot_carvier
+                        },
                         contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(64.dp)
+                        cornerRadius = 18.dp,
+                        modifier = Modifier.size(68.dp)
                     )
                     Spacer(modifier = Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
