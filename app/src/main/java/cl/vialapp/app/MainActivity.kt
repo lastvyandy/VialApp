@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -293,36 +296,16 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                // Logo temporal de VialApp
-                Box(
+                // Logo oficial de VialApp, conservando sus trazos y colores.
+                Image(
+                    painter = painterResource(R.drawable.vialapp_brand_logo),
+                    contentDescription = "VialApp",
                     modifier = Modifier
-                        .size(76.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF2563EB)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "V",
-                        color = Color.White,
-                        fontSize = 34.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(
-                    modifier = Modifier.height(20.dp)
+                        .size(width = 162.dp, height = 156.dp),
+                    contentScale = ContentScale.Fit
                 )
 
-                Text(
-                    text = "VialApp",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF111827)
-                )
-
-                Spacer(
-                    modifier = Modifier.height(6.dp)
-                )
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
                     text = "Prepárate. Practica. Aprueba.",
