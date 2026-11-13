@@ -554,9 +554,6 @@ fun VialAppNavigation(
                 } else {
 
                     PlaceholderScreen(
-                        title =
-                            "Error",
-
                         message =
                             "No se pudo iniciar el minijuego."
                     )
@@ -797,9 +794,6 @@ fun VialAppNavigation(
 
                     PlaceholderScreen(
 
-                        title =
-                            "Error",
-
                         message =
                             "No se pudo abrir este examen."
                     )
@@ -887,7 +881,6 @@ fun VialAppNavigation(
  */
 @Composable
 private fun PlaceholderScreen(
-    title: String,
     message: String
 ) {
 
@@ -910,7 +903,7 @@ private fun PlaceholderScreen(
 
         Text(
             text =
-                title,
+                "Error",
 
             fontSize =
                 30.sp
