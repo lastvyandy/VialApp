@@ -253,19 +253,11 @@ fun GamesScreen(
         }
 
         item {
-            PausedGameCard(
-                emoji = "🛑👀",
-                title = "Caza la Señal",
-                description = "En pausa mientras preparamos un catálogo visual de señaléticas realmente correcto."
-            )
+            PausedGameCard()
         }
 
         item {
-            ComingSoonGameCard(
-                emoji = "🔧🚗",
-                title = "Taller del Auto",
-                description = "Diagnostica problemas y demuestra cuánto sabes de mantenimiento."
-            )
+            ComingSoonGameCard()
         }
 
         if (loading) {
@@ -375,7 +367,7 @@ private fun PlayableGameCard(
 }
 
 @Composable
-private fun PausedGameCard(emoji: String, title: String, description: String) {
+private fun PausedGameCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -385,18 +377,18 @@ private fun PausedGameCard(emoji: String, title: String, description: String) {
             modifier = Modifier.padding(19.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = emoji, fontSize = 31.sp)
+            Text(text = "🛑👀", fontSize = 31.sp)
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = title,
+                    text = "Caza la Señal",
                     color = GamesDark,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = description,
+                    text = "En pausa mientras preparamos un catálogo visual de señaléticas realmente correcto.",
                     color = GamesGray,
                     fontSize = 12.sp,
                     lineHeight = 17.sp
@@ -413,7 +405,7 @@ private fun PausedGameCard(emoji: String, title: String, description: String) {
 }
 
 @Composable
-private fun ComingSoonGameCard(emoji: String, title: String, description: String) {
+private fun ComingSoonGameCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -423,18 +415,18 @@ private fun ComingSoonGameCard(emoji: String, title: String, description: String
             modifier = Modifier.padding(19.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = emoji, fontSize = 31.sp)
+            Text(text = "🔧🚗", fontSize = 31.sp)
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = title,
+                    text = "Taller del Auto",
                     color = GamesDark,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = description,
+                    text = "Diagnostica problemas y demuestra cuánto sabes de mantenimiento.",
                     color = GamesGray,
                     fontSize = 12.sp,
                     lineHeight = 17.sp

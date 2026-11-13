@@ -24,8 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.data.settings.ReminderFrequency
-import cl.vialapp.app.data.settings.StudyPreferences
 import cl.vialapp.app.data.settings.StudyPreferencesStore
+import java.util.Locale
 
 
 private val SettingsBlue =
@@ -400,6 +400,7 @@ private fun ManualTimePickerButton(
 
     val formattedTime =
         String.format(
+            Locale.getDefault(),
             "%02d:%02d",
             hour,
             minute
@@ -1283,6 +1284,7 @@ private fun buildSummary(
 
     val time =
         String.format(
+            Locale.getDefault(),
             "%02d:%02d",
             reminderHour,
             reminderMinute

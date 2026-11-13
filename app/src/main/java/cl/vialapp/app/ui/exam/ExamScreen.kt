@@ -39,8 +39,7 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import cl.vialapp.app.data.api.ExamCorrectionResponse
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -629,7 +628,7 @@ fun ExamScreen(
 
                 } else {
 
-                    if (body.conflict || body.attempt.testId != testId) {
+                    if (body.attempt.testId != testId) {
 
                         error =
                             "Tienes otro examen en curso. " +
@@ -2298,6 +2297,7 @@ private fun TimerText(
 
     val text =
         String.format(
+            Locale.getDefault(),
             "%02d:%02d",
             minutes,
             remaining
