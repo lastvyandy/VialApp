@@ -27,5 +27,8 @@ data class UserResponse(
     val isPremium: Boolean,
 
     @SerializedName("premium_license_classes")
-    val premiumLicenseClasses: List<String> = emptyList()
+    val premiumLicenseClasses: List<String> = emptyList(),
+
+    @SerializedName("mascot_id")
+    val mascotId: String? = null
 )

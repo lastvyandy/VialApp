@@ -41,6 +41,12 @@ interface VialApi {
         @Body profile: CompleteProfileRequest
     ): Response<UserResponse>
 
+    @PATCH("users/me")
+    suspend fun updateMascot(
+        @Header("Authorization") authorization: String,
+        @Body request: MascotSelectionRequest
+    ): Response<UserResponse>
+
     @GET("tests/")
     suspend fun getTests(
         @Header("Authorization") authorization: String,

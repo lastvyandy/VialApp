@@ -2,6 +2,7 @@ package cl.vialapp.app.ui.navigation
 
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,10 +19,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,7 +40,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import cl.vialapp.app.R
+import cl.vialapp.app.data.api.ApiClient
+import cl.vialapp.app.data.api.MascotSelectionRequest
 import cl.vialapp.app.data.api.UserResponse
+import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.data.settings.StudyPreferencesStore
 import cl.vialapp.app.ui.exam.ExamScreen
 import cl.vialapp.app.ui.exams.ExamsScreen
@@ -44,10 +52,12 @@ import cl.vialapp.app.ui.games.baldchallenge.BaldChallengeScreen
 import cl.vialapp.app.ui.games.crossroads.CrossroadsChaosScreen
 import cl.vialapp.app.ui.games.signhunt.SignHuntScreen
 import cl.vialapp.app.ui.home.HomeScreen
+import cl.vialapp.app.ui.mascot.MascotSelectionScreen
 import cl.vialapp.app.ui.practice.PracticeScreen
 import cl.vialapp.app.ui.progress.ProgressScreen
 import cl.vialapp.app.ui.settings.StudySettingsScreen
 import cl.vialapp.app.ui.settings.StudySetupScreen
+import kotlinx.coroutines.launch
 
 private data class BottomItem(
     val route: String,
@@ -59,6 +69,7 @@ private data class BottomItem(
 @Composable
 fun VialAppNavigation(
     user: UserResponse,
+    onUserUpdated: (UserResponse) -> Unit,
     onLogout: () -> Unit
 ) {
 
@@ -85,13 +96,12 @@ fun VialAppNavigation(
         remember(
             user.id
         ) {
-            if (
-                studyPreferencesStore
-                    .isConfigured()
-            ) {
-                "home"
-            } else {
+            if (!studyPreferencesStore.isConfigured()) {
                 "study_setup"
+            } else if (user.mascotId == null) {
+                "mascot_selection"
+            } else {
+                "home"
             }
         }
 
@@ -203,6 +213,7 @@ fun VialAppNavigation(
      */
     val showBottomBar =
         currentRoute != "study_setup" &&
+                currentRoute != "mascot_selection" &&
                 currentRoute != "study_settings" &&
                 currentRoute != "exam/{testId}" &&
                 currentRoute != "games/bald/{testId}" &&
@@ -338,7 +349,7 @@ fun VialAppNavigation(
                     onFinished = {
 
                         navController.navigate(
-                            "home"
+                            if (user.mascotId == null) "mascot_selection" else "home"
                         ) {
 
                             popUpTo(
@@ -351,6 +362,62 @@ fun VialAppNavigation(
 
                             launchSingleTop =
                                 true
+                        }
+                    }
+                )
+            }
+
+
+            /*
+             * Selección inicial o cambio de mascota desde Perfil.
+             * Se guarda en la cuenta del usuario mediante la API.
+             */
+            composable(route = "mascot_selection") {
+                val scope = rememberCoroutineScope()
+                val sessionManager = remember(context) { SessionManager(context) }
+                var saving by remember { mutableStateOf(false) }
+                var selectionError by remember { mutableStateOf<String?>(null) }
+
+                MascotSelectionScreen(
+                    currentMascot = user.mascotId,
+                    isSaving = saving,
+                    error = selectionError,
+                    onContinue = { mascotId ->
+                        if (!saving) {
+                            saving = true
+                            selectionError = null
+                            scope.launch {
+                                try {
+                                    val token = sessionManager.getAccessToken()
+                                    if (token.isNullOrBlank()) {
+                                        selectionError = "Tu sesión expiró. Inicia sesión nuevamente."
+                                    } else {
+                                        val response = ApiClient.api.updateMascot(
+                                            authorization = "Bearer $token",
+                                            request = MascotSelectionRequest(mascotId)
+                                        )
+                                        val updatedUser = response.body()
+                                        if (response.isSuccessful && updatedUser != null) {
+                                            val wasFirstSelection = user.mascotId == null
+                                            onUserUpdated(updatedUser)
+                                            if (wasFirstSelection) {
+                                                navController.navigate("home") {
+                                                    popUpTo("mascot_selection") { inclusive = true }
+                                                    launchSingleTop = true
+                                                }
+                                            } else {
+                                                navController.popBackStack()
+                                            }
+                                        } else {
+                                            selectionError = "No se pudo guardar tu mascota. Inténtalo nuevamente."
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    selectionError = "Sin conexión. Comprueba internet e inténtalo de nuevo."
+                                } finally {
+                                    saving = false
+                                }
+                            }
                         }
                     }
                 )
@@ -800,6 +867,10 @@ fun VialAppNavigation(
                         )
                     },
 
+                    onChangeMascot = {
+                        navController.navigate("mascot_selection")
+                    },
+
                     onLogout =
                         onLogout
                 )
@@ -890,6 +961,7 @@ private val ProfileRed =
 fun ProfileScreen(
     user: UserResponse,
     onStudySettings: () -> Unit,
+    onChangeMascot: () -> Unit,
     onLogout: () -> Unit
 ) {
     val fullName =
@@ -1155,6 +1227,49 @@ fun ProfileScreen(
                 fontWeight =
                     FontWeight.Bold
             )
+        }
+
+
+        item {
+            Card(
+                onClick = onChangeMascot,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Image(
+                        painter = painterResource(
+                            if (user.mascotId == "mister_pelao") {
+                                R.drawable.mascot_mister_pelao
+                            } else {
+                                R.drawable.mascot_carvier
+                            }
+                        ),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Tu mascota",
+                            color = ProfileDark,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Text(
+                            text = if (user.mascotId == "mister_pelao") "Mister Pelao" else "Carvier",
+                            color = ProfileGray,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Text(text = "Cambiar", color = ProfileBlue, fontWeight = FontWeight.SemiBold)
+                }
+            }
         }
 
 

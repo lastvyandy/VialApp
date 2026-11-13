@@ -195,6 +195,7 @@ class MainActivity : ComponentActivity() {
 
                     VialAppNavigation(
                         user = currentUser!!,
+                        onUserUpdated = { updatedUser -> currentUser = updatedUser },
                         onLogout = {
 
                             scope.launch {
