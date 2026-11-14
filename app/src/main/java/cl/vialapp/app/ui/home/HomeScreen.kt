@@ -349,7 +349,8 @@ fun HomeScreen(
                 xpLoaded -> {
                     HomeXpCard(
                         userKey = user.id,
-                        onProgress = onProgress
+                        onProgress = onProgress,
+                        mascotId = user.mascotId
                     )
                 }
 

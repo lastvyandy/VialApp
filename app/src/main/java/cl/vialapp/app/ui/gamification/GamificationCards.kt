@@ -3,6 +3,8 @@ package cl.vialapp.app.ui.gamification
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -21,6 +23,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import cl.vialapp.app.data.api.ApiClient
 import cl.vialapp.app.data.api.DailyMissionResponse
 import cl.vialapp.app.data.api.GamificationProgressResponse
+import cl.vialapp.app.data.api.GamificationEventResponse
+import cl.vialapp.app.ui.mascot.MascotReactionCard
+import cl.vialapp.app.ui.mascot.MascotReactions
+import cl.vialapp.app.ui.mascot.MascotReaction
 import cl.vialapp.app.data.session.SessionManager
 import kotlinx.coroutines.launch
 import cl.vialapp.app.data.games.DailyMissionSnapshot
@@ -52,7 +58,8 @@ private val GamificationRed =
 @Composable
 fun HomeXpCard(
     userKey: String,
-    onProgress: () -> Unit
+    onProgress: () -> Unit,
+    mascotId: String? = null
 ) {
     val context =
         LocalContext.current
@@ -75,6 +82,43 @@ fun HomeXpCard(
         )
     }
 
+
+    // Estado fuera del key de refresco: no se pierde al recargar la misión.
+    var claimedReward by remember(userKey) {
+        mutableStateOf<GamificationEventResponse?>(null)
+    }
+
+    val reward = claimedReward
+    if (reward != null && MascotReactions.isSupported(mascotId)) {
+        val reachedLevel = MascotReactions.levelReached(reward)
+        AlertDialog(
+            onDismissRequest = { claimedReward = null },
+            title = { Text(if (reachedLevel != null) "¡Subiste de nivel!" else "¡Misión completada!") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MascotReactionCard(
+                        mascotId = mascotId.orEmpty(),
+                        reaction = if (reachedLevel != null) {
+                            MascotReaction.LEVEL_UP
+                        } else {
+                            MascotReaction.MISSION
+                        },
+                        levelReached = reachedLevel
+                    )
+                    Text(
+                        text = "+${reward.xpAwarded} XP",
+                        color = GamificationGreen,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { claimedReward = null }) {
+                    Text("¡Genial!")
+                }
+            }
+        )
+    }
 
     key(
         refreshKey
@@ -134,7 +178,10 @@ fun HomeXpCard(
             RemoteDailyMissionSection(
                 userKey = userKey,
                 store = store,
-                onXpUpdated = {
+                onXpUpdated = { reward ->
+                    if (!reward.duplicate && reward.xpAwarded > 0) {
+                        claimedReward = reward
+                    }
                     refreshKey++
                 }
             )
@@ -147,7 +194,7 @@ fun HomeXpCard(
 private fun RemoteDailyMissionSection(
     userKey: String,
     store: GameProgressStore,
-    onXpUpdated: () -> Unit
+    onXpUpdated: (GamificationEventResponse) -> Unit
 ) {
     val context = LocalContext.current
     val sessionManager = remember(context) {
@@ -274,7 +321,7 @@ private fun RemoteDailyMissionSection(
                                                 )
                                             )
 
-                                            onXpUpdated()
+                                            onXpUpdated(reward)
                                         } else {
                                             error = "Respuesta vacía del servidor."
                                         }

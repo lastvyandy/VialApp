@@ -54,7 +54,8 @@ private val VialBackground = Color(0xFFF4F7FB)
 fun ExamScreen(
     testId: Int,
     userKey: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    mascotId: String? = null
 ) {
 
     val context =
@@ -533,6 +534,8 @@ fun ExamScreen(
             ExamResultScreen(
                 result =
                     completedResult,
+
+                mascotId = mascotId,
 
                 correctionLoading =
                     correctionLoading,

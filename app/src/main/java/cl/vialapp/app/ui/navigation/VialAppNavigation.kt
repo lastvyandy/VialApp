@@ -784,6 +784,8 @@ fun VialAppNavigation(
                         userKey =
                             user.id,
 
+                        mascotId = user.mascotId,
+
                         onBack = {
 
                             navController

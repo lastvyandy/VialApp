@@ -18,6 +18,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.data.api.ExamSubmitResponse
+import cl.vialapp.app.ui.mascot.MascotReactionCard
+import cl.vialapp.app.ui.mascot.MascotReactions
 
 
 private val ResultBlue = Color(0xFF2563EB)
@@ -32,7 +34,8 @@ fun ExamResultScreen(
     correctionLoading: Boolean,
     correctionError: String,
     onViewCorrection: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    mascotId: String? = null
 ) {
 
     BackHandler {
@@ -385,6 +388,16 @@ fun ExamResultScreen(
                 textAlign =
                     TextAlign.Center
             )
+
+
+            if (MascotReactions.isSupported(mascotId)) {
+                Spacer(Modifier.height(16.dp))
+                MascotReactionCard(
+                    mascotId = mascotId.orEmpty(),
+                    reaction = MascotReactions.exam(result.puntaje),
+                    levelReached = MascotReactions.levelReached(result.gamification)
+                )
+            }
 
 
             Spacer(
