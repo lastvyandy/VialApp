@@ -153,6 +153,12 @@ fun VialAppNavigation(
             ),
 
             BottomItem(
+                route = "leaderboard/weekly",
+                label = "Liga",
+                icon = R.drawable.ic_league
+            ),
+
+            BottomItem(
                 route =
                     "stats",
 
@@ -177,8 +183,7 @@ fun VialAppNavigation(
 
 
     /*
-     * Navegación para las cuatro
-     * secciones principales.
+     * Navegación entre las secciones principales.
      */
     fun navigateTopLevel(
         route: String
@@ -475,12 +480,6 @@ fun VialAppNavigation(
                         navController.navigate(
                             "exam/$testId"
                         )
-                    },
-
-                    onLeaderboard = {
-                        navController.navigate("leaderboard/weekly") {
-                            launchSingleTop = true
-                        }
                     }
                 )
             }
@@ -496,8 +495,7 @@ fun VialAppNavigation(
             composable("leaderboard/weekly") {
                 WeeklyLeaderboardScreen(
                     userKey = user.id,
-                    mascotId = user.mascotId,
-                    onBack = { navController.popBackStack() }
+                    mascotId = user.mascotId
                 )
             }
 

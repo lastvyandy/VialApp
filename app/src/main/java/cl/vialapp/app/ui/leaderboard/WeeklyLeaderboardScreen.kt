@@ -35,33 +35,9 @@ private val LeagueGray = Color(0xFF64748B)
 private val LeagueBg = Color(0xFFF4F7FB)
 
 @Composable
-fun WeeklyLeaderboardShortcut(onOpen: () -> Unit) {
-    Card(
-        onClick = onOpen,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7E2))
-    ) {
-        Row(
-            modifier = Modifier.padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(13.dp)
-        ) {
-            Text("🏆", fontSize = 32.sp)
-            Column(Modifier.weight(1f)) {
-                Text("Liga semanal", color = LeagueDark, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                Text("Compite estudiando y escala posiciones", color = LeagueGray, fontSize = 13.sp)
-            }
-            Text("›", fontSize = 30.sp, color = LeagueBlue)
-        }
-    }
-}
-
-@Composable
 fun WeeklyLeaderboardScreen(
     userKey: String,
-    mascotId: String?,
-    onBack: () -> Unit
+    mascotId: String?
 ) {
     val context = LocalContext.current
     val session = remember(context) { SessionManager(context) }
@@ -102,15 +78,17 @@ fun WeeklyLeaderboardScreen(
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onBack, contentPadding = PaddingValues(horizontal = 0.dp)) {
-                    Text("‹ Volver", color = LeagueBlue)
-                }
-                Spacer(Modifier.weight(1f))
+                Text(
+                    "🏆 Liga semanal",
+                    color = LeagueDark,
+                    fontSize = 25.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.weight(1f)
+                )
                 TextButton(onClick = { refresh++ }, enabled = !loading) {
                     Text("Actualizar")
                 }
             }
-            Text("🏆 Liga semanal", color = LeagueDark, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
             Text(
                 "Compite con XP de exámenes, lecciones y misiones. Cada lunes empieza una nueva liga.",
                 color = LeagueGray,
@@ -217,7 +195,7 @@ fun WeeklyLeaderboardScreen(
             }
             item {
                 Text(
-                    "Para proteger tu privacidad, la liga utiliza alias semanales. Los XP directos de minijuegos no cuentan aquí; tus XP del perfil se conservan.",
+                    "En la liga se muestra solo el primer nombre del perfil o un alias si no está disponible. Los XP directos de minijuegos no cuentan aquí; tus XP del perfil se conservan.",
                     color = LeagueGray,
                     fontSize = 12.sp,
                     lineHeight = 17.sp
