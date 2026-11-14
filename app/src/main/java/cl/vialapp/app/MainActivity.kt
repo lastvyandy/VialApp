@@ -45,6 +45,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.ui.theme.VialAppTheme
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 import androidx.compose.runtime.rememberCoroutineScope
 import cl.vialapp.app.data.api.ApiClient
 import kotlinx.coroutines.launch
@@ -271,8 +273,8 @@ fun LoginScreen(
 
     val background = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFFF4F8FF),
-            Color(0xFFFFFFFF)
+            vialColor(Color(0xFFF4F8FF)),
+            vialColor(Color(0xFFFFFFFF))
         )
     )
 
@@ -308,7 +310,7 @@ fun LoginScreen(
                 Text(
                     text = "Prepárate. Practica. Aprueba.",
                     fontSize = 16.sp,
-                    color = Color(0xFF6B7280),
+                    color = vialColor(Color(0xFF6B7280)),
                     textAlign = TextAlign.Center
                 )
 
@@ -321,7 +323,7 @@ fun LoginScreen(
                     modifier = Modifier.fillMaxWidth(),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF111827)
+                    color = vialColor(Color(0xFF111827))
                 )
 
                 Spacer(
@@ -331,7 +333,7 @@ fun LoginScreen(
                 Text(
                     text = "Ingresa a tu cuenta para continuar",
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFF6B7280),
+                    color = vialColor(Color(0xFF6B7280)),
                     fontSize = 14.sp
                 )
 
@@ -492,7 +494,8 @@ fun LoginScreen(
                     shape = RoundedCornerShape(16.dp),
 
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2563EB)
+                        containerColor = VialActionBlue,
+                        contentColor = Color.White
                     )
                 ) {
 
@@ -518,9 +521,9 @@ fun LoginScreen(
                     Text(
                         text = message,
                         color = if (message.contains("correcto")) {
-                            Color(0xFF16A34A)
+                            vialColor(Color(0xFF16A34A))
                         } else {
-                            Color(0xFFDC2626)
+                            vialColor(Color(0xFFDC2626))
                         },
                         fontSize = 14.sp
                     )
@@ -537,7 +540,7 @@ fun LoginScreen(
 
                     Text(
                         text = "¿Aún no tienes una cuenta?",
-                        color = Color(0xFF6B7280)
+                        color = vialColor(Color(0xFF6B7280))
                     )
 
                     TextButton(
@@ -558,7 +561,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 24.dp),
-                color = Color(0xFF9CA3AF),
+                color = vialColor(Color(0xFF9CA3AF)),
                 fontSize = 12.sp
             )
         }

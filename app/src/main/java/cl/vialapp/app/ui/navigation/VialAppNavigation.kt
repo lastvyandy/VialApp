@@ -62,6 +62,8 @@ import cl.vialapp.app.ui.practice.PracticeScreen
 import cl.vialapp.app.ui.progress.ProgressScreen
 import cl.vialapp.app.ui.settings.StudySettingsScreen
 import cl.vialapp.app.ui.settings.StudySetupScreen
+import cl.vialapp.app.ui.theme.VialAppearanceSetting
+import cl.vialapp.app.ui.theme.vialColor
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 
@@ -254,9 +256,9 @@ fun VialAppNavigation(
     Scaffold(
 
         containerColor =
-            Color(
+            vialColor(Color(
                 0xFFF7F9FC
-            ),
+            )),
 
         bottomBar = {
 
@@ -266,7 +268,7 @@ fun VialAppNavigation(
 
                 NavigationBar(
                     containerColor =
-                        Color.White
+                        vialColor(Color.White)
                 ) {
 
                     items.forEach { item ->
@@ -311,29 +313,29 @@ fun VialAppNavigation(
                                     .colors(
 
                                         selectedIconColor =
-                                            Color(
+                                            vialColor(Color(
                                                 0xFF2563EB
-                                            ),
+                                            )),
 
                                         selectedTextColor =
-                                            Color(
+                                            vialColor(Color(
                                                 0xFF2563EB
-                                            ),
+                                            )),
 
                                         indicatorColor =
-                                            Color(
+                                            vialColor(Color(
                                                 0xFFE8F0FF
-                                            ),
+                                            )),
 
                                         unselectedIconColor =
-                                            Color(
+                                            vialColor(Color(
                                                 0xFF94A3B8
-                                            ),
+                                            )),
 
                                         unselectedTextColor =
-                                            Color(
+                                            vialColor(Color(
                                                 0xFF64748B
-                                            )
+                                            ))
                                     )
                         )
                     }
@@ -978,23 +980,23 @@ private fun PlaceholderScreen(
  * de configuración forma parte del LazyColumn y se desplaza junto
  * al resto del contenido; ya no hay un botón flotante en navegación.
  */
-private val ProfileBlue =
-    Color(0xFF2563EB)
+private val ProfileBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
 
-private val ProfileDark =
-    Color(0xFF172033)
+private val ProfileDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
 
-private val ProfileGray =
-    Color(0xFF64748B)
+private val ProfileGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
 
-private val ProfileBackground =
-    Color(0xFFF4F7FB)
+private val ProfileBackground: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
 
-private val ProfileBorder =
-    Color(0xFFE2E8F0)
+private val ProfileBorder: Color
+    @Composable get() = vialColor(Color(0xFFE2E8F0))
 
-private val ProfileRed =
-    Color(0xFFDC2626)
+private val ProfileRed: Color
+    @Composable get() = vialColor(Color(0xFFDC2626))
 
 
 @Composable
@@ -1141,11 +1143,11 @@ fun ProfileScreen(
                             if (
                                 user.isPremium
                             ) {
-                                Color(
+                                vialColor(Color(
                                     0xFFFFF7E6
-                                )
+                                ))
                             } else {
-                                Color.White
+                                vialColor(Color.White)
                             }
                     )
             ) {
@@ -1263,7 +1265,7 @@ fun ProfileScreen(
                 colors =
                     CardDefaults.cardColors(
                         containerColor =
-                            Color.White
+                            vialColor(Color.White)
                     )
             ) {
 
@@ -1335,11 +1337,15 @@ fun ProfileScreen(
 
 
         item {
+            VialAppearanceSetting()
+        }
+
+        item {
             Card(
                 onClick = onChangeMascot,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
@@ -1389,7 +1395,7 @@ fun ProfileScreen(
                 colors =
                     CardDefaults.cardColors(
                         containerColor =
-                            Color.White
+                            vialColor(Color.White)
                     )
             ) {
 
@@ -1410,9 +1416,9 @@ fun ProfileScreen(
                                 )
                                 .background(
                                     color =
-                                        Color(
+                                        vialColor(Color(
                                             0xFFEAF1FF
-                                        ),
+                                        )),
                                     shape =
                                         RoundedCornerShape(
                                             13.dp
@@ -1517,9 +1523,9 @@ fun ProfileScreen(
                 border =
                     BorderStroke(
                         1.dp,
-                        Color(
+                        vialColor(Color(
                             0xFFC7CDD8
-                        )
+                        ))
                     )
             ) {
 
@@ -1548,9 +1554,9 @@ fun ProfileScreen(
                             bottom = 4.dp
                         ),
                 color =
-                    Color(
+                    vialColor(Color(
                         0xFF94A3B8
-                    ),
+                    )),
                 fontSize =
                     11.sp
             )
@@ -1585,9 +1591,9 @@ private fun ProfileInfoRow(
                     )
                     .background(
                         color =
-                            Color(
+                            vialColor(Color(
                                 0xFFF3F6FA
-                            ),
+                            )),
                         shape =
                             RoundedCornerShape(
                                 13.dp
