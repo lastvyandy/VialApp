@@ -38,6 +38,8 @@ import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
+import android.os.SystemClock
+import java.util.UUID
 import cl.vialapp.app.ui.theme.vialColor
 import cl.vialapp.app.ui.theme.VialActionBlue
 import cl.vialapp.app.ui.games.arcade.PelaoPose
@@ -159,8 +161,12 @@ fun BaldChallengeScreen(
 
 
     var confirmExit by remember { mutableStateOf(false) }
+    var savingReward by remember { mutableStateOf(false) }
+    var rewardConfirmed by remember { mutableStateOf(false) }
+    var runId by remember { mutableStateOf(UUID.randomUUID().toString()) }
+    var startedAt by remember { mutableLongStateOf(0L) }
     BackHandler {
-        if (started && !finished) confirmExit = true else onBack()
+        if (started && !finished) confirmExit = true else if (!savingReward) onBack()
     }
     if (confirmExit) AlertDialog(
         onDismissRequest = { confirmExit = false },
@@ -291,7 +297,8 @@ fun BaldChallengeScreen(
         currentIndex,
         answered,
         finished,
-        roundReady
+        roundReady,
+        confirmExit
     ) {
         if (
             !started ||
@@ -310,7 +317,8 @@ fun BaldChallengeScreen(
             secondsLeft > 0 &&
             !answered &&
             !finished &&
-            roundReady
+            roundReady &&
+            !confirmExit
         ) {
             delay(1000)
 
@@ -438,46 +446,38 @@ fun BaldChallengeScreen(
 
 
     fun finishGame() {
-        val earnedXp =
-            20 +
-                    (correctCount * 10) +
-                    (bestStreak * 3) +
-                    if (
-                        correctCount ==
-                        questions.size
-                    ) {
-                        25
-                    } else {
-                        0
-                    }
-
-        xpEarned =
-            earnedXp
-
-        val newRecord =
-            progressStore.recordRun(
-                gameId =
-                    GameProgressStore.BALD_CHALLENGE,
-                score =
-                    score,
-                xp =
-                    earnedXp
-            )
-
-        highScore =
-            progressStore.getHighScore(
-                GameProgressStore.BALD_CHALLENGE
-            )
-
-        isNewRecord =
-            newRecord
-
-        finished =
-            true
+        if (finished) return
+        savingReward = score > 0
+        finished = true
     }
 
+    LaunchedEffect(finished, runId) {
+        if (!finished || !savingReward) return@LaunchedEffect
+        try {
+            val token = sessionManager.getAccessToken()
+            if (!token.isNullOrBlank()) {
+                val result = progressStore.recordRunRemote(
+                    ApiClient.api, token, GameProgressStore.BALD_CHALLENGE, score,
+                    ((SystemClock.elapsedRealtime() - startedAt) / 1000L).coerceIn(1L, 3600L).toInt(),
+                    fallbackXp = 0, eventId = runId
+                )
+                xpEarned = result.xpAwarded
+                isNewRecord = result.isNewHighScore
+                rewardConfirmed = result.syncedWithBackend
+            } else {
+                isNewRecord = progressStore.recordRun(GameProgressStore.BALD_CHALLENGE, score, 0)
+            }
+            highScore = progressStore.getHighScore(GameProgressStore.BALD_CHALLENGE)
+        } finally {
+            savingReward = false
+        }
+    }
 
     fun restartGame() {
+        runId = UUID.randomUUID().toString()
+        startedAt = SystemClock.elapsedRealtime()
+        savingReward = false
+        rewardConfirmed = false
         questions =
             sourceQuestions
                 .shuffled()
@@ -719,6 +719,8 @@ fun BaldChallengeScreen(
             highScore = highScore,
             isNewRecord = isNewRecord,
             xpEarned = xpEarned,
+            saving = savingReward,
+            rewardConfirmed = rewardConfirmed,
             onRestart = {
                 restartGame()
             },
@@ -851,7 +853,7 @@ fun BaldChallengeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(
-                    onClick = onBack,
+                    onClick = { confirmExit = true },
                     contentPadding = PaddingValues(0.dp)
                 ) {
                     Text(
@@ -1916,6 +1918,8 @@ private fun BaldChallengeResult(
     highScore: Int,
     isNewRecord: Boolean,
     xpEarned: Int,
+    saving: Boolean,
+    rewardConfirmed: Boolean,
     onRestart: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -2110,7 +2114,12 @@ private fun BaldChallengeResult(
             color = vialColor(Color(0xFFEAF1FF))
         ) {
             Text(
-                text = "+$xpEarned XP",
+                text = when {
+                    saving -> "Guardando partida…"
+                    rewardConfirmed -> "+$xpEarned XP"
+                    score > 0 -> "Récord local · XP no confirmado"
+                    else -> "Sin XP en esta partida"
+                },
                 modifier = Modifier.padding(
                     horizontal = 18.dp,
                     vertical = 11.dp
@@ -2127,6 +2136,7 @@ private fun BaldChallengeResult(
 
         Button(
             onClick = onRestart,
+            enabled = !saving,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(55.dp),
@@ -2144,6 +2154,7 @@ private fun BaldChallengeResult(
 
         OutlinedButton(
             onClick = onBack,
+            enabled = !saving,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(53.dp),

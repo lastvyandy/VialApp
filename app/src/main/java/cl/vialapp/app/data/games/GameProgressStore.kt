@@ -6,6 +6,7 @@ import cl.vialapp.app.data.api.GamificationGameEventRequest
 import cl.vialapp.app.data.api.GamificationProgressResponse
 import cl.vialapp.app.data.api.VialApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -138,6 +139,8 @@ class GameProgressStore(
                     syncedWithBackend = true
                 )
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             // Fallback a registro local si hay error de red
         }

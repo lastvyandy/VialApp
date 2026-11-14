@@ -12,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -56,6 +58,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
     var saving by remember { mutableStateOf(false) }
     var record by remember(userKey, gameId) { mutableIntStateOf(store.getHighScore(gameId)) }
     val c = MaterialTheme.colorScheme
+    val haptic = LocalHapticFeedback.current
 
     fun start() {
         engine = create()
@@ -78,7 +81,11 @@ internal fun <S : ArcadeFrame> ArcadeSession(
     }
     fun act(action: Int) {
         if (phase == Phase.PLAY && !paused) {
+            val previous = frame
             frame = engine.act(action)
+            if (frame.health != previous.health || frame.score > previous.score) {
+                haptic.performHapticFeedback(if (frame.score > previous.score) HapticFeedbackType.TextHandleMove else HapticFeedbackType.LongPress)
+            }
             finishIfOver()
         }
     }
