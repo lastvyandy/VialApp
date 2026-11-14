@@ -22,6 +22,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import cl.vialapp.app.data.games.GameProgressStore
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.R
 import kotlin.math.sin
@@ -29,9 +30,9 @@ import kotlin.math.sin
 @Composable
 fun PelaoArenaScreen(userKey: String, onBack: () -> Unit) {
     ArcadeSession(
-        userKey = userKey, gameId = "pelao_arena", title = "Don Pelao Arena",
+        userKey = userKey, gameId = GameProgressStore.PELAO_ARENA, title = "Don Pelao Arena",
         subtitle = "Tres rivales, reflejos rápidos y una sola oportunidad de convertirte en campeón.",
-        rules = "Lee el peligro de tránsito que anuncia el rival. Elige frenar, esquivar cuando sea seguro o aumentar la distancia. Si aciertas, tendrás unos segundos para atacar y sumar combos. No golpees durante la preparación del rival.",
+        rules = "Lee el peligro de tránsito que anuncia el rival. Elige frenar, esquivar cuando sea seguro o aumentar la distancia. Si aciertas, tendrás unos segundos para atacar y sumar combos. No golpees durante la preparación del rival. Es un combate ficticio, no una guía de maniobras reales.",
         duration = FightEngine.TIME, create = { FightEngine() }, onBack = onBack,
         scene = { frame, modifier, _, _ -> FightScene(frame, modifier) },
         controls = { frame, enabled, act ->

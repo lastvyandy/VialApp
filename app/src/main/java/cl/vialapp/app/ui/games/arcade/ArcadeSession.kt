@@ -125,11 +125,11 @@ internal fun <S : ArcadeFrame> ArcadeSession(
     }
 
     if (exitDialog) AlertDialog(
-        onDismissRequest = { exitDialog = false },
+        onDismissRequest = { exitDialog = false; paused = false },
         title = { Text("¿Abandonar partida?") },
         text = { Text("Esta partida no se guardará.") },
         confirmButton = { TextButton(onClick = onBack) { Text("Salir") } },
-        dismissButton = { TextButton(onClick = { exitDialog = false }) { Text("Seguir jugando") } }
+        dismissButton = { TextButton(onClick = { exitDialog = false; paused = false }) { Text("Seguir jugando") } }
     )
 
     when (phase) {

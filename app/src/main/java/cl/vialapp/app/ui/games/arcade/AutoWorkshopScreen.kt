@@ -20,13 +20,14 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import cl.vialapp.app.data.games.GameProgressStore
 import androidx.compose.ui.unit.sp
 import kotlin.math.hypot
 
 @Composable
 fun AutoWorkshopScreen(userKey: String, onBack: () -> Unit) {
     ArcadeSession(
-        userKey = userKey, gameId = "auto_workshop", title = "Taller del Auto",
+        userKey = userKey, gameId = GameProgressStore.AUTO_WORKSHOP, title = "Taller del Auto",
         subtitle = "Inspecciona cuatro fallas del vehículo antes de que se acabe el tiempo.",
         rules = "La zona defectuosa se señala en rojo. Toca esa parte del auto y después elige la herramienta adecuada. Una selección incorrecta te cuesta una vida. Es una simulación de diagnóstico: no realiza reparaciones reales.",
         duration = WorkshopEngine.TIME, create = { WorkshopEngine() }, onBack = onBack,

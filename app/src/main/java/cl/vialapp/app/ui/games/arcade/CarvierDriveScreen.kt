@@ -20,12 +20,13 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import cl.vialapp.app.data.games.GameProgressStore
 import kotlin.math.abs
 
 @Composable
 fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
     ArcadeSession(
-        userKey = userKey, gameId = "carvier_drive", title = "Carvier al volante",
+        userKey = userKey, gameId = GameProgressStore.CARVIER_DRIVE, title = "Carvier al volante",
         subtitle = "Una carretera, tres carriles y 65 segundos para llegar a la meta.",
         rules = "Desliza o usa los botones para cambiar de carril. Evita autos y conos, recoge monedas y reduce la velocidad cuando aparezca una zona escolar. Tienes tres vidas.",
         duration = DriveEngine.TIME, create = { DriveEngine() }, onBack = onBack,
