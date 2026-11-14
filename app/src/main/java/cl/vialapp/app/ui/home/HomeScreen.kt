@@ -235,7 +235,7 @@ fun HomeScreen(
                     .clip(RoundedCornerShape(28.dp))
                     .background(
                         Brush.linearGradient(
-                            colors = listOf(VialActionBlue, Color(0xFF4F7DF3))
+                            colors = listOf(Color(0xFF1D4ED8), Color(0xFF285BC4))
                         )
                     )
                     .padding(24.dp)
