@@ -49,4 +49,26 @@ class ArcadeEnginesTest {
         assertTrue(engine.snapshot().won)
         assertEquals(1600, engine.snapshot().score)
     }
+    @Test fun stopRequiresCompleteDetentionAndAwardsOnlyOnce() {
+        val engine = DriveEngine(11, spawnTraffic = false)
+        repeat(280) { engine.step(1f / 30f) }
+        assertTrue(engine.snapshot().stopChallenge)
+        engine.act(3)
+        engine.act(3)
+        assertTrue(engine.snapshot().stopped)
+        repeat(42) { engine.step(1f / 30f) }
+        assertTrue(engine.snapshot().stopCompleted)
+        assertEquals(1, engine.snapshot().safeStops)
+        engine.act(3)
+        assertFalse(engine.snapshot().stopped)
+        repeat(120) { engine.step(1f / 30f) }
+        assertEquals(1, engine.snapshot().safeStops)
+    }
+    @Test fun ignoringStopAndSchoolZoneCostsLives() {
+        val engine = DriveEngine(12, spawnTraffic = false)
+        repeat(630) { engine.step(1f / 30f) }
+        assertEquals(2, engine.snapshot().infractions)
+        assertEquals(1, engine.snapshot().lives)
+        assertEquals(0, engine.snapshot().safeStops)
+    }
 }

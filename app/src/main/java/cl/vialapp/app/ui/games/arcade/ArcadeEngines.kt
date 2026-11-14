@@ -46,12 +46,12 @@ internal data class DriveFrame(
     override val finished get() = lives <= 0 || elapsed >= DriveEngine.TIME
     override val won get() = lives > 0 && elapsed >= DriveEngine.TIME
     override val health get() = "♥".repeat(lives) + "♡".repeat(3 - lives)
-    override val detail get() = "$coins monedas · $safeZones zonas seguras · $safeStops PARE respetados"
+    override val detail get() = "$coins monedas · $safeZones zonas seguras · $safeStops PARE respetados · $infractions infracciones"
     override val lesson get() = "Zonas escolares: máximo 30 km/h en horas de entrada y salida. Ante un PARE, detente completamente y continúa solo si es seguro."
 }
 
 /** Three lanes, smooth steering, collisions and a timed school-zone challenge. */
-internal class DriveEngine(seed: Int = Random.nextInt()) : ArcadeEngine<DriveFrame> {
+internal class DriveEngine(seed: Int = Random.nextInt(), private val spawnTraffic: Boolean = true) : ArcadeEngine<DriveFrame> {
     private val random = Random(seed)
     private var state = DriveFrame()
     private var spawn = .4f
@@ -63,10 +63,14 @@ internal class DriveEngine(seed: Int = Random.nextInt()) : ArcadeEngine<DriveFra
     override fun act(action: Int): DriveFrame {
         if (state.finished) return state
         state = when (action) {
-            0 -> state.copy(lane = (state.lane - 1).coerceAtLeast(0))
-            1 -> state.copy(lane = (state.lane + 1).coerceAtMost(2))
+            0 -> if (!state.stopped) state.copy(lane = (state.lane - 1).coerceAtLeast(0)) else state
+            1 -> if (!state.stopped) state.copy(lane = (state.lane + 1).coerceAtMost(2)) else state
             2 -> if (!state.stopped) state.copy(slow = !state.slow) else state
-            3 -> if (state.stopChallenge || state.stopped) state.copy(stopped = !state.stopped) else state
+            3 -> when {
+                state.stopped && state.stopCompleted -> state.copy(stopped = false)
+                state.stopChallenge && !state.stopCompleted && !state.stopped -> state.copy(stopped = true)
+                else -> state
+            }
             else -> state
         }
         return state
@@ -105,7 +109,7 @@ internal class DriveEngine(seed: Int = Random.nextInt()) : ArcadeEngine<DriveFra
                 infractions++
                 message = "Excediste el límite de 30 km/h. −1 vida."
             }
-        } else if (zone) speeding = 0f
+        }
         if (!zone && state.schoolZone && zoneBonus) {
             score += 300
             safeZones++
@@ -138,7 +142,7 @@ internal class DriveEngine(seed: Int = Random.nextInt()) : ArcadeEngine<DriveFra
         val next = mutableListOf<RoadItem>()
         for (item in state.items) {
             val y = item.y + speed * d
-            val touching = abs(x - item.lane) < .48f && y >= .75f && y <= .91f
+            val touching = !stopped && abs(x - item.lane) < .48f && y >= .75f && y <= .91f
             when {
                 touching && item.kind == RoadItemKind.COIN -> {
                     if ((!zone || state.slow) && (!stopChallenge || stopCompleted) && !stopped) {
@@ -157,7 +161,7 @@ internal class DriveEngine(seed: Int = Random.nextInt()) : ArcadeEngine<DriveFra
             }
         }
         if (!stopChallenge && !stopped) spawn -= d
-        if (spawn <= 0f && !stopChallenge && !stopped) {
+        if (spawnTraffic && spawn <= 0f && !stopChallenge && !stopped) {
             spawn += (1.05f - elapsed / 180f).coerceAtLeast(.65f)
             val lane = random.nextInt(3)
             if (next.none { it.lane == lane && it.y < .20f }) {

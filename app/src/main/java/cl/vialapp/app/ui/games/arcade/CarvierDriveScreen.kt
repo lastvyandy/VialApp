@@ -16,6 +16,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.input.pointer.pointerInput
@@ -37,7 +38,9 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
                 Surface(color = if (frame.stopChallenge) Color(0xFFB42318) else if (frame.schoolZone) Color(0xFF85520E) else scheme.surface, shape = RoundedCornerShape(12.dp)) {
                     val fg = if (frame.stopChallenge || frame.schoolZone) Color.White else scheme.onSurface
                     Text(when {
-                        frame.stopChallenge && frame.stopCompleted -> "PARE · cruce libre, pulsa Avanzar"
+                        frame.stopChallenge && frame.stopCompleted && frame.stopped -> "PARE · cruce libre, pulsa Avanzar"
+                        frame.stopChallenge && frame.stopCompleted -> "✓ PARE respetado"
+                        !frame.stopChallenge && (frame.elapsed in 15f..18f || frame.elapsed in 40f..43f) -> "PRÓXIMA ZONA ESCOLAR · reduce a 30 km/h"
                         frame.stopChallenge -> "PARE · detención completa"
                         frame.schoolZone -> "ZONA ESCOLAR · máximo 30 km/h"
                         else -> "VELOCIDAD: ${if (frame.stopped) 0 else if (frame.slow) 30 else 50} km/h (simulada)"
@@ -49,11 +52,11 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
         controls = { frame, enabled, act ->
             Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ArcadeControl("◀ Izq.", enabled && frame.lane > 0, Modifier.weight(1f)) { act(0) }
+                ArcadeControl("◀ Izq.", enabled && !frame.stopped && frame.lane > 0, Modifier.weight(1f)) { act(0) }
                 ArcadeControl(if (frame.slow) "30 km/h ✓" else "Reducir a 30", enabled && !frame.stopped, Modifier.weight(1.35f), frame.slow) { act(2) }
-                ArcadeControl("Der. ▶", enabled && frame.lane < 2, Modifier.weight(1f)) { act(1) }
+                ArcadeControl("Der. ▶", enabled && !frame.stopped && frame.lane < 2, Modifier.weight(1f)) { act(1) }
             }
-            if (frame.stopChallenge || frame.stopped) {
+            if ((frame.stopChallenge && !frame.stopCompleted) || frame.stopped) {
                 ArcadeControl(if (frame.stopped && frame.stopCompleted) "AVANZAR" else if (frame.stopped) "DETENIDO · ESPERA" else "DETENER (PARE)", enabled && (!frame.stopped || frame.stopCompleted), Modifier.fillMaxWidth(), frame.stopCompleted) { act(3) }
             }
             }
@@ -106,6 +109,29 @@ private fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, a
                 drawCircle(Color(0xFFFBBF24), 37f, Offset(64f, 130f))
                 drawCircle(Color(0xFF1F2937), 28f, Offset(64f, 130f))
                 drawLine(Color(0xFFFBBF24), Offset(49f, 146f), Offset(79f, 114f), 8f)
+            }
+            if (frame.stopChallenge && !frame.stopCompleted) {
+                // Arcade checkpoint: visual stop line and octagonal marker ahead of the player.
+                drawLine(Color.White, Offset(145f, 737f), Offset(555f, 737f), 9f)
+                val center = Offset(626f, 710f)
+                val sign = Path().apply {
+                    for (i in 0..7) {
+                        val angle = Math.PI / 8 + i * Math.PI / 4
+                        val x = center.x + (42 * kotlin.math.cos(angle)).toFloat()
+                        val y = center.y + (42 * kotlin.math.sin(angle)).toFloat()
+                        if (i == 0) moveTo(x, y) else lineTo(x, y)
+                    }
+                    close()
+                }
+                drawPath(sign, Color(0xFFB42318))
+                drawPath(sign, Color.White, style = androidx.compose.ui.graphics.drawscope.Stroke(5f))
+                drawContext.canvas.nativeCanvas.drawText("PARE", center.x, center.y + 8f,
+                    android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                        color = android.graphics.Color.WHITE
+                        textSize = 24f
+                        textAlign = android.graphics.Paint.Align.CENTER
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    })
             }
             frame.items.forEach { item ->
                 val center = Offset(laneX(item.lane.toFloat()), item.y * 1000f)
