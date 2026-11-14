@@ -10,6 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -28,27 +32,43 @@ import kotlin.math.hypot
 fun AutoWorkshopScreen(userKey: String, onBack: () -> Unit) {
     ArcadeSession(
         userKey = userKey, gameId = GameProgressStore.AUTO_WORKSHOP, title = "Taller del Auto",
-        subtitle = "Inspecciona cuatro fallas del vehículo antes de que se acabe el tiempo.",
-        rules = "Primero toca la pieza señalada en rojo. Luego elige la herramienta y decide qué hacer según el diagnóstico. Las respuestas erróneas cuestan una vida. Es una inspección simulada, no una reparación real.",
+        subtitle = "Eres el encargado del taller. Completa cuatro órdenes de trabajo.",
+        rules = "Cada orden tiene tres pasos: localiza la pieza señalada, elige la herramienta y decide qué hacer según el diagnóstico. Toca el dibujo o los botones con nombres. Tienes tres vidas y 95 segundos. Es una inspección simulada.",
         duration = WorkshopEngine.TIME, create = { WorkshopEngine() }, onBack = onBack,
         scene = { frame, modifier, enabled, act -> WorkshopScene(frame, modifier, enabled, act) },
         controls = { frame, enabled, act ->
-            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                val fault = frame.fault
-                if (frame.checking && fault != null) {
-                    fault.choices.forEachIndexed { index, choice ->
-                        ArcadeControl(choice, enabled, Modifier.fillMaxWidth()) { act(20 + index) }
-                    }
-                } else {
-                for (row in 0..1) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        for (column in 0..1) {
-                            val index = row * 2 + column
-                            ArcadeControl(WorkshopPart.entries[index].tool, enabled && frame.repairTime <= 0f,
-                                Modifier.weight(1f)) { act(10 + index) }
+            val fault = frame.fault
+            if (fault != null) {
+                val c = MaterialTheme.colorScheme
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    when {
+                        frame.repairTime > 0f -> {
+                            Text("✓ Orden aprobada · registrando inspección", color = c.primary, fontWeight = FontWeight.Bold)
+                            LinearProgressIndicator(progress = { (1f - frame.repairTime / 1.15f).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(8.dp))
+                        }
+                        frame.checking -> {
+                            Text("¿Qué harías antes de circular?", fontSize = 13.sp, color = c.onSurface, fontWeight = FontWeight.Bold)
+                            fault.choices.forEachIndexed { index, choice ->
+                                WorkshopOption(choice, enabled, Modifier.fillMaxWidth()) { act(20 + index) }
+                            }
+                        }
+                        else -> {
+                            val picking = frame.selectedPart < 0
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text(if (picking) "Selecciona la pieza afectada" else "Elige la herramienta", color = c.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                if (!picking) TextButton(onClick = { act(4) }, enabled = enabled, contentPadding = PaddingValues(0.dp)) { Text("Cambiar pieza", fontSize = 12.sp) }
+                            }
+                            repeat(2) { row ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                    repeat(2) { col ->
+                                        val part = WorkshopPart.entries[row * 2 + col]
+                                        val label = if (picking) "${part.ordinal + 1}. ${part.label}" else part.tool
+                                        WorkshopOption(label, enabled, Modifier.weight(1f)) { act(if (picking) part.ordinal else 10 + part.ordinal) }
+                                    }
+                                }
+                            }
                         }
                     }
-                }
                 }
             }
         }
@@ -64,7 +84,16 @@ private fun WorkshopScene(frame: WorkshopFrame, modifier: Modifier, enabled: Boo
     val c = MaterialTheme.colorScheme
     Column(modifier.clip(RoundedCornerShape(20.dp)).background(c.surface).padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text(if (frame.checking) frame.fault?.check.orEmpty() else frame.fault?.symptom ?: "¡Inspección terminada!", color = c.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        val stage = when { frame.repairTime > 0f || frame.checking -> 3; frame.selectedPart >= 0 -> 2; else -> 1 }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            listOf("1. Pieza", "2. Herramienta", "3. Decisión").forEachIndexed { index, label ->
+                Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp), color = if (stage == index + 1) c.primaryContainer else c.surfaceVariant) {
+                    Text(label, Modifier.padding(vertical = 6.dp, horizontal = 2.dp), textAlign = TextAlign.Center, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (stage == index + 1) c.onPrimaryContainer else c.onSurfaceVariant)
+                }
+            }
+        }
+        Text("ORDEN ${(frame.completed + 1).coerceAtMost(frame.jobs.size)}/${frame.jobs.size}", color = c.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        Text(if (frame.checking) frame.fault?.check.orEmpty() else frame.fault?.symptom ?: "¡Inspección terminada!", color = c.onSurface, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         Canvas(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(12.dp)).pointerInput(enabled) {
             if (enabled) detectTapGestures { point ->
                 val x = point.x * 700f / size.width
@@ -74,9 +103,9 @@ private fun WorkshopScene(frame: WorkshopFrame, modifier: Modifier, enabled: Boo
             }
         }) {
             scale(size.width / 700f, size.height / 750f, pivot = Offset.Zero) {
-                drawRect(Color(0xFF536274), size = Size(700f, 750f))
-                for (i in 0..7) drawLine(Color(0xFF637388), Offset(i * 100f, 0f), Offset(i * 100f, 750f), 2f)
-                for (i in 0..8) drawLine(Color(0xFF637388), Offset(0f, i * 100f), Offset(700f, i * 100f), 2f)
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF14283B), Color(0xFF4A6177)), endY = 750f), size = Size(700f, 750f))
+                for (i in 0..7) drawLine(Color(0xFF637388).copy(alpha = .40f), Offset(i * 100f, 0f), Offset(i * 100f, 750f), 2f)
+                for (i in 0..8) drawLine(Color(0xFF637388).copy(alpha = .40f), Offset(0f, i * 100f), Offset(700f, i * 100f), 2f)
                 drawRoundRect(Color(0xFF263445), Offset(114f, 40f), Size(472f, 670f), CornerRadius(24f))
                 drawRoundRect(Color(0xFF8B9CAA), Offset(134f, 60f), Size(432f, 630f), CornerRadius(22f))
                 drawLine(Color(0xFFFBBF24), Offset(148f, 65f), Offset(148f, 680f), 10f)
@@ -110,7 +139,14 @@ private fun WorkshopScene(frame: WorkshopFrame, modifier: Modifier, enabled: Boo
                     val accent = if (selected) Color(0xFF4ADE80) else if (faulty) Color(0xFFF87171) else Color(0xFFDCE7F6)
                     drawCircle(accent.copy(alpha = .2f), 42f, point)
                     drawCircle(accent, 42f, point, style = Stroke(width = if (selected) 7f else 4f))
-                    drawCircle(accent, 7f, point)
+                    drawCircle(accent, 24f, point)
+                    drawContext.canvas.nativeCanvas.drawText((index + 1).toString(), point.x, point.y + 10f,
+                        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                            color = android.graphics.Color.rgb(22, 32, 51)
+                            textSize = 29f
+                            textAlign = android.graphics.Paint.Align.CENTER
+                            typeface = android.graphics.Typeface.DEFAULT_BOLD
+                        })
                 }
                 if (frame.flash > 0f) drawRect(Color(0xFFEF4444).copy(alpha = .12f), size = Size(700f, 750f))
             }
@@ -118,7 +154,22 @@ private fun WorkshopScene(frame: WorkshopFrame, modifier: Modifier, enabled: Boo
         if (frame.repairTime > 0f) {
             LinearProgressIndicator(progress = { (1f - frame.repairTime / 1.15f).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
         }
-        Text(if (frame.selectedPart >= 0) "Seleccionado: ${WorkshopPart.entries[frame.selectedPart].label}" else "Toca una zona del auto.",
+        Text(when {
+            frame.repairTime > 0f -> "✓ Inspección registrada"
+            frame.checking -> "Lee el diagnóstico y decide."
+            frame.selectedPart >= 0 -> "Pieza: ${WorkshopPart.entries[frame.selectedPart].label}"
+            else -> "Toca el número rojo o usa los botones."
+        },
             color = c.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun WorkshopOption(label: String, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val c = MaterialTheme.colorScheme
+    OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier.heightIn(min = 46.dp),
+        shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = c.onSurface, containerColor = c.surface)) {
+        Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
     }
 }

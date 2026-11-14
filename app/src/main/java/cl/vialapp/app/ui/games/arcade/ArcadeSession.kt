@@ -201,7 +201,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
             Surface(color = c.surface, shape = RoundedCornerShape(12.dp)) {
                 Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(frame.detail, fontSize = 12.sp, color = c.primary, fontWeight = FontWeight.Bold)
-                    Text(frame.message, fontSize = 12.sp, color = c.onSurface, minLines = 2)
+                    Text(frame.message, fontSize = 13.sp, color = c.onSurface, lineHeight = 18.sp)
                 }
             }
             controls(frame, !paused, ::act)

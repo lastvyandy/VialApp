@@ -343,6 +343,7 @@ internal class WorkshopEngine(seed: Int = Random.nextInt()) : ArcadeEngine<Works
         }
         state = when (action) {
             in 0..3 -> s.copy(selectedPart = action, message = "Zona: ${WorkshopPart.entries[action].label}. Elige herramienta.")
+            4 -> s.copy(selectedPart = -1, message = "Selecciona la pieza afectada.")
             in 10..13 -> if (s.selectedPart == -1) {
                 s.copy(message = "Primero toca una parte del vehículo.")
             } else if (s.selectedPart == issue.ordinal && action - 10 == issue.ordinal) {
@@ -368,5 +369,5 @@ internal class WorkshopEngine(seed: Int = Random.nextInt()) : ArcadeEngine<Works
         state = s
         return s
     }
-    companion object { const val TIME = 65f }
+    companion object { const val TIME = 95f }
 }
