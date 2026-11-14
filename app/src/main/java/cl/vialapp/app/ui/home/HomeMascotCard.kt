@@ -5,8 +5,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -93,8 +93,7 @@ fun HomeMascotCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 320.dp)
-                        .aspectRatio(873f / 1024f)
+                        .height(320.dp)
                         .clip(RoundedCornerShape(20.dp))
                         .background(Color(0xFF122B42)),
                     contentAlignment = Alignment.Center
@@ -102,7 +101,7 @@ fun HomeMascotCard(
                     Image(
                         painter = painterResource(greetingPortraitId),
                         contentDescription = "Don Pelao saludando",
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit
                     )
                 }
