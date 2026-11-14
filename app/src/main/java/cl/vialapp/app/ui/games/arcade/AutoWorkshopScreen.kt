@@ -29,11 +29,17 @@ fun AutoWorkshopScreen(userKey: String, onBack: () -> Unit) {
     ArcadeSession(
         userKey = userKey, gameId = GameProgressStore.AUTO_WORKSHOP, title = "Taller del Auto",
         subtitle = "Inspecciona cuatro fallas del vehículo antes de que se acabe el tiempo.",
-        rules = "La zona defectuosa se señala en rojo. Toca esa parte del auto y después elige la herramienta adecuada. Una selección incorrecta te cuesta una vida. Es una simulación de diagnóstico: no realiza reparaciones reales.",
+        rules = "Primero toca la pieza señalada en rojo. Luego elige la herramienta y decide qué hacer según el diagnóstico. Las respuestas erróneas cuestan una vida. Es una inspección simulada, no una reparación real.",
         duration = WorkshopEngine.TIME, create = { WorkshopEngine() }, onBack = onBack,
         scene = { frame, modifier, enabled, act -> WorkshopScene(frame, modifier, enabled, act) },
         controls = { frame, enabled, act ->
             Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                val fault = frame.fault
+                if (frame.checking && fault != null) {
+                    fault.choices.forEachIndexed { index, choice ->
+                        ArcadeControl(choice, enabled, Modifier.fillMaxWidth()) { act(20 + index) }
+                    }
+                } else {
                 for (row in 0..1) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         for (column in 0..1) {
@@ -42,6 +48,7 @@ fun AutoWorkshopScreen(userKey: String, onBack: () -> Unit) {
                                 Modifier.weight(1f)) { act(10 + index) }
                         }
                     }
+                }
                 }
             }
         }
@@ -57,7 +64,7 @@ private fun WorkshopScene(frame: WorkshopFrame, modifier: Modifier, enabled: Boo
     val c = MaterialTheme.colorScheme
     Column(modifier.clip(RoundedCornerShape(20.dp)).background(c.surface).padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text(frame.fault?.symptom ?: "¡Inspección terminada!", color = c.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(if (frame.checking) frame.fault?.check.orEmpty() else frame.fault?.symptom ?: "¡Inspección terminada!", color = c.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Canvas(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(12.dp)).pointerInput(enabled) {
             if (enabled) detectTapGestures { point ->
                 val x = point.x * 700f / size.width

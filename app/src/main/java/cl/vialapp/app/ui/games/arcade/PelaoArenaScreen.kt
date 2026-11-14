@@ -32,15 +32,15 @@ fun PelaoArenaScreen(userKey: String, onBack: () -> Unit) {
     ArcadeSession(
         userKey = userKey, gameId = GameProgressStore.PELAO_ARENA, title = "Don Pelao Arena",
         subtitle = "Tres rivales, reflejos rápidos y una sola oportunidad de convertirte en campeón.",
-        rules = "Lee el peligro de tránsito que anuncia el rival. Elige frenar, esquivar cuando sea seguro o aumentar la distancia. Si aciertas, tendrás unos segundos para atacar y sumar combos. No golpees durante la preparación del rival. Es un combate ficticio, no una guía de maniobras reales.",
+        rules = "Lee el peligro de tránsito que anuncia el rival. Elige detenerte, reducir la velocidad o dejar más distancia, según la situación. Si aciertas, tendrás unos segundos para atacar y sumar combos. No golpees durante la preparación del rival. Es un combate ficticio, no una guía de maniobras reales.",
         duration = FightEngine.TIME, create = { FightEngine() }, onBack = onBack,
         scene = { frame, modifier, _, _ -> FightScene(frame, modifier) },
         controls = { frame, enabled, act ->
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     val ready = enabled && frame.phase == FightPhase.TELEGRAPH
-                    ArcadeControl("Frenar", ready, Modifier.weight(1f)) { act(0) }
-                    ArcadeControl("Esquivar", ready, Modifier.weight(1f)) { act(1) }
+                    ArcadeControl("Detenerse", ready, Modifier.weight(1f)) { act(0) }
+                    ArcadeControl("Reducir", ready, Modifier.weight(1f)) { act(1) }
                     ArcadeControl("Distancia", ready, Modifier.weight(1f)) { act(2) }
                 }
                 ArcadeControl("⚡ ATACAR", enabled && frame.phase == FightPhase.OPENING && frame.attackLock <= 0f,
@@ -73,7 +73,7 @@ private fun FightScene(frame: FightFrame, modifier: Modifier) {
                     when (frame.phase) { FightPhase.TELEGRAPH -> frame.hazard.label; FightPhase.OPENING -> "¡VULNERABLE!"; FightPhase.RECOVERY -> "Preparando siguiente ataque…" },
                     fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
                 )
-                LinearProgressIndicator(progress = { (frame.remaining / 3.2f).coerceIn(0f, 1f) },
+                LinearProgressIndicator(progress = { (frame.remaining / if (opening) 3.2f else 6f).coerceIn(0f, 1f) },
                     Modifier.fillMaxWidth().height(4.dp), color = if (opening) Color(0xFF86EFAC) else Color(0xFFFBBF24), trackColor = Color(0xFF172033))
             }
         }

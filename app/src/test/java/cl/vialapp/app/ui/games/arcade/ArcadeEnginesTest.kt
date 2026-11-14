@@ -42,6 +42,8 @@ class ArcadeEnginesTest {
             val part = engine.snapshot().fault!!
             engine.act(part.ordinal)
             engine.act(10 + part.ordinal)
+            assertTrue(engine.snapshot().checking)
+            engine.act(20 + part.correct)
             repeat(40) { engine.step(1f / 30f) }
         }
         assertTrue(engine.snapshot().won)

@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import cl.vialapp.app.data.games.GameProgressStore
 import kotlin.math.abs
 
@@ -28,14 +29,33 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
     ArcadeSession(
         userKey = userKey, gameId = GameProgressStore.CARVIER_DRIVE, title = "Carvier al volante",
         subtitle = "Una carretera, tres carriles y 65 segundos para llegar a la meta.",
-        rules = "Desliza o usa los botones para cambiar de carril. Evita autos y conos, recoge monedas y reduce la velocidad cuando aparezca una zona escolar. Tienes tres vidas.",
+        rules = "Desliza o usa las flechas para cambiar de carril. Recoge monedas solo cuando sea seguro. En zona escolar activa 30 km/h. Cuando aparezca PARE, pulsa Detener, espera el aviso de cruce libre y pulsa Avanzar. Tienes tres vidas.",
         duration = DriveEngine.TIME, create = { DriveEngine() }, onBack = onBack,
-        scene = { frame, modifier, enabled, act -> DriveRoad(frame, modifier, enabled, act) },
+        scene = { frame, modifier, enabled, act ->
+            Column(modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                val scheme = MaterialTheme.colorScheme
+                Surface(color = if (frame.stopChallenge) Color(0xFFB42318) else if (frame.schoolZone) Color(0xFF85520E) else scheme.surface, shape = RoundedCornerShape(12.dp)) {
+                    val fg = if (frame.stopChallenge || frame.schoolZone) Color.White else scheme.onSurface
+                    Text(when {
+                        frame.stopChallenge && frame.stopCompleted -> "PARE · cruce libre, pulsa Avanzar"
+                        frame.stopChallenge -> "PARE · detención completa"
+                        frame.schoolZone -> "ZONA ESCOLAR · máximo 30 km/h"
+                        else -> "VELOCIDAD: ${if (frame.stopped) 0 else if (frame.slow) 30 else 50} km/h (simulada)"
+                    }, Modifier.fillMaxWidth().padding(9.dp), color = fg, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 13.sp)
+                }
+                DriveRoad(frame, Modifier.weight(1f).fillMaxWidth(), enabled, act)
+            }
+        },
         controls = { frame, enabled, act ->
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ArcadeControl("◀ Izq.", enabled && frame.lane > 0, Modifier.weight(1f)) { act(0) }
-                ArcadeControl(if (frame.slow) "✓ Lento" else "Reducir", enabled, Modifier.weight(1.25f), frame.slow) { act(2) }
+                ArcadeControl(if (frame.slow) "30 km/h ✓" else "Reducir a 30", enabled && !frame.stopped, Modifier.weight(1.35f), frame.slow) { act(2) }
                 ArcadeControl("Der. ▶", enabled && frame.lane < 2, Modifier.weight(1f)) { act(1) }
+            }
+            if (frame.stopChallenge || frame.stopped) {
+                ArcadeControl(if (frame.stopped && frame.stopCompleted) "AVANZAR" else if (frame.stopped) "DETENIDO · ESPERA" else "DETENER (PARE)", enabled && (!frame.stopped || frame.stopCompleted), Modifier.fillMaxWidth(), frame.stopCompleted) { act(3) }
+            }
             }
         }
     )

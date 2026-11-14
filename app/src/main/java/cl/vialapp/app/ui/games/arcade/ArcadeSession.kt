@@ -49,6 +49,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
     var phase by remember(userKey, gameId) { mutableStateOf(Phase.INTRO) }
     var paused by remember { mutableStateOf(false) }
     var exitDialog by remember { mutableStateOf(false) }
+    var help by remember { mutableStateOf(false) }
     var runId by remember { mutableStateOf(UUID.randomUUID().toString()) }
     var reward by remember { mutableStateOf<GameRunResult?>(null) }
     var saving by remember { mutableStateOf(false) }
@@ -124,6 +125,15 @@ internal fun <S : ArcadeFrame> ArcadeSession(
         } finally { saving = false }
     }
 
+    if (help) AlertDialog(
+        onDismissRequest = { help = false; paused = false },
+        title = { Text("Cómo jugar") },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(rules)
+            Text(frame.lesson, color = c.onSurfaceVariant)
+        } },
+        confirmButton = { TextButton(onClick = { help = false; paused = false }) { Text("Continuar") } }
+    )
     if (exitDialog) AlertDialog(
         onDismissRequest = { exitDialog = false; paused = false },
         title = { Text("¿Abandonar partida?") },
@@ -143,6 +153,12 @@ internal fun <S : ArcadeFrame> ArcadeSession(
             scene(frame, Modifier.fillMaxWidth().height(270.dp), false) {}
             Text("Cómo jugar", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = c.onSurface)
             Text(rules, color = c.onSurfaceVariant, fontSize = 14.sp, lineHeight = 21.sp)
+            Surface(color = c.primaryContainer, shape = RoundedCornerShape(14.dp)) {
+                Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                    Text("Qué vas a aprender", fontWeight = FontWeight.Bold, color = c.onPrimaryContainer)
+                    Text(frame.lesson, color = c.onPrimaryContainer, fontSize = 13.sp, lineHeight = 19.sp)
+                }
+            }
             Text("Récord · $record puntos", color = c.primary, fontWeight = FontWeight.Bold)
             Button(onClick = ::start, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp)) {
                 Text("¡A jugar!", fontWeight = FontWeight.Bold)
@@ -165,6 +181,10 @@ internal fun <S : ArcadeFrame> ArcadeSession(
                 ArcadeMetric("PUNTOS", frame.score.toString(), Modifier.weight(1f))
                 ArcadeMetric("TIEMPO", "${ceil((duration - frame.elapsed).coerceAtLeast(0f).toDouble()).toInt()}s", Modifier.weight(1f))
                 ArcadeMetric("ESTADO", frame.health, Modifier.weight(1f))
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(if (paused) "Partida pausada" else "Toma decisiones seguras", fontSize = 12.sp, color = c.onSurfaceVariant)
+                TextButton(onClick = { paused = true; help = true }, contentPadding = PaddingValues(0.dp)) { Text("? Cómo jugar") }
             }
             LinearProgressIndicator(progress = { (frame.elapsed / duration).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(4.dp))
@@ -196,6 +216,12 @@ internal fun <S : ArcadeFrame> ArcadeSession(
             Text("${frame.score}", color = c.primary, fontSize = 56.sp, fontWeight = FontWeight.ExtraBold)
             Text("PUNTOS · ${frame.detail}", color = c.onSurfaceVariant, textAlign = TextAlign.Center)
             Text("Récord: $record", color = c.primary, fontWeight = FontWeight.Bold)
+            Surface(color = c.primaryContainer, shape = RoundedCornerShape(15.dp)) {
+                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("Lo que aprendiste", fontWeight = FontWeight.Bold, color = c.onPrimaryContainer)
+                    Text(frame.lesson, color = c.onPrimaryContainer, fontSize = 14.sp, lineHeight = 20.sp)
+                }
+            }
             if (reward?.isNewHighScore == true) Text("¡Nuevo récord!", color = c.primary, fontWeight = FontWeight.Bold)
             if (saving) CircularProgressIndicator(Modifier.size(24.dp))
             else reward?.let {

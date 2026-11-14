@@ -11,6 +11,7 @@ internal interface ArcadeFrame {
     val health: String
     val detail: String
     val message: String
+    val lesson: String
 }
 
 internal interface ArcadeEngine<S : ArcadeFrame> {
@@ -34,12 +35,19 @@ internal data class DriveFrame(
     val coins: Int = 0,
     val dodged: Int = 0,
     val invulnerable: Float = 0f,
-    override val message: String = "¡Mantén tu carril libre!"
+    override val message: String = "Mantén tu carril libre. Practica conducción segura.",
+    val stopped: Boolean = false,
+    val stopChallenge: Boolean = false,
+    val stopCompleted: Boolean = false,
+    val safeZones: Int = 0,
+    val safeStops: Int = 0,
+    val infractions: Int = 0
 ) : ArcadeFrame {
     override val finished get() = lives <= 0 || elapsed >= DriveEngine.TIME
     override val won get() = lives > 0 && elapsed >= DriveEngine.TIME
     override val health get() = "♥".repeat(lives) + "♡".repeat(3 - lives)
-    override val detail get() = "$coins monedas · $dodged obstáculos superados"
+    override val detail get() = "$coins monedas · $safeZones zonas seguras · $safeStops PARE respetados"
+    override val lesson get() = "Zonas escolares: máximo 30 km/h en horas de entrada y salida. Ante un PARE, detente completamente y continúa solo si es seguro."
 }
 
 /** Three lanes, smooth steering, collisions and a timed school-zone challenge. */
@@ -50,13 +58,15 @@ internal class DriveEngine(seed: Int = Random.nextInt()) : ArcadeEngine<DriveFra
     private var id = 0
     private var speeding = 0f
     private var zoneBonus = false
+    private var stopTime = 0f
     override fun snapshot() = state
     override fun act(action: Int): DriveFrame {
         if (state.finished) return state
         state = when (action) {
             0 -> state.copy(lane = (state.lane - 1).coerceAtLeast(0))
             1 -> state.copy(lane = (state.lane + 1).coerceAtMost(2))
-            2 -> state.copy(slow = !state.slow)
+            2 -> if (!state.stopped) state.copy(slow = !state.slow) else state
+            3 -> if (state.stopChallenge || state.stopped) state.copy(stopped = !state.stopped) else state
             else -> state
         }
         return state
@@ -67,6 +77,13 @@ internal class DriveEngine(seed: Int = Random.nextInt()) : ArcadeEngine<DriveFra
         val d = dt.coerceAtMost(.05f)
         val elapsed = (state.elapsed + d).coerceAtMost(TIME)
         val zone = (elapsed in 18f..27f || elapsed in 43f..52f)
+        // Short, explicitly signposted scripted junctions in the arcade.
+        val stopChallenge = elapsed in 9f..15f || elapsed in 34f..40f
+        var stopped = state.stopped
+        var stopCompleted = state.stopCompleted
+        var safeZones = state.safeZones
+        var safeStops = state.safeStops
+        var infractions = state.infractions
         var lives = state.lives
         var score = state.score
         var message = state.message
@@ -74,23 +91,48 @@ internal class DriveEngine(seed: Int = Random.nextInt()) : ArcadeEngine<DriveFra
         var coins = state.coins
         var dodged = state.dodged
         val x = state.carX + (state.lane - state.carX).coerceIn(-d * 7f, d * 7f)
-        val speed = if (state.slow) .27f else .43f + elapsed / 240f
+        val speed = if (stopped) 0f else if (state.slow) .27f else .43f + elapsed / 240f
 
         if (zone && !state.schoolZone) {
             speeding = 0f; zoneBonus = true
-            message = "Zona escolar: activa velocidad reducida."
+            message = "Zona escolar (entrada/salida): reduce a 30 km/h."
         }
-        if (zone && !state.slow) {
+        if (zone && !state.slow && !stopped) {
             speeding += d
             if (speeding >= 2f && zoneBonus) {
                 lives = (lives - 1).coerceAtLeast(0)
                 zoneBonus = false
-                message = "Exceso de velocidad en zona escolar."
+                infractions++
+                message = "Excediste el límite de 30 km/h. −1 vida."
             }
         } else if (zone) speeding = 0f
         if (!zone && state.schoolZone && zoneBonus) {
             score += 300
-            message = "¡Zona escolar respetada! +300"
+            safeZones++
+            message = "¡Respetaste la zona escolar! +300"
+        }
+
+        if (stopChallenge && !state.stopChallenge) {
+            stopTime = 0f
+            stopCompleted = false
+            message = "Señal PARE: detente completamente y espera el aviso."
+        }
+        if (stopChallenge && !stopCompleted) {
+            stopTime = if (stopped) stopTime + d else 0f
+            if (stopTime >= 1.3f) {
+                stopCompleted = true
+                safeStops++
+                score += 350
+                message = "¡Detención completa! Cruce libre: puedes avanzar."
+            }
+        }
+        if (!stopChallenge && state.stopChallenge) {
+            if (!stopCompleted) {
+                lives = (lives - 1).coerceAtLeast(0)
+                infractions++
+                message = "No respetaste el PARE. −1 vida."
+            }
+            stopped = false
         }
 
         val next = mutableListOf<RoadItem>()
@@ -99,20 +141,23 @@ internal class DriveEngine(seed: Int = Random.nextInt()) : ArcadeEngine<DriveFra
             val touching = abs(x - item.lane) < .48f && y >= .75f && y <= .91f
             when {
                 touching && item.kind == RoadItemKind.COIN -> {
-                    coins++; score += 100; message = "¡Moneda! +100"
+                    if ((!zone || state.slow) && (!stopChallenge || stopCompleted) && !stopped) {
+                        coins++; score += 100
+                        if (!stopChallenge && !zone) message = "¡Moneda! +100"
+                    }
                 }
                 touching && invulnerable <= 0f -> {
                     lives = (lives - 1).coerceAtLeast(0)
                     invulnerable = 1.4f
-                    message = "¡Cuidado! Perdiste una vida."
+                    message = "Colisión: anticipa los obstáculos. −1 vida."
                 }
                 touching -> Unit
                 y > 1.11f -> if (item.kind != RoadItemKind.COIN) { dodged++; score += 60 }
                 else -> next += item.copy(y = y)
             }
         }
-        spawn -= d
-        if (spawn <= 0f) {
+        if (!stopChallenge && !stopped) spawn -= d
+        if (spawn <= 0f && !stopChallenge && !stopped) {
             spawn += (1.05f - elapsed / 180f).coerceAtLeast(.65f)
             val lane = random.nextInt(3)
             if (next.none { it.lane == lane && it.y < .20f }) {
@@ -125,7 +170,8 @@ internal class DriveEngine(seed: Int = Random.nextInt()) : ArcadeEngine<DriveFra
             }
         }
         state = DriveFrame(elapsed, score, lives, state.lane, x, state.slow, zone,
-            state.distance + speed * d * 100f, next, coins, dodged, invulnerable, message)
+            state.distance + speed * d * 100f, next, coins, dodged, invulnerable, message,
+            stopped, stopChallenge, stopCompleted, safeZones, safeStops, infractions)
         return state
     }
     companion object { const val TIME = 65f }
@@ -133,9 +179,13 @@ internal class DriveEngine(seed: Int = Random.nextInt()) : ArcadeEngine<DriveFra
 
 internal enum class FightPhase { TELEGRAPH, OPENING, RECOVERY }
 internal enum class Hazard(val label: String, val response: Int, val advice: String) {
-    PEDESTRIAN("Peatón en la calzada", 0, "Frena ante un peatón."),
-    CLEAR_LANE("Obstáculo · carril contiguo libre", 1, "Solo esquiva si es seguro."),
-    TAILGATE("Vehículo demasiado cerca", 2, "Aumenta la distancia de seguridad.")
+    PEDESTRIAN("Peatón cruzando delante de ti", 0, "Detente antes del paso y deja cruzar."),
+    STOP_SIGN("Señal PARE en tu vía", 0, "El PARE exige detenerse completamente."),
+    RED_LIGHT("Semáforo rojo delante de ti", 0, "Detente antes de la línea de detención."),
+    SCHOOL("Zona escolar en horario de salida", 1, "No superes los 30 km/h en ese horario."),
+    FOG("Niebla: visibilidad reducida", 1, "Reduce la velocidad y adapta la conducción a la visibilidad."),
+    WORKS("Trabajos en la vía, carril estrecho", 1, "Reduce la velocidad y respeta la señalización."),
+    TAILGATE("Vas muy cerca del vehículo precedente", 2, "Aumenta la distancia: usa la referencia de tres segundos en buenas condiciones.")
 }
 internal data class FightFrame(
     override val elapsed: Float = 0f,
@@ -145,18 +195,21 @@ internal data class FightFrame(
     val boss: Int = 1,
     val hazard: Hazard = Hazard.PEDESTRIAN,
     val phase: FightPhase = FightPhase.TELEGRAPH,
-    val remaining: Float = 2.8f,
+    val remaining: Float = 6.0f,
     val combo: Int = 0,
     val bestCombo: Int = 0,
     val strikes: Int = 0,
     val impact: Float = 0f,
     val attackLock: Float = 0f,
+    val correctDecisions: Int = 0,
+    val missedDecisions: Int = 0,
     override val message: String = "Observa el peligro y responde a tiempo."
 ) : ArcadeFrame {
     override val finished get() = hp <= 0 || boss > 3 || elapsed >= FightEngine.TIME
     override val won get() = boss > 3 && hp > 0
     override val health get() = "$hp HP"
-    override val detail get() = "${(boss - 1).coerceAtMost(3)}/3 rivales · combo x$bestCombo"
+    override val detail get() = "${(boss - 1).coerceAtMost(3)}/3 rivales · $correctDecisions decisiones correctas"
+    override val lesson get() = "Detente ante PARE, luz roja y peatones que cruzan delante de ti. Reduce la velocidad si hay poca visibilidad y conserva la distancia de seguridad."
 }
 
 /** A correct defensive response exposes the rival; strike during the opening. */
@@ -166,8 +219,8 @@ internal class FightEngine(seed: Int = Random.nextInt()) : ArcadeEngine<FightFra
     override fun snapshot() = state
     private fun nextHazard(s: FightFrame): FightFrame = s.copy(
         phase = FightPhase.TELEGRAPH,
-        hazard = Hazard.entries.random(random),
-        remaining = (3.2f - (s.boss - 1) * .4f).coerceAtLeast(2f),
+        hazard = Hazard.entries.filter { it != s.hazard }.random(random),
+        remaining = (6f - (s.boss - 1) * .65f).coerceAtLeast(4.5f),
         message = "¡Lee el peligro!"
     )
     override fun act(action: Int): FightFrame {
@@ -175,18 +228,18 @@ internal class FightEngine(seed: Int = Random.nextInt()) : ArcadeEngine<FightFra
         val s = state
         state = when (s.phase) {
             FightPhase.TELEGRAPH -> if (action == s.hazard.response) {
-                s.copy(phase = FightPhase.OPENING, remaining = 2.1f, score = s.score + 80,
-                    message = "¡Bien! Ahora ataca al rival.")
+                s.copy(phase = FightPhase.OPENING, remaining = 3.2f, score = s.score + 80,
+                    correctDecisions = s.correctDecisions + 1, message = s.hazard.advice + " ¡Ataca!")
             } else {
                 s.copy(hp = (s.hp - 15).coerceAtLeast(0), phase = FightPhase.RECOVERY,
-                    remaining = .65f, combo = 0, impact = .35f, message = s.hazard.advice)
+                    remaining = 2.2f, combo = 0, impact = .35f, missedDecisions = s.missedDecisions + 1, message = s.hazard.advice)
             }
             FightPhase.OPENING -> if (action == 3 && s.attackLock <= 0f) {
                 val enemy = (s.bossHp - 20).coerceAtLeast(0)
                 val combo = s.combo + 1
                 val hit = s.copy(bossHp = enemy, score = s.score + 100 + combo.coerceAtMost(10) * 10,
                     combo = combo, bestCombo = maxOf(s.bestCombo, combo), strikes = s.strikes + 1,
-                    attackLock = .33f, impact = .25f, message = "¡Combo x$combo!")
+                    attackLock = .4f, impact = .25f, message = "¡Combo x$combo! " + s.hazard.advice)
                 if (enemy == 0) {
                     if (s.boss == 3) hit.copy(boss = 4, score = hit.score + 500, message = "¡Todos los rivales derrotados!")
                     else hit.copy(boss = s.boss + 1, bossHp = 100 + s.boss * 20, phase = FightPhase.RECOVERY,
@@ -207,7 +260,7 @@ internal class FightEngine(seed: Int = Random.nextInt()) : ArcadeEngine<FightFra
         if (s.remaining <= 0f && !s.finished) {
             s = when (s.phase) {
                 FightPhase.TELEGRAPH -> s.copy(hp = (s.hp - 20).coerceAtLeast(0), combo = 0,
-                    phase = FightPhase.RECOVERY, remaining = .65f, impact = .4f, message = s.hazard.advice)
+                    phase = FightPhase.RECOVERY, remaining = 2.2f, impact = .4f, missedDecisions = s.missedDecisions + 1, message = s.hazard.advice)
                 FightPhase.OPENING, FightPhase.RECOVERY -> nextHazard(s)
             }
         }
@@ -217,11 +270,11 @@ internal class FightEngine(seed: Int = Random.nextInt()) : ArcadeEngine<FightFra
     companion object { const val TIME = 75f }
 }
 
-internal enum class WorkshopPart(val label: String, val tool: String, val symptom: String, val fact: String) {
-    TIRE("Neumático", "Manómetro", "Neumático con presión baja", "Comprueba la presión indicada por el fabricante."),
-    LIGHT("Faro", "Revisión de luces", "Faro izquierdo apagado", "Las luces deben funcionar antes de circular."),
-    BATTERY("Batería", "Multímetro", "Aviso eléctrico de batería", "La revisión eléctrica permite detectar fallas."),
-    GLASS("Parabrisas", "Limpiavidrios", "Parabrisas sucio", "Mantén la visibilidad antes de iniciar la marcha.")
+internal enum class WorkshopPart(val label: String, val tool: String, val symptom: String, val fact: String, val check: String, val choices: List<String>, val correct: Int) {
+    TIRE("Neumático", "Manómetro", "Neumático con presión baja", "Comprueba la presión indicada por el fabricante, preferentemente en frío.", "El manómetro indica presión inferior a la recomendada.", listOf("Circular igual", "Ajustar presión", "Desinflar más"), 1),
+    LIGHT("Faro", "Revisión de luces", "Faro izquierdo apagado", "Las luces permiten ver y ser visto.", "La prueba confirma que el faro no enciende.", listOf("Resolver la falla", "Circular de noche", "Tapar el faro"), 0),
+    BATTERY("Batería", "Multímetro", "Aviso eléctrico de batería", "Una advertencia del sistema de carga exige revisión.", "Se detecta una anomalía eléctrica.", listOf("Ignorar aviso", "Desconectar al azar", "Revisión técnica"), 2),
+    GLASS("Parabrisas", "Limpiavidrios", "Parabrisas sucio", "Mantén la visibilidad antes de iniciar la marcha.", "La suciedad impide ver correctamente.", listOf("Limpiar y revisar", "Acelerar", "Conducir igual"), 0)
 }
 
 internal data class WorkshopFrame(
@@ -233,13 +286,15 @@ internal data class WorkshopFrame(
     val selectedPart: Int = -1,
     val repairTime: Float = 0f,
     val flash: Float = 0f,
-    override val message: String = "Inspecciona el vehículo y elige una herramienta."
+    val checking: Boolean = false,
+    override val message: String = "1. Toca la pieza. 2. Elige herramienta. 3. Decide qué hacer."
 ) : ArcadeFrame {
     val fault get() = jobs.getOrNull(completed)
     override val finished get() = lives <= 0 || completed >= jobs.size || elapsed >= WorkshopEngine.TIME
     override val won get() = completed == jobs.size && lives > 0
     override val health get() = "♥".repeat(lives) + "♡".repeat(3 - lives)
     override val detail get() = "$completed/${jobs.size} diagnósticos"
+    override val lesson get() = "Antes de circular, revisa presión de neumáticos, luces, visibilidad y avisos eléctricos. Ante una falla que comprometa la seguridad, no continúes hasta resolverla."
 }
 
 internal class WorkshopEngine(seed: Int = Random.nextInt()) : ArcadeEngine<WorkshopFrame> {
@@ -249,12 +304,22 @@ internal class WorkshopEngine(seed: Int = Random.nextInt()) : ArcadeEngine<Works
         val s = state
         val issue = s.fault ?: return s
         if (s.finished || s.repairTime > 0f) return s
+        if (s.checking) {
+            if (action in 20..22) {
+                state = if (action - 20 == issue.correct) {
+                    s.copy(checking = false, repairTime = 1.15f, message = issue.fact)
+                } else {
+                    s.copy(lives = (s.lives - 1).coerceAtLeast(0), flash = .5f, message = issue.fact)
+                }
+            }
+            return state
+        }
         state = when (action) {
             in 0..3 -> s.copy(selectedPart = action, message = "Zona: ${WorkshopPart.entries[action].label}. Elige herramienta.")
             in 10..13 -> if (s.selectedPart == -1) {
                 s.copy(message = "Primero toca una parte del vehículo.")
             } else if (s.selectedPart == issue.ordinal && action - 10 == issue.ordinal) {
-                s.copy(repairTime = 1.15f, message = "Comprobación en curso…")
+                s.copy(checking = true, message = issue.check)
             } else {
                 s.copy(lives = (s.lives - 1).coerceAtLeast(0), flash = .5f,
                     selectedPart = -1, message = "No corresponde a esta falla. ${issue.fact}")
