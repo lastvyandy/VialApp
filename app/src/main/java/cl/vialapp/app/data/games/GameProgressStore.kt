@@ -567,6 +567,7 @@ class GameProgressStore(
         const val BALD_CHALLENGE = "bald_challenge"
         const val SIGN_HUNT = "sign_hunt"
         const val CROSSROADS_CHAOS = "crossroads_chaos"
+        const val CROSSROADS_ARCADE = "crossroads_arcade"
 
         private const val PREFERENCES_NAME = "vialapp_games"
         private const val KEY_TOTAL_POINTS = "games_total_points"

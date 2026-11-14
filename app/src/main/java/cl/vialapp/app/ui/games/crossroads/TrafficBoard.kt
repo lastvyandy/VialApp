@@ -86,7 +86,10 @@ private fun DrawScope.light(x: Float, y: Float, green: Boolean, changing: Boolea
     drawRoundRect(Color(0xFF192536), Offset(x - 18f, y - 31f), Size(36f, 62f), CornerRadius(9f))
     drawCircle(Color(0xFF573B40), 10f, Offset(x, y - 17f))
     drawCircle(Color(0xFF3D5145), 10f, Offset(x, y + 17f))
-    val color = if (green) Color(0xFF4ADE80) else if (changing) Color(0xFFFBBF24) else Color(0xFFFB7185)
+    val color = if (green) Color(0xFF4ADE80) else Color(0xFFFB7185)
+    if (changing) {
+        drawCircle(Color(0xFFFBBF24).copy(alpha = .26f), 26f, Offset(x, y))
+    }
     val center = Offset(x, y + if (green) 17f else -17f)
     drawCircle(color.copy(alpha = .30f), 19f, center)
     drawCircle(color, 10f, center)

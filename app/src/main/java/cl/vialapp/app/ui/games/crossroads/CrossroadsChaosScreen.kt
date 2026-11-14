@@ -27,7 +27,7 @@ import cl.vialapp.app.data.session.SessionManager
 import java.util.UUID
 import kotlin.math.ceil
 
-private const val ArcadeRecordId = "crossroads_arcade"
+private const val ArcadeRecordId = GameProgressStore.CROSSROADS_ARCADE
 private enum class ArcadePhase { INTRO, PLAY, RESULT }
 
 @Composable

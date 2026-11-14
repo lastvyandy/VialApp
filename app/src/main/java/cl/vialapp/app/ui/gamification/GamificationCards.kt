@@ -1217,7 +1217,7 @@ fun ProgressGamificationSection(
 
     val crossroadsHighScore =
         store.getHighScore(
-            GameProgressStore.CROSSROADS_CHAOS
+            GameProgressStore.CROSSROADS_ARCADE
         )
 
     val xpProgress =
