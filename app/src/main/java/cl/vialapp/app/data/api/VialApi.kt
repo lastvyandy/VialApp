@@ -134,6 +134,9 @@ interface VialApi {
         @Header("Authorization") authorization: String
     ): Response<WeeklyLeaderboardResponse>
 
+    @POST("users/me/gamification/achievements")
+    suspend fun syncAchievements(@Header("Authorization") authorization: String): Response<AchievementCollectionResponse>
+
     @GET("users/me/gamification")
     suspend fun getGamificationProgress(
         @Header("Authorization") authorization: String

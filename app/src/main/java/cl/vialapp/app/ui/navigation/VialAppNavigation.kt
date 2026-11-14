@@ -61,6 +61,8 @@ import cl.vialapp.app.ui.mascot.MascotSelectionScreen
 import cl.vialapp.app.ui.mascot.MascotPortrait
 import cl.vialapp.app.ui.profile.LicenseClassPickerDialog
 import cl.vialapp.app.ui.profile.ProfilePhotoSection
+import cl.vialapp.app.ui.achievements.CollectionScreen
+import cl.vialapp.app.ui.achievements.CollectionEntryCard
 import cl.vialapp.app.ui.practice.PracticeScreen
 import cl.vialapp.app.ui.progress.ProgressScreen
 import cl.vialapp.app.ui.settings.StudySettingsScreen
@@ -256,7 +258,8 @@ fun VialAppNavigation(
                 currentRoute != "games/crossroads" &&
                 currentRoute != "games/carvier" &&
                 currentRoute != "games/arena" &&
-                currentRoute != "games/workshop"
+                currentRoute != "games/workshop" &&
+                currentRoute != "collection"
 
 
     Scaffold(
@@ -871,7 +874,8 @@ fun VialAppNavigation(
             ) {
 
                 ProgressScreen(
-                    userKey = user.id
+                    userKey = user.id,
+                    onOpenCollection = { navController.navigate("collection") }
                 )
             }
 
@@ -904,6 +908,10 @@ fun VialAppNavigation(
              * PERFIL
              * ------------------------------------------------
              */
+            composable("collection") {
+                CollectionScreen(user.id, onBack = { navController.popBackStack() })
+            }
+
             composable(
                 route =
                     "profile"
@@ -926,6 +934,7 @@ fun VialAppNavigation(
                     onChangeMascot = {
                         navController.navigate("mascot_selection")
                     },
+                    onOpenCollection = { navController.navigate("collection") },
 
                     onUserUpdated = onUserUpdated,
 
@@ -1023,7 +1032,8 @@ fun ProfileScreen(
     onLogout: () -> Unit,
     avatarKey: String? = null,
     avatarLoaded: Boolean = true,
-    onAvatarChanged: (String?) -> Unit = {}
+    onAvatarChanged: (String?) -> Unit = {},
+    onOpenCollection: () -> Unit = {}
 ) {
     val fullName =
         listOfNotNull(
@@ -1350,6 +1360,10 @@ fun ProfileScreen(
             )
         }
 
+
+        item {
+            CollectionEntryCard(onClick = onOpenCollection)
+        }
 
         item {
             VialAppearanceSetting()

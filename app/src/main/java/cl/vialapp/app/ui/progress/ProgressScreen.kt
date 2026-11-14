@@ -20,6 +20,7 @@ import cl.vialapp.app.data.api.CategoryStatResponse
 import cl.vialapp.app.data.api.RecentTestResponse
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.gamification.ProgressGamificationSection
+import cl.vialapp.app.ui.achievements.CollectionEntryCard
 import cl.vialapp.app.ui.theme.vialColor
 
 private val ProgressBlue: Color
@@ -40,7 +41,8 @@ private val ProgressBackground: Color
 
 @Composable
 fun ProgressScreen(
-    userKey: String
+    userKey: String,
+    onOpenCollection: () -> Unit = {}
 ) {
 
     val context =
@@ -229,6 +231,10 @@ private fun ProgressContent(
             )
     ) {
 
+
+        item {
+            CollectionEntryCard(onClick = onOpenCollection)
+        }
 
         item {
             ProgressGamificationSection(
