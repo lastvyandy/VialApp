@@ -19,14 +19,22 @@ import androidx.compose.ui.unit.sp
 import cl.vialapp.app.data.api.ExamCorrectionQuestion
 import cl.vialapp.app.data.api.ExamCorrectionResponse
 import coil3.compose.AsyncImage
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionGreen
 
 
-private val CorrectionBlue = Color(0xFF2563EB)
-private val CorrectionDark = Color(0xFF172033)
-private val CorrectionGray = Color(0xFF64748B)
-private val CorrectionGreen = Color(0xFF14966F)
-private val CorrectionRed = Color(0xFFD92D20)
-private val CorrectionOrange = Color(0xFFB54708)
+private val CorrectionBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val CorrectionDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val CorrectionGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
+private val CorrectionGreen: Color
+    @Composable get() = vialColor(Color(0xFF14966F))
+private val CorrectionRed: Color
+    @Composable get() = vialColor(Color(0xFFD92D20))
+private val CorrectionOrange: Color
+    @Composable get() = vialColor(Color(0xFFB54708))
 
 
 @Composable
@@ -126,13 +134,13 @@ fun CorrectionScreen(
     Scaffold(
 
         containerColor =
-            Color(0xFFF4F7FB),
+            vialColor(Color(0xFFF4F7FB)),
 
         bottomBar = {
 
             Surface(
                 color =
-                    Color.White,
+                    vialColor(Color.White),
 
                 shadowElevation =
                     5.dp
@@ -179,7 +187,8 @@ fun CorrectionScreen(
                                 ButtonDefaults
                                     .buttonColors(
                                         containerColor =
-                                            CorrectionGreen
+                                            VialActionGreen,
+                                    contentColor = Color.White
                                     )
                         ) {
 
@@ -215,7 +224,7 @@ fun CorrectionScreen(
                                 Modifier.fillMaxWidth(),
 
                             color =
-                                Color(0xFFEAF8F1),
+                                vialColor(Color(0xFFEAF8F1)),
 
                             shape =
                                 RoundedCornerShape(
@@ -225,7 +234,7 @@ fun CorrectionScreen(
                             border =
                                 BorderStroke(
                                     1.dp,
-                                    Color(0xFFA9DEC9)
+                                    vialColor(Color(0xFFA9DEC9))
                                 )
                         ) {
 
@@ -348,7 +357,7 @@ fun CorrectionScreen(
                         Modifier.fillMaxWidth(),
 
                     color =
-                        Color.White,
+                        vialColor(Color.White),
 
                     shape =
                         RoundedCornerShape(
@@ -513,7 +522,7 @@ private fun CorrectionQuestionCard(
             CardDefaults
                 .cardColors(
                     containerColor =
-                        Color.White
+                        vialColor(Color.White)
                 )
     ) {
 
@@ -717,9 +726,9 @@ private fun CorrectionQuestionCard(
 
                 Surface(
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFFFFF8E8
-                        ),
+                        )),
 
                     shape =
                         RoundedCornerShape(
@@ -770,19 +779,19 @@ private fun CorrectionOption(
         when {
 
             correct ->
-                Color(
+                vialColor(Color(
                     0xFFEAF8F1
-                )
+                ))
 
             selected ->
-                Color(
+                vialColor(Color(
                     0xFFFFF1F0
-                )
+                ))
 
             else ->
-                Color(
+                vialColor(Color(
                     0xFFF8FAFD
-                )
+                ))
         }
 
 
@@ -790,19 +799,19 @@ private fun CorrectionOption(
         when {
 
             correct ->
-                Color(
+                vialColor(Color(
                     0xFFA9DEC9
-                )
+                ))
 
             selected ->
-                Color(
+                vialColor(Color(
                     0xFFF2B8B5
-                )
+                ))
 
             else ->
-                Color(
+                vialColor(Color(
                     0xFFE2E8F0
-                )
+                ))
         }
 
 
@@ -1019,15 +1028,15 @@ private fun ErrorPracticeScreen(
     Scaffold(
 
         containerColor =
-            Color(
+            vialColor(Color(
                 0xFFF4F7FB
-            ),
+            )),
 
         bottomBar = {
 
             Surface(
                 color =
-                    Color.White,
+                    vialColor(Color.White),
 
                 shadowElevation =
                     5.dp
@@ -1121,7 +1130,8 @@ private fun ErrorPracticeScreen(
                         ButtonDefaults
                             .buttonColors(
                                 containerColor =
-                                    CorrectionGreen
+                                    VialActionGreen,
+                                    contentColor = Color.White
                             )
                 ) {
 
@@ -1316,9 +1326,9 @@ private fun ErrorPracticeScreen(
                             .fillMaxWidth(),
 
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFFFFF8E8
-                        ),
+                        )),
 
                     shape =
                         RoundedCornerShape(
@@ -1460,15 +1470,15 @@ private fun ErrorPracticeScreen(
                     color =
                         if (answerIsCorrect) {
 
-                            Color(
+                            vialColor(Color(
                                 0xFFEAF8F1
-                            )
+                            ))
 
                         } else {
 
-                            Color(
+                            vialColor(Color(
                                 0xFFFFF1F0
-                            )
+                            ))
                         },
 
                     border =
@@ -1477,15 +1487,15 @@ private fun ErrorPracticeScreen(
 
                             if (answerIsCorrect) {
 
-                                Color(
+                                vialColor(Color(
                                     0xFFA9DEC9
-                                )
+                                ))
 
                             } else {
 
-                                Color(
+                                vialColor(Color(
                                     0xFFF2B8B5
-                                )
+                                ))
                             }
                         ),
 
@@ -1626,9 +1636,9 @@ private fun PracticeOption(
             checked &&
                     correct ->
 
-                Color(
+                vialColor(Color(
                     0xFFEAF8F1
-                )
+                ))
 
 
             /*
@@ -1639,9 +1649,9 @@ private fun PracticeOption(
                     selected &&
                     !correct ->
 
-                Color(
+                vialColor(Color(
                     0xFFFFF1F0
-                )
+                ))
 
 
             /*
@@ -1649,14 +1659,14 @@ private fun PracticeOption(
              */
             selected ->
 
-                Color(
+                vialColor(Color(
                     0xFFEAF1FF
-                )
+                ))
 
 
             else ->
 
-                Color.White
+                vialColor(Color.White)
         }
 
 
@@ -1683,9 +1693,9 @@ private fun PracticeOption(
 
             else ->
 
-                Color(
+                vialColor(Color(
                     0xFFD8E1EF
-                )
+                ))
         }
 
 

@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.R
+import cl.vialapp.app.ui.theme.vialColor
 
 @Composable
 @SuppressLint("DiscouragedApi") // Recursos opcionales: se incorporarán sin romper builds anteriores.
@@ -33,7 +34,8 @@ fun MascotReactionCard(
     mascotId: String,
     reaction: MascotReaction,
     levelReached: Int? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    embedded: Boolean = false
 ) {
     if (!MascotReactions.isSupported(mascotId)) return
 
@@ -51,10 +53,10 @@ fun MascotReactionCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = if (embedded) Color.Transparent else vialColor(Color.White))
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(if (embedded) 0.dp else 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -64,7 +66,7 @@ fun MascotReactionCard(
                     contentDescription = name,
                     modifier = portraitModifier
                         .clip(shape)
-                        .background(Color(0xFFF1F5F9)),
+                        .background(vialColor(Color(0xFFF1F5F9))),
                     contentScale = ContentScale.Fit
                 )
             } else {
@@ -82,20 +84,20 @@ fun MascotReactionCard(
             ) {
                 Text(
                     text = name,
-                    color = Color(0xFF172033),
+                    color = vialColor(Color(0xFF172033)),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = MascotReactions.message(mascotId, reaction),
-                    color = Color(0xFF475569),
+                    color = vialColor(Color(0xFF475569)),
                     fontSize = 13.sp,
                     lineHeight = 18.sp
                 )
                 if (levelReached != null) {
                     Text(
                         text = "¡Nivel $levelReached alcanzado!",
-                        color = Color(0xFF15803D),
+                        color = vialColor(Color(0xFF15803D)),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )

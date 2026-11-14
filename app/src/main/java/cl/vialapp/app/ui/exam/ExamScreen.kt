@@ -42,11 +42,17 @@ import cl.vialapp.app.data.api.ExamCorrectionResponse
 import java.util.Locale
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 
-private val VialBlue = Color(0xFF2563EB)
-private val VialDark = Color(0xFF172033)
-private val VialGray = Color(0xFF64748B)
-private val VialBackground = Color(0xFFF4F7FB)
+private val VialBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val VialDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val VialGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
+private val VialBackground: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
 
 
 
@@ -526,58 +532,30 @@ fun ExamScreen(
         completedResult != null
     ) {
 
-        Box(
-            modifier =
-                Modifier.fillMaxSize()
-        ) {
+        ExamResultScreen(
+            result =
+                completedResult,
 
-            ExamResultScreen(
-                result =
-                    completedResult,
+            mascotId = mascotId,
+            xpEarned = examXpEarned,
 
-                mascotId = mascotId,
+            correctionLoading =
+                correctionLoading,
 
-                correctionLoading =
-                    correctionLoading,
+            correctionError =
+                correctionError,
 
-                correctionError =
-                    correctionError,
+            onViewCorrection = {
 
-                onViewCorrection = {
+                scope.launch {
 
-                    scope.launch {
+                    openCorrection()
+                }
+            },
 
-                        openCorrection()
-                    }
-                },
-
-                onBack =
-                    onBack
-            )
-
-
-            if (
-                examXpEarned > 0
-            ) {
-
-                ExamXpRewardBanner(
-                    xp =
-                        examXpEarned,
-
-                    modifier =
-                        Modifier
-                            .align(
-                                Alignment.TopCenter
-                            )
-                            .statusBarsPadding()
-                            .padding(
-                                top = 10.dp,
-                                start = 18.dp,
-                                end = 18.dp
-                            )
-                )
-            }
-        }
+            onBack =
+                onBack
+        )
 
         return
     }
@@ -886,9 +864,9 @@ fun ExamScreen(
                             error,
 
                         color =
-                            Color(
+                            vialColor(Color(
                                 0xFFDC2626
-                            )
+                            ))
                     )
 
 
@@ -1051,9 +1029,9 @@ fun ExamScreen(
                                     )
                                 )
                                 .background(
-                                    Color(
+                                    vialColor(Color(
                                         0xFFD8E1EF
-                                    )
+                                    ))
                                 )
                     ) {
 
@@ -1111,9 +1089,9 @@ fun ExamScreen(
                                     CardDefaults
                                         .cardColors(
                                             containerColor =
-                                                Color(
+                                                vialColor(Color(
                                                     0xFFFFF7E6
-                                                )
+                                                ))
                                         )
                             ) {
 
@@ -1127,9 +1105,9 @@ fun ExamScreen(
                                         ),
 
                                     color =
-                                        Color(
+                                        vialColor(Color(
                                             0xFF92400E
-                                        )
+                                        ))
                                 )
                             }
 
@@ -1156,9 +1134,9 @@ fun ExamScreen(
                                     CardDefaults
                                         .cardColors(
                                             containerColor =
-                                                Color(
+                                                vialColor(Color(
                                                     0xFFFFF1F0
-                                                )
+                                                ))
                                         )
                             ) {
 
@@ -1174,9 +1152,9 @@ fun ExamScreen(
                                             actionError,
 
                                         color =
-                                            Color(
+                                            vialColor(Color(
                                                 0xFFB42318
-                                            )
+                                            ))
                                     )
 
 
@@ -1310,9 +1288,9 @@ fun ExamScreen(
                                     "Selecciona todas las alternativas correctas.",
 
                                 color =
-                                    Color(
+                                    vialColor(Color(
                                         0xFF9A5B00
-                                    ),
+                                    )),
 
                                 fontSize =
                                     14.sp
@@ -1423,7 +1401,7 @@ fun ExamScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .background(
-                                    Color.White
+                                    vialColor(Color.White)
                                 )
                                 .padding(
                                     18.dp
@@ -1549,7 +1527,8 @@ fun ExamScreen(
                                 ButtonDefaults
                                     .buttonColors(
                                         containerColor =
-                                            VialBlue
+                                            VialActionBlue,
+                                    contentColor = Color.White
                                     )
                         ) {
 
@@ -1584,7 +1563,7 @@ fun ExamScreen(
 
 
 @Composable
-private fun ExamXpRewardBanner(
+internal fun ExamXpRewardBanner(
     xp: Int,
     modifier: Modifier = Modifier
 ) {
@@ -1597,11 +1576,10 @@ private fun ExamXpRewardBanner(
                 18.dp
             ),
         color =
-            Color(
+            vialColor(Color(
                 0xFFEAF8F1
-            ),
-        shadowElevation =
-            5.dp
+            )),
+        shadowElevation = 0.dp
     ) {
 
         Row(
@@ -1636,9 +1614,9 @@ private fun ExamXpRewardBanner(
                     text =
                         "+$xp XP",
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFF15803D
-                        ),
+                        )),
                     fontSize =
                         16.sp,
                     fontWeight =
@@ -1656,9 +1634,9 @@ private fun ExamXpRewardBanner(
                             "Bonus de repaso"
                         },
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFF166534
-                        ),
+                        )),
                     fontSize =
                         11.sp
                 )
@@ -2046,15 +2024,15 @@ private fun QuestionImage(
             CardDefaults
                 .cardColors(
                     containerColor =
-                        Color.White
+                        vialColor(Color.White)
                 ),
 
         border =
             BorderStroke(
                 1.dp,
-                Color(
+                vialColor(Color(
                     0xFFD8E1EF
-                )
+                ))
             )
     ) {
 
@@ -2069,9 +2047,9 @@ private fun QuestionImage(
                     Modifier
                         .fillMaxSize()
                         .background(
-                            Color(
+                            vialColor(Color(
                                 0xFFF1F5F9
-                            )
+                            ))
                         ),
 
                 contentAlignment =
@@ -2150,13 +2128,13 @@ private fun AnswerOption(
     val background =
         if (selected) {
 
-            Color(
+            vialColor(Color(
                 0xFFEAF1FF
-            )
+            ))
 
         } else {
 
-            Color.White
+            vialColor(Color.White)
         }
 
 
@@ -2190,9 +2168,9 @@ private fun AnswerOption(
                 if (selected) {
                     VialBlue
                 } else {
-                    Color(
+                    vialColor(Color(
                         0xFFD8E1EF
-                    )
+                    ))
                 }
             )
     ) {
@@ -2217,13 +2195,13 @@ private fun AnswerOption(
                 color =
                     if (selected) {
 
-                        VialBlue
+                        VialActionBlue
 
                     } else {
 
-                        Color(
+                        vialColor(Color(
                             0xFFF1F5F9
-                        )
+                        ))
                     }
             ) {
 
@@ -2315,13 +2293,13 @@ private fun TimerText(
         color =
             if (urgent) {
 
-                Color(
+                vialColor(Color(
                     0xFFFFF1F0
-                )
+                ))
 
             } else {
 
-                Color.White
+                vialColor(Color.White)
             },
 
         shape =
@@ -2335,15 +2313,15 @@ private fun TimerText(
 
                 if (urgent) {
 
-                    Color(
+                    vialColor(Color(
                         0xFFF2B8B5
-                    )
+                    ))
 
                 } else {
 
-                    Color(
+                    vialColor(Color(
                         0xFFC8D8F8
-                    )
+                    ))
                 }
             )
     ) {
@@ -2364,9 +2342,9 @@ private fun TimerText(
             color =
                 if (urgent) {
 
-                    Color(
+                    vialColor(Color(
                         0xFFB42318
-                    )
+                    ))
 
                 } else {
 

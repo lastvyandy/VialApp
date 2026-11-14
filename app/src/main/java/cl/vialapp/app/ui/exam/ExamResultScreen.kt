@@ -3,6 +3,7 @@ package cl.vialapp.app.ui.exam
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,12 +21,18 @@ import androidx.compose.ui.unit.sp
 import cl.vialapp.app.data.api.ExamSubmitResponse
 import cl.vialapp.app.ui.mascot.MascotReactionCard
 import cl.vialapp.app.ui.mascot.MascotReactions
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 
 
-private val ResultBlue = Color(0xFF2563EB)
-private val ResultDark = Color(0xFF172033)
-private val ResultGray = Color(0xFF64748B)
-private val ResultBackground = Color(0xFFF4F7FB)
+private val ResultBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val ResultDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val ResultGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
+private val ResultBackground: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
 
 
 @Composable
@@ -35,7 +42,8 @@ fun ExamResultScreen(
     correctionError: String,
     onViewCorrection: () -> Unit,
     onBack: () -> Unit,
-    mascotId: String? = null
+    mascotId: String? = null,
+    xpEarned: Int = 0
 ) {
 
     BackHandler {
@@ -109,7 +117,7 @@ fun ExamResultScreen(
 
             Surface(
                 color =
-                    Color.White,
+                    vialColor(Color.White),
 
                 shadowElevation =
                     6.dp
@@ -141,10 +149,12 @@ fun ExamResultScreen(
                                     52.dp
                                 ),
 
-                        shape =
-                            RoundedCornerShape(
-                                16.dp
-                            )
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = ResultBlue,
+                            disabledContentColor = ResultGray
+                        ),
+                        border = BorderStroke(1.dp, if (correctionLoading) ResultGray else ResultBlue)
                     ) {
 
                         if (
@@ -209,7 +219,8 @@ fun ExamResultScreen(
                             ButtonDefaults
                                 .buttonColors(
                                     containerColor =
-                                        ResultBlue
+                                        VialActionBlue,
+                                    contentColor = Color.White
                                 )
                     ) {
 
@@ -263,6 +274,11 @@ fun ExamResultScreen(
             )
 
 
+            if (xpEarned > 0) {
+                Spacer(Modifier.height(14.dp))
+                ExamXpRewardBanner(xp = xpEarned)
+            }
+
             Spacer(
                 modifier =
                     Modifier.height(
@@ -297,9 +313,9 @@ fun ExamResultScreen(
                         ResultBlue,
 
                     trackColor =
-                        Color(
+                        vialColor(Color(
                             0xFFDCE6F5
-                        )
+                        ))
                 )
 
 
@@ -421,7 +437,7 @@ fun ExamResultScreen(
                     CardDefaults
                         .cardColors(
                             containerColor =
-                                Color.White
+                                vialColor(Color.White)
                         )
             ) {
 
@@ -448,9 +464,9 @@ fun ExamResultScreen(
                             "Correctas",
 
                         color =
-                            Color(
+                            vialColor(Color(
                                 0xFF14966F
-                            )
+                            ))
                     )
 
 
@@ -463,9 +479,9 @@ fun ExamResultScreen(
                             "Incorrectas",
 
                         color =
-                            Color(
+                            vialColor(Color(
                                 0xFFD92D20
-                            )
+                            ))
                     )
 
 
@@ -501,9 +517,9 @@ fun ExamResultScreen(
                         Modifier.fillMaxWidth(),
 
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFFFFF1F0
-                        ),
+                        )),
 
                     shape =
                         RoundedCornerShape(
@@ -521,9 +537,9 @@ fun ExamResultScreen(
                             ),
 
                         color =
-                            Color(
+                            vialColor(Color(
                                 0xFFB42318
-                            ),
+                            )),
 
                         fontSize =
                             14.sp
@@ -553,9 +569,9 @@ fun ExamResultScreen(
                     CardDefaults
                         .cardColors(
                             containerColor =
-                                Color(
+                                vialColor(Color(
                                     0xFFEAF1FF
-                                )
+                                ))
                         )
             ) {
 

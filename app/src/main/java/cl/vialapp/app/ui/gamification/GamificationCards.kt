@@ -33,25 +33,27 @@ import cl.vialapp.app.data.games.DailyMissionSnapshot
 import cl.vialapp.app.data.games.GameProgressSnapshot
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.games.StudyStreakSnapshot
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionGreen
 
 
-private val GamificationBlue =
-    Color(0xFF2563EB)
+private val GamificationBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
 
-private val GamificationDark =
-    Color(0xFF172033)
+private val GamificationDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
 
-private val GamificationGray =
-    Color(0xFF64748B)
+private val GamificationGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
 
-private val GamificationOrange =
-    Color(0xFFF59E0B)
+private val GamificationOrange: Color
+    @Composable get() = vialColor(Color(0xFFF59E0B))
 
-private val GamificationGreen =
-    Color(0xFF16A34A)
+private val GamificationGreen: Color
+    @Composable get() = vialColor(Color(0xFF16A34A))
 
-private val GamificationRed =
-    Color(0xFFDC2626)
+private val GamificationRed: Color
+    @Composable get() = vialColor(Color(0xFFDC2626))
 
 
 
@@ -93,6 +95,9 @@ fun HomeXpCard(
         val reachedLevel = MascotReactions.levelReached(reward)
         AlertDialog(
             onDismissRequest = { claimedReward = null },
+            containerColor = vialColor(Color.White),
+            titleContentColor = GamificationDark,
+            textContentColor = GamificationGray,
             title = { Text(if (reachedLevel != null) "¡Subiste de nivel!" else "¡Misión completada!") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -103,7 +108,8 @@ fun HomeXpCard(
                         } else {
                             MascotReaction.MISSION
                         },
-                        levelReached = reachedLevel
+                        levelReached = reachedLevel,
+                        embedded = true
                     )
                     Text(
                         text = "+${reward.xpAwarded} XP",
@@ -398,7 +404,7 @@ private fun XpOverviewCard(
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    Color.White
+                    vialColor(Color.White)
             )
     ) {
 
@@ -427,9 +433,9 @@ private fun XpOverviewCard(
                             15.dp
                         ),
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFFEAF1FF
-                        )
+                        ))
                 ) {
 
                     Box(
@@ -501,9 +507,9 @@ private fun XpOverviewCard(
                             30.dp
                         ),
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFFFFF7E6
-                        )
+                        ))
                 ) {
 
                     Text(
@@ -546,9 +552,9 @@ private fun XpOverviewCard(
                 color =
                     GamificationBlue,
                 trackColor =
-                    Color(
+                    vialColor(Color(
                         0xFFE5EAF2
-                    )
+                    ))
             )
 
 
@@ -648,7 +654,7 @@ private fun HomeStreakCard(
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    Color.White
+                    vialColor(Color.White)
             )
     ) {
 
@@ -676,9 +682,9 @@ private fun HomeStreakCard(
                             14.dp
                         ),
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFFFFF4E8
-                        )
+                        ))
                 ) {
 
                     Box(
@@ -834,9 +840,9 @@ private fun HomeStreakCard(
                 color =
                     GamificationOrange,
                 trackColor =
-                    Color(
+                    vialColor(Color(
                         0xFFF1F5F9
-                    )
+                    ))
             )
         }
     }
@@ -862,17 +868,17 @@ private fun HomeDailyMissionCard(
         when {
 
             mission.claimed ->
-                Color(
+                vialColor(Color(
                     0xFFEAF8F1
-                )
+                ))
 
             mission.completed ->
-                Color(
+                vialColor(Color(
                     0xFFFFF8E8
-                )
+                ))
 
             else ->
-                Color.White
+                vialColor(Color.White)
         }
 
 
@@ -917,13 +923,13 @@ private fun HomeDailyMissionCard(
                         if (
                             mission.claimed
                         ) {
-                            Color(
+                            vialColor(Color(
                                 0xFFDDF5E8
-                            )
+                            ))
                         } else {
-                            Color(
+                            vialColor(Color(
                                 0xFFEAF1FF
-                            )
+                            ))
                         }
                 ) {
 
@@ -1005,13 +1011,13 @@ private fun HomeDailyMissionCard(
                         if (
                             mission.claimed
                         ) {
-                            Color(
+                            vialColor(Color(
                                 0xFFDDF5E8
-                            )
+                            ))
                         } else {
-                            Color(
+                            vialColor(Color(
                                 0xFFFFF4E8
-                            )
+                            ))
                         }
                 ) {
 
@@ -1105,9 +1111,9 @@ private fun HomeDailyMissionCard(
                         GamificationBlue
                     },
                 trackColor =
-                    Color(
+                    vialColor(Color(
                         0xFFE5EAF2
-                    )
+                    ))
             )
 
 
@@ -1150,7 +1156,8 @@ private fun HomeDailyMissionCard(
                         colors =
                             ButtonDefaults.buttonColors(
                                 containerColor =
-                                    GamificationGreen
+                                    VialActionGreen,
+                                    contentColor = Color.White
                             )
                     ) {
 
@@ -1279,7 +1286,7 @@ fun ProgressGamificationSection(
             colors =
                 CardDefaults.cardColors(
                     containerColor =
-                        Color.White
+                        vialColor(Color.White)
                 )
         ) {
 
@@ -1307,9 +1314,9 @@ fun ProgressGamificationSection(
                                 18.dp
                             ),
                         color =
-                            Color(
+                            vialColor(Color(
                                 0xFFEAF1FF
-                            )
+                            ))
                     ) {
 
                         Box(
@@ -1421,9 +1428,9 @@ fun ProgressGamificationSection(
                     color =
                         GamificationBlue,
                     trackColor =
-                        Color(
+                        vialColor(Color(
                             0xFFE5EAF2
-                        )
+                        ))
                 )
 
 
@@ -1545,7 +1552,7 @@ fun ProgressGamificationSection(
             colors =
                 CardDefaults.cardColors(
                     containerColor =
-                        Color.White
+                        vialColor(Color.White)
                 )
         ) {
 
@@ -1696,9 +1703,9 @@ private fun ProgressMetric(
                 17.dp
             ),
         color =
-            Color(
+            vialColor(Color(
                 0xFFF7F9FC
-            )
+            ))
     ) {
 
         Column(
@@ -1766,7 +1773,7 @@ private fun GameRecordRow(
                 18.dp
             ),
         color =
-            Color.White
+            vialColor(Color.White)
     ) {
 
         Row(
@@ -1870,9 +1877,9 @@ private fun MilestoneCard(
                 18.dp
             ),
         color =
-            Color(
+            vialColor(Color(
                 0xFFEAF8F1
-            )
+            ))
     ) {
 
         Text(
