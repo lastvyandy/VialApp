@@ -62,6 +62,17 @@ internal fun TrafficBoard(frame: TrafficFrame, modifier: Modifier = Modifier) {
             light(281f, 689f, frame.green == TrafficAxis.HORIZONTAL, frame.pending != null)
             light(719f, 311f, frame.green == TrafficAxis.HORIZONTAL, frame.pending != null)
             for (car in frame.cars) drawCar(car, frame.elapsed)
+            if (frame.pedestrianWaiting || frame.pedestrianRequested || frame.pedestrianCrossing > 0f) {
+                val x = if (frame.pedestrianCrossing > 0f) 300f + (1f - frame.pedestrianCrossing / 3.4f).coerceIn(0f, 1f) * 400f else 302f
+                for (offset in listOf(-16f, 18f)) {
+                    val center = Offset(x + offset, 356f)
+                    drawCircle(Color(0xFF172033).copy(alpha = .45f), 17f, center + Offset(3f, 4f))
+                    drawCircle(Color(0xFFFBBF24), 15f, center)
+                    drawCircle(Color(0xFF603E2B), 8f, center - Offset(0f, 7f))
+                    drawLine(Color(0xFF172033), center + Offset(-7f, 8f), center + Offset(-8f, 19f), 5f)
+                    drawLine(Color(0xFF172033), center + Offset(7f, 8f), center + Offset(9f, 19f), 5f)
+                }
+            }
         }
     }
 }

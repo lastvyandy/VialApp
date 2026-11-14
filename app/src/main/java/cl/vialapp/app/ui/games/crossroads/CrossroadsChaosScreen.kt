@@ -124,6 +124,12 @@ fun CrossroadsChaosScreen(userKey: String, onBack: () -> Unit) {
         ArcadePhase.INTRO -> ArcadeIntro(record, onBack, ::start)
         ArcadePhase.PLAY -> ArcadePlay(
             frame, paused, { paused = !paused }, ::requestExit,
+            onPedestrian = {
+                if (!paused) {
+                    engine.requestPedestrian()
+                    frame = engine.snapshot()
+                }
+            },
             onSignal = {
                 if (!paused) {
                     engine.requestGreen(it)
@@ -159,7 +165,8 @@ private fun ArcadeIntro(record: Int, onBack: () -> Unit, onStart: () -> Unit) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Cómo jugar", fontWeight = FontWeight.Bold, color = c.onSurface)
                 Text("🚦 Alterna el paso vertical y horizontal. El cruce se despeja automáticamente antes de cambiar.", color = c.onSurfaceVariant, fontSize = 14.sp)
-                Text("🚑 Prioriza ambulancias. Los autos que esperan demasiado te cuestan una vida.", color = c.onSurfaceVariant, fontSize = 14.sp)
+                Text("🚑 Prioriza ambulancias de emergencia sin abrir un cruce ocupado. Los autos que esperan demasiado te cuestan una vida.", color = c.onSurfaceVariant, fontSize = 14.sp)
+                Text("🚶 Cuando aparezcan peatones, activa Paso peatonal. Los vehículos se detienen y el cruce se abre únicamente cuando está libre.", color = c.onSurfaceVariant, fontSize = 14.sp)
                 Text("🏆 Récord: $record puntos", color = c.primary, fontWeight = FontWeight.Bold)
             }
         }
@@ -173,7 +180,7 @@ private fun ArcadeIntro(record: Int, onBack: () -> Unit, onStart: () -> Unit) {
 @Composable
 private fun ArcadePlay(
     frame: TrafficFrame, paused: Boolean, onPause: () -> Unit,
-    onExit: () -> Unit, onSignal: (TrafficAxis) -> Unit
+    onExit: () -> Unit, onPedestrian: () -> Unit, onSignal: (TrafficAxis) -> Unit
 ) {
     val c = MaterialTheme.colorScheme
     val time = ceil((TrafficEngine.DURATION - frame.elapsed).coerceAtLeast(0f).toDouble()).toInt()
@@ -214,23 +221,34 @@ private fun ArcadePlay(
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("${frame.passed} vehículos", color = c.onSurfaceVariant, fontSize = 13.sp)
+            Text("${frame.passed} autos · ${frame.pedestrianServed} pasos", color = c.onSurfaceVariant, fontSize = 13.sp)
             Text("COMBO ×${frame.combo}", color = c.primary, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
         }
         Surface(color = c.surface, shape = RoundedCornerShape(12.dp)) {
             Text(
-                if (frame.pending != null) "Despejando el cruce · ambos en rojo"
-                else if (frame.elapsed <= frame.messageUntil) frame.message
-                else "Alterna el paso para evitar filas largas.",
+                when {
+                    frame.pedestrianCrossing > 0f -> "Peatones cruzando · todas las vías en rojo"
+                    frame.pedestrianRequested -> "Despejando el cruce para los peatones"
+                    frame.pedestrianWaiting -> "Peatones esperando · activa Paso peatonal"
+                    frame.pending != null -> "Despejando el cruce · ambas vías en rojo"
+                    frame.elapsed <= frame.messageUntil -> frame.message
+                    else -> "Filas: N/S ${frame.cars.count { it.lane.axis == TrafficAxis.VERTICAL && it.waiting > 0f }} · E/O ${frame.cars.count { it.lane.axis == TrafficAxis.HORIZONTAL && it.waiting > 0f }}"
+                },
                 Modifier.fillMaxWidth().padding(10.dp),
                 color = c.onSurface, fontSize = 12.sp, textAlign = TextAlign.Center,
-                maxLines = 1
+                maxLines = 2
             )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SignalButton("↕", "Norte / Sur", frame.green == TrafficAxis.VERTICAL, !paused, Modifier.weight(1f)) { onSignal(TrafficAxis.VERTICAL) }
-            SignalButton("↔", "Este / Oeste", frame.green == TrafficAxis.HORIZONTAL, !paused, Modifier.weight(1f)) { onSignal(TrafficAxis.HORIZONTAL) }
+            SignalButton("↕", "Norte / Sur", frame.green == TrafficAxis.VERTICAL, !paused && !frame.pedestrianRequested && frame.pedestrianCrossing <= 0f, Modifier.weight(1f)) { onSignal(TrafficAxis.VERTICAL) }
+            SignalButton("↔", "Este / Oeste", frame.green == TrafficAxis.HORIZONTAL, !paused && !frame.pedestrianRequested && frame.pedestrianCrossing <= 0f, Modifier.weight(1f)) { onSignal(TrafficAxis.HORIZONTAL) }
         }
+        Button(
+            onClick = onPedestrian,
+            enabled = !paused && frame.pedestrianWaiting && !frame.pedestrianRequested && frame.pedestrianCrossing <= 0f,
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF166534), contentColor = Color.White)
+        ) { Text(if (frame.pedestrianWaiting && !frame.pedestrianRequested) "🚶 Dar paso a peatones" else "Paso peatonal", fontWeight = FontWeight.Bold) }
         Spacer(Modifier.height(4.dp))
     }
 }
@@ -285,6 +303,12 @@ private fun ArcadeResult(frame: TrafficFrame, record: Int, result: GameRunResult
             HudValue("AUTOS", frame.passed.toString(), Modifier.weight(1f))
             HudValue("COMBO", "×${frame.bestCombo}", Modifier.weight(1f))
             HudValue("RÉCORD", record.toString(), Modifier.weight(1f))
+        }
+        Surface(color = c.primaryContainer, shape = RoundedCornerShape(14.dp)) {
+            Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                Text("Paso peatonal: ${frame.pedestrianServed}", color = c.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                Text("Recuerda: no ingreses a una intersección bloqueada; respeta los semáforos y permite el paso seguro de peatones y vehículos de emergencia.", color = c.onPrimaryContainer, fontSize = 13.sp)
+            }
         }
         if (saving) {
             CircularProgressIndicator(Modifier.size(24.dp))

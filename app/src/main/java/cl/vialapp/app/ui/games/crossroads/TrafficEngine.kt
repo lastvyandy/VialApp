@@ -28,7 +28,12 @@ internal data class TrafficFrame(
     val combo: Int = 0,
     val bestCombo: Int = 0,
     val message: String = "¡Mantén el tráfico en movimiento!",
-    val messageUntil: Float = 3f
+    val messageUntil: Float = 3f,
+    val pedestrianWaiting: Boolean = false,
+    val pedestrianCrossing: Float = 0f,
+    val pedestrianServed: Int = 0,
+    val pedestrianWait: Float = 0f,
+    val pedestrianRequested: Boolean = false
 ) {
     val stage: Int get() = 1 + (elapsed / 25f).toInt().coerceIn(0, 2)
     val finished: Boolean get() = elapsed >= TrafficEngine.DURATION || lives <= 0
@@ -42,14 +47,25 @@ internal class TrafficEngine(seed: Int = Random.nextInt()) {
     private var nextId = 0
     private var clearance = 0f
     private var lastAxisChange = -2f
+    private var pedestrianDue = 12f
+    private var pedestrianReturn = TrafficAxis.VERTICAL
 
     fun snapshot(): TrafficFrame = frame
 
     fun requestGreen(axis: TrafficAxis) {
-        if (frame.finished || frame.green == axis || frame.pending == axis || frame.elapsed - lastAxisChange < .65f) return
+        if (frame.finished || frame.pedestrianRequested || frame.pedestrianCrossing > 0f || frame.green == axis || frame.pending == axis || frame.elapsed - lastAxisChange < .65f) return
         frame = frame.copy(green = null, pending = axis)
         clearance = .85f
         lastAxisChange = frame.elapsed
+    }
+
+    // Pedestrians receive an exclusive phase, never a conflicting green light.
+    fun requestPedestrian() {
+        if (frame.finished || !frame.pedestrianWaiting || frame.pedestrianRequested || frame.pedestrianCrossing > 0f) return
+        pedestrianReturn = frame.pending ?: frame.green ?: TrafficAxis.VERTICAL
+        clearance = .85f
+        frame = frame.copy(green = null, pending = null, pedestrianRequested = true,
+            message = "Ambas vías en rojo: espera que el cruce quede libre.", messageUntil = frame.elapsed + 4f)
     }
 
     fun step(seconds: Float): TrafficFrame {
@@ -65,6 +81,11 @@ internal class TrafficEngine(seed: Int = Random.nextInt()) {
         var best = frame.bestCombo
         var message = frame.message
         var until = frame.messageUntil
+        var walkWaiting = frame.pedestrianWaiting
+        var walkRemaining = frame.pedestrianCrossing
+        var walkServed = frame.pedestrianServed
+        var walkWait = frame.pedestrianWait
+        var walkRequested = frame.pedestrianRequested
         val moved = mutableListOf<TrafficCar>()
 
         for (lane in TrafficLane.entries) {
@@ -111,6 +132,43 @@ internal class TrafficEngine(seed: Int = Random.nextInt()) {
             }
         }
 
+        if (walkRequested) {
+            clearance -= dt
+            val blocked = moved.any { it.progress > STOP + .0001f && it.progress < CLEAR }
+            if (clearance <= 0f && !blocked) {
+                walkRequested = false
+                walkWaiting = false
+                walkRemaining = 3.4f
+                message = "Paso peatonal protegido: espera a que termine de cruzar."
+                until = elapsed + 4f
+            }
+        } else if (walkRemaining > 0f) {
+            walkRemaining = (walkRemaining - dt).coerceAtLeast(0f)
+            if (walkRemaining <= 0f) {
+                walkServed++
+                score += 400
+                green = pedestrianReturn
+                message = "¡Peatones a salvo! +400"
+                until = elapsed + 3f
+                pedestrianDue = elapsed + 17f
+            }
+        } else if (!walkWaiting && elapsed >= pedestrianDue) {
+            walkWaiting = true
+            walkWait = 0f
+            message = "¡Peatones esperando! Activa Paso peatonal."
+            until = elapsed + 4f
+        } else if (walkWaiting) {
+            walkWait += dt
+            if (walkWait >= 15f) {
+                lives = (lives - 1).coerceAtLeast(0)
+                combo = 0
+                walkWaiting = false
+                pedestrianDue = elapsed + 12f
+                message = "No diste paso a los peatones. −1 vida."
+                until = elapsed + 4f
+            }
+        }
+
         spawnIn -= dt
         if (spawnIn <= 0f) {
             val stage = 1 + (elapsed / 25f).toInt().coerceIn(0, 2)
@@ -129,7 +187,8 @@ internal class TrafficEngine(seed: Int = Random.nextInt()) {
                 }
             }
         }
-        frame = TrafficFrame(moved, green, pending, elapsed, lives, score, passed, combo, best, message, until)
+        frame = TrafficFrame(moved, green, pending, elapsed, lives, score, passed, combo, best, message, until,
+            walkWaiting, walkRemaining, walkServed, walkWait, walkRequested)
         return frame
     }
 
