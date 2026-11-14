@@ -26,16 +26,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.data.games.GameProgressStore
 import kotlinx.coroutines.delay
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 
 
-private val ChaosBlue = Color(0xFF2563EB)
-private val ChaosDark = Color(0xFF172033)
-private val ChaosGray = Color(0xFF64748B)
-private val ChaosGreen = Color(0xFF16A34A)
-private val ChaosRed = Color(0xFFDC2626)
-private val ChaosOrange = Color(0xFFF59E0B)
-private val ChaosPurple = Color(0xFF7C3AED)
-private val ChaosBackground = Color(0xFFF4F7FB)
+private val ChaosBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val ChaosDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val ChaosGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
+private val ChaosGreen: Color
+    @Composable get() = vialColor(Color(0xFF16A34A))
+private val ChaosRed: Color
+    @Composable get() = vialColor(Color(0xFFDC2626))
+private val ChaosOrange: Color
+    @Composable get() = vialColor(Color(0xFFF59E0B))
+private val ChaosPurple: Color
+    @Composable get() = vialColor(Color(0xFF7C3AED))
+private val ChaosBackground: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
 private val RoadColor = Color(0xFF4B5563)
 private val GrassColor = Color(0xFFDFF3E6)
 
@@ -580,7 +590,7 @@ fun CrossroadsChaosScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    Color.White
+                    vialColor(Color.White)
                 )
                 .padding(
                     horizontal = 18.dp,
@@ -629,7 +639,7 @@ fun CrossroadsChaosScreen(
                             ChaosBlue
                         },
                     trackColor =
-                        Color(0xFFE5EAF2)
+                        vialColor(Color(0xFFE5EAF2))
                 )
 
                 Spacer(
@@ -733,7 +743,7 @@ fun CrossroadsChaosScreen(
                 color =
                     timerColor,
                 trackColor =
-                    Color(0xFFE5EAF2)
+                    vialColor(Color(0xFFE5EAF2))
             )
         }
 
@@ -830,13 +840,13 @@ fun CrossroadsChaosScreen(
                         currentScenario.difficulty
                     ) {
                         1 ->
-                            Color(0xFFEAF8F1)
+                            vialColor(Color(0xFFEAF8F1))
 
                         2 ->
-                            Color(0xFFFFF7E6)
+                            vialColor(Color(0xFFFFF7E6))
 
                         else ->
-                            Color(0xFFF2EAFE)
+                            vialColor(Color(0xFFF2EAFE))
                     }
             ) {
                 Text(
@@ -1070,9 +1080,9 @@ fun CrossroadsChaosScreen(
                         RoundedCornerShape(18.dp),
                     color =
                         if (answerWasCorrect) {
-                            Color(0xFFEAF8F1)
+                            vialColor(Color(0xFFEAF8F1))
                         } else {
-                            Color(0xFFFFEEEE)
+                            vialColor(Color(0xFFFFEEEE))
                         }
                 ) {
                     Text(
@@ -1180,7 +1190,7 @@ private fun CrossroadsIntro(
             colors =
                 CardDefaults.cardColors(
                     containerColor =
-                        Color.White
+                        vialColor(Color.White)
                 )
         ) {
             Column(
@@ -1229,7 +1239,7 @@ private fun CrossroadsIntro(
                 shape =
                     RoundedCornerShape(16.dp),
                 color =
-                    Color(0xFFFFF7E6)
+                    vialColor(Color(0xFFFFF7E6))
             ) {
                 Text(
                     text =
@@ -1263,7 +1273,7 @@ private fun CrossroadsIntro(
             colors =
                 ButtonDefaults.buttonColors(
                     containerColor =
-                        ChaosBlue
+                        VialActionBlue, contentColor = Color.White
                 )
         ) {
             Text(
@@ -1400,7 +1410,7 @@ private fun CrossroadScene(
             )
             .border(
                 width = 1.dp,
-                color = Color(0xFFD4E5DA),
+                color = vialColor(Color(0xFFD4E5DA)),
                 shape = RoundedCornerShape(28.dp)
             )
     ) {
@@ -1563,7 +1573,7 @@ private fun CrossroadScene(
                 shape =
                     CircleShape,
                 color =
-                    Color.White
+                    vialColor(Color.White)
             ) {
                 Box(
                     modifier =
@@ -1673,7 +1683,7 @@ private fun CrossroadScene(
             shape =
                 RoundedCornerShape(30.dp),
             color =
-                Color.White.copy(
+                vialColor(Color.White).copy(
                     alpha = 0.94f
                 )
         ) {
@@ -1772,17 +1782,17 @@ private fun CrossroadActorToken(
         color =
             when {
                 showCorrect ->
-                    Color(0xFFEAF8F1)
+                    vialColor(Color(0xFFEAF8F1))
 
                 showWrong ->
-                    Color(0xFFFFEEEE)
+                    vialColor(Color(0xFFFFEEEE))
 
                 timedOut &&
                         isCorrectActor ->
-                    Color(0xFFEAF8F1)
+                    vialColor(Color(0xFFEAF8F1))
 
                 else ->
-                    Color.White
+                    vialColor(Color.White)
             },
         border =
             BorderStroke(
@@ -1804,7 +1814,7 @@ private fun CrossroadActorToken(
                             ChaosRed
 
                         else ->
-                            Color(0xFFD9E1EC)
+                            vialColor(Color(0xFFD9E1EC))
                     }
             )
     ) {
@@ -2026,7 +2036,7 @@ private fun CrossroadsResult(
             colors =
                 CardDefaults.cardColors(
                     containerColor =
-                        Color.White
+                        vialColor(Color.White)
                 )
         ) {
             Row(
@@ -2069,7 +2079,7 @@ private fun CrossroadsResult(
             shape =
                 RoundedCornerShape(18.dp),
             color =
-                Color(0xFFEAF1FF)
+                vialColor(Color(0xFFEAF1FF))
         ) {
             Text(
                 text =
@@ -2098,7 +2108,7 @@ private fun CrossroadsResult(
                 shape =
                     RoundedCornerShape(18.dp),
                 color =
-                    Color(0xFFFFF7E6)
+                    vialColor(Color(0xFFFFF7E6))
             ) {
                 Text(
                     text =
@@ -2132,7 +2142,7 @@ private fun CrossroadsResult(
             colors =
                 ButtonDefaults.buttonColors(
                     containerColor =
-                        ChaosBlue
+                        VialActionBlue, contentColor = Color.White
                 )
         ) {
             Text(

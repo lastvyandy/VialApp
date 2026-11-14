@@ -38,16 +38,26 @@ import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 
 
-private val GameBlue = Color(0xFF2563EB)
-private val GameDark = Color(0xFF172033)
-private val GameGray = Color(0xFF64748B)
-private val GameGreen = Color(0xFF16A34A)
-private val GameRed = Color(0xFFDC2626)
-private val GameOrange = Color(0xFFF59E0B)
-private val GamePurple = Color(0xFF7C3AED)
-private val GameBackground = Color(0xFFF4F7FB)
+private val GameBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val GameDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val GameGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
+private val GameGreen: Color
+    @Composable get() = vialColor(Color(0xFF16A34A))
+private val GameRed: Color
+    @Composable get() = vialColor(Color(0xFFDC2626))
+private val GameOrange: Color
+    @Composable get() = vialColor(Color(0xFFF59E0B))
+private val GamePurple: Color
+    @Composable get() = vialColor(Color(0xFF7C3AED))
+private val GameBackground: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
 
 
 
@@ -616,7 +626,7 @@ fun BaldChallengeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White
+                    containerColor = vialColor(Color.White)
                 )
             ) {
                 Column(
@@ -662,7 +672,7 @@ fun BaldChallengeScreen(
                     .height(56.dp),
                 shape = RoundedCornerShape(17.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = GameBlue
+                    containerColor = VialActionBlue, contentColor = Color.White
                 )
             ) {
                 Text(
@@ -819,7 +829,7 @@ fun BaldChallengeScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(vialColor(Color.White))
                 .padding(
                     horizontal = 18.dp,
                     vertical = 12.dp
@@ -859,7 +869,7 @@ fun BaldChallengeScreen(
                         } else {
                             GameBlue
                         },
-                    trackColor = Color(0xFFE5EAF2)
+                    trackColor = vialColor(Color(0xFFE5EAF2))
                 )
 
                 Spacer(
@@ -1017,7 +1027,7 @@ fun BaldChallengeScreen(
                             top = 10.dp
                         ),
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFF2EAFE)
+                    color = vialColor(Color(0xFFF2EAFE))
                 ) {
                     Text(
                         text =
@@ -1071,11 +1081,11 @@ fun BaldChallengeScreen(
                     shape = RoundedCornerShape(18.dp),
                     color =
                         if (powerModeActive) {
-                            Color(0xFFF2EAFE)
+                            vialColor(Color(0xFFF2EAFE))
                         } else if (isBossRound) {
-                            Color(0xFFFFF3E0)
+                            vialColor(Color(0xFFFFF3E0))
                         } else {
-                            Color(0xFFEAF1FF)
+                            vialColor(Color(0xFFEAF1FF))
                         }
                 ) {
                     Box(
@@ -1162,7 +1172,7 @@ fun BaldChallengeScreen(
 
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFF1F5F9)
+                    color = vialColor(Color(0xFFF1F5F9))
                 ) {
                     Text(
                         text =
@@ -1204,7 +1214,7 @@ fun BaldChallengeScreen(
                         ),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color.White
+                        containerColor = vialColor(Color.White)
                     )
                 ) {
                     AsyncImage(
@@ -1371,9 +1381,9 @@ fun BaldChallengeScreen(
                     colors = CardDefaults.cardColors(
                         containerColor =
                             if (answerWasCorrect) {
-                                Color(0xFFEAF8F1)
+                                vialColor(Color(0xFFEAF8F1))
                             } else {
-                                Color(0xFFFFEEEE)
+                                vialColor(Color(0xFFFFEEEE))
                             }
                     )
                 ) {
@@ -1423,7 +1433,7 @@ fun BaldChallengeScreen(
 
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFF2EAFE)
+                                color = vialColor(Color(0xFFF2EAFE))
                             ) {
                                 Text(
                                     text =
@@ -1576,7 +1586,7 @@ private fun CountdownScreen(
             .fillMaxSize()
             .background(
                 if (boss) {
-                    Color(0xFFFFF8EB)
+                    vialColor(Color(0xFFFFF8EB))
                 } else {
                     GameBackground
                 }
@@ -1775,7 +1785,7 @@ private fun PelaoPowerBar(
                 } else {
                     GameBlue
                 },
-            trackColor = Color(0xFFE5EAF2)
+            trackColor = vialColor(Color(0xFFE5EAF2))
         )
     }
 }
@@ -1793,10 +1803,10 @@ private fun GameAnswerOption(
 ) {
     val background =
         when {
-            correct -> Color(0xFFEAF8F1)
-            wrong -> Color(0xFFFFEEEE)
-            selected -> Color(0xFFEAF1FF)
-            else -> Color.White
+            correct -> vialColor(Color(0xFFEAF8F1))
+            wrong -> vialColor(Color(0xFFFFEEEE))
+            selected -> vialColor(Color(0xFFEAF1FF))
+            else -> vialColor(Color.White)
         }
 
     val borderColor =
@@ -1804,7 +1814,7 @@ private fun GameAnswerOption(
             correct -> GameGreen
             wrong -> GameRed
             selected -> GameBlue
-            else -> Color(0xFFDCE3EE)
+            else -> vialColor(Color(0xFFDCE3EE))
         }
 
     Surface(
@@ -2004,7 +2014,7 @@ private fun BaldChallengeResult(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color.White
+                containerColor = vialColor(Color.White)
             )
         ) {
             Row(
@@ -2040,9 +2050,9 @@ private fun BaldChallengeResult(
             shape = RoundedCornerShape(18.dp),
             color =
                 if (isNewRecord) {
-                    Color(0xFFFFF4D9)
+                    vialColor(Color(0xFFFFF4D9))
                 } else {
-                    Color(0xFFEAF1FF)
+                    vialColor(Color(0xFFEAF1FF))
                 }
         ) {
             Row(
@@ -2101,7 +2111,7 @@ private fun BaldChallengeResult(
 
         Surface(
             shape = RoundedCornerShape(18.dp),
-            color = Color(0xFFEAF1FF)
+            color = vialColor(Color(0xFFEAF1FF))
         ) {
             Text(
                 text = "+$xpEarned XP",

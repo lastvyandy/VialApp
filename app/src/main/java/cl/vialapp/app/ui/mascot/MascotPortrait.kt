@@ -18,6 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cl.vialapp.app.R
+import cl.vialapp.app.ui.theme.vialColor
 
 /**
  * Retrato compartido por el selector y Perfil.
@@ -40,10 +41,10 @@ fun MascotPortrait(
     Box(
         modifier = modifier
             .clip(shape)
-            .background(Color(0xFFF1F5F9))
+            .background(vialColor(Color(0xFFF1F5F9)))
             .border(
                 width = if (selected) 2.dp else 1.dp,
-                color = if (selected) Color(0xFF2563EB) else Color(0xFFE2E8F0),
+                color = if (selected) vialColor(Color(0xFF2563EB)) else vialColor(Color(0xFFE2E8F0)),
                 shape = shape
             ),
         contentAlignment = Alignment.TopCenter

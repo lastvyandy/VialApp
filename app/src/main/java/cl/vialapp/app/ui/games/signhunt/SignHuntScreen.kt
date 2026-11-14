@@ -27,15 +27,24 @@ import cl.vialapp.app.data.api.StudyQuestion
 import cl.vialapp.app.data.session.SessionManager
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 
 
-private val HuntBlue = Color(0xFF2563EB)
-private val HuntDark = Color(0xFF172033)
-private val HuntGray = Color(0xFF64748B)
-private val HuntGreen = Color(0xFF16A34A)
-private val HuntRed = Color(0xFFDC2626)
-private val HuntOrange = Color(0xFFF59E0B)
-private val HuntBackground = Color(0xFFF4F7FB)
+private val HuntBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val HuntDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val HuntGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
+private val HuntGreen: Color
+    @Composable get() = vialColor(Color(0xFF16A34A))
+private val HuntRed: Color
+    @Composable get() = vialColor(Color(0xFFDC2626))
+private val HuntOrange: Color
+    @Composable get() = vialColor(Color(0xFFF59E0B))
+private val HuntBackground: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
 
 
 @Composable
@@ -630,7 +639,7 @@ fun SignHuntScreen(
                 colors =
                     CardDefaults.cardColors(
                         containerColor =
-                            Color.White
+                            vialColor(Color.White)
                     )
             ) {
                 Column(
@@ -679,7 +688,7 @@ fun SignHuntScreen(
                     shape =
                         RoundedCornerShape(16.dp),
                     color =
-                        Color(0xFFFFF7E6)
+                        vialColor(Color(0xFFFFF7E6))
                 ) {
                     Text(
                         text =
@@ -714,7 +723,7 @@ fun SignHuntScreen(
                 colors =
                     ButtonDefaults.buttonColors(
                         containerColor =
-                            HuntBlue
+                            VialActionBlue, contentColor = Color.White
                     )
             ) {
                 Text(
@@ -848,7 +857,7 @@ fun SignHuntScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(vialColor(Color.White))
                 .padding(
                     horizontal = 18.dp,
                     vertical = 12.dp
@@ -890,7 +899,7 @@ fun SignHuntScreen(
                     color =
                         HuntBlue,
                     trackColor =
-                        Color(0xFFE5EAF2)
+                        vialColor(Color(0xFFE5EAF2))
                 )
 
                 Spacer(
@@ -986,7 +995,7 @@ fun SignHuntScreen(
                 color =
                     timerColor,
                 trackColor =
-                    Color(0xFFE5EAF2)
+                    vialColor(Color(0xFFE5EAF2))
             )
         }
 
@@ -1112,12 +1121,12 @@ fun SignHuntScreen(
                     colors =
                         CardDefaults.cardColors(
                             containerColor =
-                                Color.White
+                                vialColor(Color.White)
                         ),
                     border =
                         BorderStroke(
                             1.dp,
-                            Color(0xFFE1E7F0)
+                            vialColor(Color(0xFFE1E7F0))
                         )
                 ) {
                     Box(
@@ -1317,7 +1326,7 @@ fun SignHuntScreen(
                         shape =
                             RoundedCornerShape(16.dp),
                         color =
-                            Color(0xFFFFEEEE)
+                            vialColor(Color(0xFFFFEEEE))
                     ) {
                         Text(
                             text =
@@ -1482,16 +1491,16 @@ private fun HuntAnswerOption(
     val background =
         when {
             correct ->
-                Color(0xFFEAF8F1)
+                vialColor(Color(0xFFEAF8F1))
 
             wrong ->
-                Color(0xFFFFEEEE)
+                vialColor(Color(0xFFFFEEEE))
 
             selected ->
-                Color(0xFFEAF1FF)
+                vialColor(Color(0xFFEAF1FF))
 
             else ->
-                Color.White
+                vialColor(Color.White)
         }
 
     val borderColor =
@@ -1506,7 +1515,7 @@ private fun HuntAnswerOption(
                 HuntBlue
 
             else ->
-                Color(0xFFDCE3EE)
+                vialColor(Color(0xFFDCE3EE))
         }
 
     Surface(
@@ -1739,7 +1748,7 @@ private fun SignHuntResult(
             colors =
                 CardDefaults.cardColors(
                     containerColor =
-                        Color.White
+                        vialColor(Color.White)
                 )
         ) {
             Row(
@@ -1783,7 +1792,7 @@ private fun SignHuntResult(
                 shape =
                     RoundedCornerShape(18.dp),
                 color =
-                    Color(0xFFFFF7E6)
+                    vialColor(Color(0xFFFFF7E6))
             ) {
                 Text(
                     text =
@@ -1817,7 +1826,7 @@ private fun SignHuntResult(
             colors =
                 ButtonDefaults.buttonColors(
                     containerColor =
-                        HuntBlue
+                        VialActionBlue, contentColor = Color.White
                 )
         ) {
             Text(

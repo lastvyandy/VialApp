@@ -16,15 +16,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.data.api.UserResponse
+import cl.vialapp.app.ui.theme.vialColor
 
 
-private val ProfileBlue = Color(0xFF2563EB)
-private val ProfileDark = Color(0xFF172033)
-private val ProfileGray = Color(0xFF64748B)
-private val ProfileGreen = Color(0xFF14966F)
-private val ProfileOrange = Color(0xFFF59E0B)
-private val ProfileBackground = Color(0xFFF4F7FB)
-private val ProfileRed = Color(0xFFD92D20)
+private val ProfileBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val ProfileDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val ProfileGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
+private val ProfileGreen: Color
+    @Composable get() = vialColor(Color(0xFF14966F))
+private val ProfileOrange: Color
+    @Composable get() = vialColor(Color(0xFFF59E0B))
+private val ProfileBackground: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
+private val ProfileRed: Color
+    @Composable get() = vialColor(Color(0xFFD92D20))
 
 
 @Composable
@@ -143,7 +151,7 @@ fun ProfileScreen(
                     colors =
                         ButtonDefaults.buttonColors(
                             containerColor =
-                                ProfileRed
+                                Color(0xFFB42318), contentColor = Color.White
                         )
                 ) {
 
@@ -253,7 +261,7 @@ fun ProfileScreen(
             colors =
                 CardDefaults.cardColors(
                     containerColor =
-                        Color.White
+                        vialColor(Color.White)
                 )
         ) {
 
@@ -283,9 +291,9 @@ fun ProfileScreen(
                         CircleShape,
 
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFFEAF1FF
-                        )
+                        ))
                 ) {
 
                     Box(
@@ -382,15 +390,15 @@ fun ProfileScreen(
                     color =
                         if (user.isPremium) {
 
-                            Color(
+                            vialColor(Color(
                                 0xFFFFF4D8
-                            )
+                            ))
 
                         } else {
 
-                            Color(
+                            vialColor(Color(
                                 0xFFF1F5F9
-                            )
+                            ))
                         }
                 ) {
 
@@ -414,9 +422,9 @@ fun ProfileScreen(
                         color =
                             if (user.isPremium) {
 
-                                Color(
+                                vialColor(Color(
                                     0xFF9A6700
-                                )
+                                ))
 
                             } else {
 
@@ -480,7 +488,7 @@ fun ProfileScreen(
             colors =
                 CardDefaults.cardColors(
                     containerColor =
-                        Color.White
+                        vialColor(Color.White)
                 )
         ) {
 
@@ -509,9 +517,9 @@ fun ProfileScreen(
                         ),
 
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFFEAF1FF
-                        )
+                        ))
                 ) {
 
                     Box(
@@ -634,13 +642,13 @@ fun ProfileScreen(
                     containerColor =
                         if (user.isPremium) {
 
-                            Color(
+                            vialColor(Color(
                                 0xFFFFF8E8
-                            )
+                            ))
 
                         } else {
 
-                            Color.White
+                            vialColor(Color.White)
                         }
                 )
         ) {
@@ -753,9 +761,9 @@ fun ProfileScreen(
                             Modifier.fillMaxWidth(),
 
                         color =
-                            Color(
+                            vialColor(Color(
                                 0xFFF8FAFD
-                            ),
+                            )),
 
                         shape =
                             RoundedCornerShape(
@@ -833,7 +841,7 @@ fun ProfileScreen(
             colors =
                 CardDefaults.cardColors(
                     containerColor =
-                        Color.White
+                        vialColor(Color.White)
                 )
         ) {
 
@@ -858,9 +866,9 @@ fun ProfileScreen(
                         ),
 
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFFE8EDF5
-                        )
+                        ))
                 )
 
 
@@ -883,9 +891,9 @@ fun ProfileScreen(
                         ),
 
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFFE8EDF5
-                        )
+                        ))
                 )
 
 
@@ -964,9 +972,9 @@ fun ProfileScreen(
                 Modifier.fillMaxWidth(),
 
             color =
-                Color(
+                vialColor(Color(
                     0xFF94A3B8
-                ),
+                )),
 
             fontSize =
                 12.sp,
@@ -1010,9 +1018,9 @@ private fun ProfileInfoRow(
                 ),
 
             color =
-                Color(
+                vialColor(Color(
                     0xFFF4F7FB
-                )
+                ))
         ) {
 
             Box(

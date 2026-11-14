@@ -18,13 +18,20 @@ import cl.vialapp.app.data.api.ApiClient
 import cl.vialapp.app.data.api.AssignedTest
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
+import cl.vialapp.app.ui.theme.vialColor
 
-private val GamesBlue = Color(0xFF2563EB)
-private val GamesDark = Color(0xFF172033)
-private val GamesGray = Color(0xFF64748B)
-private val GamesGreen = Color(0xFF14966F)
-private val GamesOrange = Color(0xFFF59E0B)
-private val GamesBackground = Color(0xFFF4F7FB)
+private val GamesBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val GamesDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val GamesGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
+private val GamesGreen: Color
+    @Composable get() = vialColor(Color(0xFF14966F))
+private val GamesOrange: Color
+    @Composable get() = vialColor(Color(0xFFF59E0B))
+private val GamesBackground: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
 
 @Composable
 fun GamesScreen(
@@ -140,7 +147,7 @@ fun GamesScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(26.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF1FF))
+                colors = CardDefaults.cardColors(containerColor = vialColor(Color(0xFFEAF1FF)))
             ) {
                 Row(
                     modifier = Modifier.padding(20.dp),
@@ -171,7 +178,7 @@ fun GamesScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Row(
@@ -210,7 +217,7 @@ fun GamesScreen(
                             .fillMaxWidth()
                             .height(8.dp),
                         color = GamesBlue,
-                        trackColor = Color(0xFFE5EAF2)
+                        trackColor = vialColor(Color(0xFFE5EAF2))
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
@@ -304,8 +311,8 @@ private fun PlayableGameCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White,
-            disabledContainerColor = Color.White
+            containerColor = vialColor(Color.White),
+            disabledContainerColor = vialColor(Color.White)
         )
     ) {
         Column(modifier = Modifier.padding(21.dp)) {
@@ -371,7 +378,7 @@ private fun PausedGameCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBEB))
+        colors = CardDefaults.cardColors(containerColor = vialColor(Color(0xFFFFFBEB)))
     ) {
         Row(
             modifier = Modifier.padding(19.dp),
@@ -409,7 +416,7 @@ private fun ComingSoonGameCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC))
+        colors = CardDefaults.cardColors(containerColor = vialColor(Color(0xFFF8FAFC)))
     ) {
         Row(
             modifier = Modifier.padding(19.dp),
