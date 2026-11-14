@@ -249,8 +249,8 @@ fun GamesScreen(
             PlayableGameCard(
                 emoji = "🚦💥",
                 title = "Cruce Caótico",
-                subtitle = "Prioridades · combos · BOSS",
-                description = "Toca quién tiene prioridad antes de que el cruce se convierta en un desastre.",
+                subtitle = "Arcade en tiempo real · 75 s",
+                description = "Controla los semáforos de una ciudad en movimiento, evita la congestión y da prioridad a las ambulancias.",
                 accent = GamesOrange,
                 enabled = true,
                 onClick = {
