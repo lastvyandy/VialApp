@@ -191,7 +191,8 @@ fun ProgressScreen(
 
             ProgressContent(
                 stats = stats!!,
-                userKey = userKey
+                userKey = userKey,
+                onOpenCollection = onOpenCollection
             )
         }
     }
@@ -202,7 +203,8 @@ fun ProgressScreen(
 @Composable
 private fun ProgressContent(
     stats: AdvancedStatsResponse,
-    userKey: String
+    userKey: String,
+    onOpenCollection: () -> Unit
 ) {
 
     val summary =
