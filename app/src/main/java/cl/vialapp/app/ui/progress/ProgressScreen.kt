@@ -20,14 +20,22 @@ import cl.vialapp.app.data.api.CategoryStatResponse
 import cl.vialapp.app.data.api.RecentTestResponse
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.gamification.ProgressGamificationSection
+import cl.vialapp.app.ui.theme.vialColor
 
-private val ProgressBlue = Color(0xFF2563EB)
-private val ProgressDark = Color(0xFF172033)
-private val ProgressGray = Color(0xFF64748B)
-private val ProgressGreen = Color(0xFF14966F)
-private val ProgressRed = Color(0xFFD92D20)
-private val ProgressOrange = Color(0xFFF59E0B)
-private val ProgressBackground = Color(0xFFF4F7FB)
+private val ProgressBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val ProgressDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val ProgressGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
+private val ProgressGreen: Color
+    @Composable get() = vialColor(Color(0xFF14966F))
+private val ProgressRed: Color
+    @Composable get() = vialColor(Color(0xFFD92D20))
+private val ProgressOrange: Color
+    @Composable get() = vialColor(Color(0xFFF59E0B))
+private val ProgressBackground: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
 
 
 @Composable
@@ -297,9 +305,9 @@ private fun ProgressContent(
                 colors =
                     CardDefaults.cardColors(
                         containerColor =
-                            Color(
+                            vialColor(Color(
                                 0xFFEAF1FF
-                            )
+                            ))
                     )
             ) {
 
@@ -416,9 +424,9 @@ private fun ProgressContent(
                             ),
 
                         trackColor =
-                            Color(
+                            vialColor(Color(
                                 0xFFD6E2F6
-                            )
+                            ))
                     )
                 }
             }
@@ -564,9 +572,9 @@ private fun ProgressContent(
                         colors =
                             CardDefaults.cardColors(
                                 containerColor =
-                                    Color(
+                                    vialColor(Color(
                                         0xFFEAF8F1
-                                    )
+                                    ))
                             )
                     ) {
 
@@ -744,7 +752,7 @@ private fun ProgressContent(
                     Modifier.fillMaxWidth(),
 
                 color =
-                    Color.White,
+                    vialColor(Color.White),
 
                 shape =
                     RoundedCornerShape(
@@ -818,7 +826,7 @@ private fun ProgressStatCard(
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    Color.White
+                    vialColor(Color.White)
             )
     ) {
 
@@ -917,7 +925,7 @@ private fun ProgressCategoryCard(
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    Color.White
+                    vialColor(Color.White)
             )
     ) {
 
@@ -1003,9 +1011,9 @@ private fun ProgressCategoryCard(
                     ),
 
                 trackColor =
-                    Color(
+                    vialColor(Color(
                         0xFFE8EDF5
-                    )
+                    ))
             )
 
 
@@ -1061,7 +1069,7 @@ private fun RecentTestCard(
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    Color.White
+                    vialColor(Color.White)
             )
     ) {
 
@@ -1267,6 +1275,7 @@ private fun EmptyProgressState() {
 }
 
 
+@Composable
 private fun scoreColor(
     score: Int
 ): Color {

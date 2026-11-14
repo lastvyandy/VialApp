@@ -23,14 +23,23 @@ import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.gamification.HomeXpCard
 import cl.vialapp.app.ui.profile.ProfileAvatar
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 
-private val HomeBlue = Color(0xFF2563EB)
-private val HomeDark = Color(0xFF172033)
-private val HomeGray = Color(0xFF64748B)
-private val HomeGreen = Color(0xFF14966F)
-private val HomeOrange = Color(0xFFF59E0B)
-private val HomeRed = Color(0xFFD92D20)
-private val HomeBackground = Color(0xFFF4F7FB)
+private val HomeBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val HomeDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val HomeGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
+private val HomeGreen: Color
+    @Composable get() = vialColor(Color(0xFF14966F))
+private val HomeOrange: Color
+    @Composable get() = vialColor(Color(0xFFF59E0B))
+private val HomeRed: Color
+    @Composable get() = vialColor(Color(0xFFD92D20))
+private val HomeBackground: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
 
 @Composable
 fun HomeScreen(
@@ -226,7 +235,7 @@ fun HomeScreen(
                     .clip(RoundedCornerShape(28.dp))
                     .background(
                         Brush.linearGradient(
-                            colors = listOf(Color(0xFF2563EB), Color(0xFF4F7DF3))
+                            colors = listOf(VialActionBlue, Color(0xFF4F7DF3))
                         )
                     )
                     .padding(24.dp)
@@ -260,7 +269,7 @@ fun HomeScreen(
                         onClick = onPractice,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.White,
-                            contentColor = HomeBlue
+                            contentColor = VialActionBlue
                         ),
                         shape = RoundedCornerShape(16.dp)
                     ) {
@@ -280,7 +289,7 @@ fun HomeScreen(
                     onClick = { onResumeExam(attempt.testId) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF1FF))
+                    colors = CardDefaults.cardColors(containerColor = vialColor(Color(0xFFEAF1FF)))
                 ) {
                     Row(
                         modifier = Modifier.padding(19.dp),
@@ -289,7 +298,7 @@ fun HomeScreen(
                         Surface(
                             modifier = Modifier.size(50.dp),
                             shape = RoundedCornerShape(15.dp),
-                            color = Color.White
+                            color = vialColor(Color.White)
                         ) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
@@ -389,7 +398,7 @@ fun HomeScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     if (dashboardLoading) {
@@ -432,14 +441,15 @@ fun HomeScreen(
                                 .fillMaxWidth()
                                 .height(8.dp),
                             color = scoreColor(priorityCategory.successPercentage),
-                            trackColor = Color(0xFFE8EDF5)
+                            trackColor = vialColor(Color(0xFFE8EDF5))
                         )
                         Spacer(modifier = Modifier.height(17.dp))
                         Button(
                             onClick = onPractice,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(15.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = HomeBlue)
+                            colors = ButtonDefaults.buttonColors(containerColor = VialActionBlue,
+                                    contentColor = Color.White)
                         ) {
                             Text(text = "Practicar ahora", fontWeight = FontWeight.Bold)
                         }
@@ -485,7 +495,7 @@ fun HomeScreen(
                     onClick = onProgress,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(
@@ -569,7 +579,7 @@ fun HomeScreen(
                 onClick = onGames,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF172033))
+                colors = CardDefaults.cardColors(containerColor = vialColor(Color(0xFF172033)))
             ) {
                 Row(
                     modifier = Modifier.padding(20.dp),
@@ -605,7 +615,7 @@ fun HomeScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7E6))
+                colors = CardDefaults.cardColors(containerColor = vialColor(Color(0xFFFFF7E6)))
             ) {
                 Row(
                     modifier = Modifier.padding(20.dp),
@@ -639,7 +649,7 @@ private fun HomeMetric(modifier: Modifier, value: String, label: String) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFF4F7FB)
+        color = vialColor(Color(0xFFF4F7FB))
     ) {
         Column(
             modifier = Modifier.padding(vertical = 13.dp, horizontal = 8.dp),
@@ -664,7 +674,7 @@ private fun HomeActionCard(
         onClick = onClick,
         modifier = modifier.height(150.dp),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             Text(text = emoji, fontSize = 29.sp)
@@ -676,6 +686,7 @@ private fun HomeActionCard(
     }
 }
 
+@Composable
 private fun scoreColor(score: Int): Color {
     return when {
         score >= 80 -> HomeGreen

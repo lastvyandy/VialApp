@@ -26,11 +26,17 @@ import cl.vialapp.app.ui.mascot.MascotReactions
 import kotlinx.coroutines.CancellationException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 
-private val LeagueBlue = Color(0xFF2563EB)
-private val LeagueDark = Color(0xFF172033)
-private val LeagueGray = Color(0xFF64748B)
-private val LeagueBg = Color(0xFFF4F7FB)
+private val LeagueBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val LeagueDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val LeagueGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
+private val LeagueBg: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
 
 @Composable
 fun WeeklyLeaderboardScreen(
@@ -100,7 +106,7 @@ fun WeeklyLeaderboardScreen(
         }
         error?.let { message ->
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Card(colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))) {
                     Column(Modifier.padding(16.dp)) {
                         Text(message, color = LeagueDark)
                         TextButton(onClick = { refresh++ }) { Text("Reintentar") }
@@ -121,7 +127,7 @@ fun WeeklyLeaderboardScreen(
             item {
                 Card(
                     shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = LeagueBlue)
+                    colors = CardDefaults.cardColors(containerColor = VialActionBlue)
                 ) {
                     Column(Modifier.fillMaxWidth().padding(18.dp)) {
                         Text("TU POSICIÓN", color = Color.White.copy(alpha = .8f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -141,7 +147,7 @@ fun WeeklyLeaderboardScreen(
             }
             board.previousMedal?.let { medal ->
                 item {
-                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7E2))) {
+                    Card(colors = CardDefaults.cardColors(containerColor = vialColor(Color(0xFFFFF7E2)))) {
                         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(medalEmoji(medal), fontSize = 32.sp)
                             Spacer(Modifier.width(12.dp))
@@ -163,7 +169,7 @@ fun WeeklyLeaderboardScreen(
             }
             if (board.entries.isEmpty() && !loading) {
                 item {
-                    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                    Card(colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))) {
                         Text(
                             "Todavía no hay participantes. ¡Sé el primero en sumar XP!",
                             color = LeagueGray,
@@ -208,7 +214,7 @@ private fun LeaguePodium(entries: List<LeaderboardEntryResponse>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 18.dp),
@@ -238,9 +244,9 @@ private fun LeaguePodium(entries: List<LeaderboardEntryResponse>) {
                             ),
                             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
                             color = when (position) {
-                                1 -> Color(0xFFFFE38C)
-                                2 -> Color(0xFFE2E8F0)
-                                else -> Color(0xFFF4D5B7)
+                                1 -> vialColor(Color(0xFFFFE38C))
+                                2 -> vialColor(Color(0xFFE2E8F0))
+                                else -> vialColor(Color(0xFFF4D5B7))
                             }
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -260,7 +266,7 @@ private fun LeagueRow(entry: LeaderboardEntryResponse) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (entry.isMe) Color(0xFFE5EDFF) else Color.White
+            containerColor = if (entry.isMe) vialColor(Color(0xFFE5EDFF)) else vialColor(Color.White)
         )
     ) {
         Row(

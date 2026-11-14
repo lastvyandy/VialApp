@@ -17,14 +17,22 @@ import androidx.compose.ui.unit.sp
 import cl.vialapp.app.data.api.ApiClient
 import cl.vialapp.app.data.api.CategoryStatResponse
 import cl.vialapp.app.data.session.SessionManager
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 
 
-private val PracticeBlue = Color(0xFF2563EB)
-private val PracticeDark = Color(0xFF172033)
-private val PracticeGray = Color(0xFF64748B)
-private val PracticeGreen = Color(0xFF14966F)
-private val PracticeOrange = Color(0xFFF59E0B)
-private val PracticeBackground = Color(0xFFF4F7FB)
+private val PracticeBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val PracticeDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val PracticeGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
+private val PracticeGreen: Color
+    @Composable get() = vialColor(Color(0xFF14966F))
+private val PracticeOrange: Color
+    @Composable get() = vialColor(Color(0xFFF59E0B))
+private val PracticeBackground: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
 
 
 @Composable
@@ -162,7 +170,7 @@ fun PracticeScreen(
                         error,
 
                     color =
-                        Color(0xFFD92D20)
+                        vialColor(Color(0xFFD92D20))
                 )
             }
         }
@@ -339,7 +347,7 @@ fun PracticeScreen(
                         colors =
                             CardDefaults.cardColors(
                                 containerColor =
-                                    Color.White
+                                    vialColor(Color.White)
                             )
                     ) {
 
@@ -432,7 +440,7 @@ private fun PriorityPracticeCard(
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    Color(0xFFEAF1FF)
+                    vialColor(Color(0xFFEAF1FF))
             )
     ) {
 
@@ -551,7 +559,7 @@ private fun PriorityPracticeCard(
                     ),
 
                 trackColor =
-                    Color(0xFFD6E2F6)
+                    vialColor(Color(0xFFD6E2F6))
             )
 
 
@@ -582,7 +590,8 @@ private fun PriorityPracticeCard(
                 colors =
                     ButtonDefaults.buttonColors(
                         containerColor =
-                            PracticeBlue
+                            VialActionBlue,
+                                    contentColor = Color.White
                     )
             ) {
 
@@ -615,7 +624,7 @@ private fun CategoryPracticeCard(
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    Color.White
+                    vialColor(Color.White)
             )
     ) {
 
@@ -779,6 +788,7 @@ private fun EmptyPracticeState(
 }
 
 
+@Composable
 private fun scoreColor(
     score: Int
 ): Color {
@@ -792,6 +802,6 @@ private fun scoreColor(
             PracticeOrange
 
         else ->
-            Color(0xFFD92D20)
+            vialColor(Color(0xFFD92D20))
     }
 }

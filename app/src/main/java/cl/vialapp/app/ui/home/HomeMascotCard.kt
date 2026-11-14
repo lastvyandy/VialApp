@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.R
 import cl.vialapp.app.ui.mascot.MascotPortrait
+import cl.vialapp.app.ui.theme.vialColor
 
 /**
  * Saludo visual de la mascota elegida. Los identificadores del backend
@@ -80,7 +81,7 @@ fun HomeMascotCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -94,7 +95,7 @@ fun HomeMascotCard(
                         .size(width = 94.dp, height = 105.dp)
                         .clip(shape)
                         .background(Color(0xFF122B42))
-                        .border(1.dp, Color(0xFFE2E8F0), shape),
+                        .border(1.dp, vialColor(Color(0xFFE2E8F0)), shape),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
@@ -123,14 +124,14 @@ fun HomeMascotCard(
 private fun MascotGreeting(characterName: String, phrase: String?) {
     Text(
         text = "TU COMPAÑERO DE RUTA",
-        color = Color(0xFF2563EB),
+        color = vialColor(Color(0xFF2563EB)),
         fontSize = 10.sp,
         fontWeight = FontWeight.Bold
     )
     Spacer(modifier = Modifier.size(5.dp))
     Text(
         text = characterName,
-        color = Color(0xFF172033),
+        color = vialColor(Color(0xFF172033)),
         fontWeight = FontWeight.ExtraBold,
         fontSize = 19.sp
     )
@@ -138,7 +139,7 @@ private fun MascotGreeting(characterName: String, phrase: String?) {
         Spacer(modifier = Modifier.size(7.dp))
         Text(
             text = phrase,
-            color = Color(0xFF64748B),
+            color = vialColor(Color(0xFF64748B)),
             fontSize = 13.sp,
             lineHeight = 18.sp
         )

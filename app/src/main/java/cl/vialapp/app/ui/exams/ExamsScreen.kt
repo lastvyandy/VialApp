@@ -19,11 +19,16 @@ import cl.vialapp.app.data.api.ApiClient
 import cl.vialapp.app.data.api.AssignedTest
 import cl.vialapp.app.data.api.ExamAttemptResponse
 import cl.vialapp.app.data.session.SessionManager
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 
 
-private val VialBlue = Color(0xFF2563EB)
-private val VialDark = Color(0xFF172033)
-private val VialGray = Color(0xFF64748B)
+private val VialBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val VialDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val VialGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
 
 
 @Composable
@@ -214,7 +219,7 @@ fun ExamsScreen(
                     Modifier
                         .fillMaxSize()
                         .background(
-                            Color(0xFFF7F9FC)
+                            vialColor(Color(0xFFF7F9FC))
                         ),
 
                 contentAlignment =
@@ -236,7 +241,7 @@ fun ExamsScreen(
                     Modifier
                         .fillMaxSize()
                         .background(
-                            Color(0xFFF7F9FC)
+                            vialColor(Color(0xFFF7F9FC))
                         )
                         .padding(
                             24.dp
@@ -251,7 +256,7 @@ fun ExamsScreen(
                         error,
 
                     color =
-                        Color(0xFFDC2626)
+                        vialColor(Color(0xFFDC2626))
                 )
             }
         }
@@ -264,7 +269,7 @@ fun ExamsScreen(
                     Modifier
                         .fillMaxSize()
                         .background(
-                            Color(0xFFF7F9FC)
+                            vialColor(Color(0xFFF7F9FC))
                         )
                         .padding(
                             horizontal = 20.dp
@@ -368,9 +373,9 @@ fun ExamsScreen(
                             colors =
                                 CardDefaults.cardColors(
                                     containerColor =
-                                        Color(
+                                        vialColor(Color(
                                             0xFFEAF1FF
-                                        )
+                                        ))
                                 )
                         ) {
 
@@ -448,7 +453,8 @@ fun ExamsScreen(
                                     colors =
                                         ButtonDefaults.buttonColors(
                                             containerColor =
-                                                VialBlue
+                                                VialActionBlue,
+                                    contentColor = Color.White
                                         )
                                 ) {
 
@@ -491,7 +497,7 @@ fun ExamsScreen(
                             colors =
                                 CardDefaults.cardColors(
                                     containerColor =
-                                        Color.White
+                                        vialColor(Color.White)
                                 )
                         ) {
 
@@ -814,10 +820,10 @@ private fun ExamCard(
                 VialBlue
 
             test.isLocked ->
-                Color(0xFFF59E0B)
+                vialColor(Color(0xFFF59E0B))
 
             test.hasResult ->
-                Color(0xFF16A34A)
+                vialColor(Color(0xFF16A34A))
 
             else ->
                 VialBlue
@@ -853,13 +859,13 @@ private fun ExamCard(
                 containerColor =
                     if (isActive) {
 
-                        Color(
+                        vialColor(Color(
                             0xFFF5F9FF
-                        )
+                        ))
 
                     } else {
 
-                        Color.White
+                        vialColor(Color.White)
                     }
             )
     ) {
@@ -891,15 +897,15 @@ private fun ExamCard(
                                 color =
                                     if (isActive) {
 
-                                        Color(
+                                        vialColor(Color(
                                             0xFFDCE9FF
-                                        )
+                                        ))
 
                                     } else {
 
-                                        Color(
+                                        vialColor(Color(
                                             0xFFE8F0FF
-                                        )
+                                        ))
                                     },
 
                                 shape =
@@ -1010,9 +1016,9 @@ private fun ExamCard(
                         "🔒 ${test.lockedReason}",
 
                     color =
-                        Color(
+                        vialColor(Color(
                             0xFF92400E
-                        ),
+                        )),
 
                     fontSize =
                         13.sp
@@ -1050,7 +1056,8 @@ private fun ExamCard(
                     colors =
                         ButtonDefaults.buttonColors(
                             containerColor =
-                                VialBlue
+                                VialActionBlue,
+                                    contentColor = Color.White
                         )
                 ) {
 
