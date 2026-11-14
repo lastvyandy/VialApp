@@ -119,7 +119,7 @@ fun ProfilePhotoSection(
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column(Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             ProfileAvatar(name, avatarKey, Modifier.size(88.dp).clickable(enabled = enabled && !busy) { options = true })
             Spacer(Modifier.height(9.dp))
             Text(name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF172033))
