@@ -1683,6 +1683,9 @@ fun ProgressGamificationSection(
             title = "Taller del Auto",
             score = store.getHighScore(GameProgressStore.AUTO_WORKSHOP)
         )
+        GameRecordRow(
+            emoji = "🛑", title = "Caza la Señal", score = store.getHighScore(GameProgressStore.SIGN_HUNT_ARCADE)
+        )
 
 
 

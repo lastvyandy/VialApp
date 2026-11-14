@@ -57,24 +57,26 @@ private fun FightScene(frame: FightFrame, modifier: Modifier) {
     val takingDamage = pose == PelaoPose.HIT
     val enemyMax = 100 + (frame.boss - 1).coerceIn(0, 2) * 20
     val enemyColor = when (frame.boss) { 1 -> Color(0xFFF97316); 2 -> Color(0xFFA78BFA); else -> Color(0xFFFB7185) }
+    val enemyName = when (frame.boss) { 1 -> "IMPRUDENTE"; 2 -> "DISTRAÍDO"; else -> "TEMERARIO" }
     Column(modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF15253A)).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f)) {
-                Text("DON PELAO", color = Color(0xFFDBEAFE), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("DON PELAO · ${frame.hp} HP", color = Color(0xFFDBEAFE), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 LinearProgressIndicator(progress = { frame.hp / 100f }, Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF4ADE80), trackColor = Color(0xFF35445A))
             }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text("RIVAL ${frame.boss.coerceAtMost(3)}", color = enemyColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("$enemyName · ${frame.bossHp} HP", color = enemyColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 LinearProgressIndicator(progress = { (frame.bossHp.toFloat() / enemyMax).coerceIn(0f, 1f) }, Modifier.fillMaxWidth().height(7.dp), color = enemyColor, trackColor = Color(0xFF35445A))
             }
         }
         Surface(color = if (opening) Color(0xFF166534) else Color(0xFF31455F), shape = RoundedCornerShape(11.dp)) {
             Column(Modifier.fillMaxWidth().padding(7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    when (frame.phase) { FightPhase.TELEGRAPH -> frame.hazard.label; FightPhase.OPENING -> "¡VULNERABLE!"; FightPhase.RECOVERY -> "Preparando siguiente ataque…" },
+                    when (frame.phase) { FightPhase.TELEGRAPH -> frame.hazard.label; FightPhase.OPENING -> "¡CORRECTO! Pulsa ATACAR varias veces"; FightPhase.RECOVERY -> "Lee la explicación · próximo ataque" },
                     fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
                 )
+                Text(if (opening) "VENTANA DE ATAQUE" else if (frame.phase == FightPhase.TELEGRAPH) "ELIGE UNA DECISIÓN SEGURA" else "PREPARACIÓN", color = Color(0xFFDBEAFE), fontSize = 10.sp)
                 LinearProgressIndicator(progress = { (frame.remaining / if (opening) 3.2f else 6f).coerceIn(0f, 1f) },
                     Modifier.fillMaxWidth().height(4.dp), color = if (opening) Color(0xFF86EFAC) else Color(0xFFFBBF24), trackColor = Color(0xFF172033))
             }
@@ -90,6 +92,8 @@ private fun FightScene(frame: FightFrame, modifier: Modifier) {
                 }
                 drawRect(Color(0xFF455366), Offset(0f, floor), Size(size.width, size.height - floor))
                 drawLine(Color(0xFFFCD34D), Offset(0f, floor + 9f), Offset(size.width, floor + 9f), 3f)
+                drawOval(Color(0xFF111827).copy(alpha = .38f), Offset(size.width * .10f, floor - 4f), Size(size.width * .33f, 15f))
+                if (opening) drawCircle(Color(0xFF86EFAC).copy(alpha = .11f), size.width * .26f, Offset(size.width * .76f, size.height * .51f))
                 val cx = size.width * if (attacking && frame.impact > 0f) .80f else .76f
                 val cy = size.height * .53f + sin(frame.elapsed * 5f) * size.height * .018f
                 val unit = minOf(size.width / 330f, size.height / 220f)
@@ -126,7 +130,7 @@ private fun FightScene(frame: FightFrame, modifier: Modifier) {
             if (takingDamage && frame.impact > 0f) {
                 Box(Modifier.matchParentSize().background(Color(0xFFEF4444).copy(alpha = .16f)))
             }
-            if (attacking && frame.combo > 1) Text("×${frame.combo}", color = Color(0xFFFDE68A), fontWeight = FontWeight.ExtraBold,
+            if (attacking) Text("−20 HP · ×${frame.combo}", color = Color(0xFFFDE68A), fontWeight = FontWeight.ExtraBold,
                 fontSize = 25.sp, modifier = Modifier.align(Alignment.TopCenter).padding(8.dp))
         }
     }

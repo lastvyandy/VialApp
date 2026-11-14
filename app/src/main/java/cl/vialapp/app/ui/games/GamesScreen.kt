@@ -2,6 +2,7 @@ package cl.vialapp.app.ui.games
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -237,7 +238,8 @@ fun GamesScreen(
 
         item {
             PlayableGameCard(
-                emoji = "🏎️",
+                gameId = GameProgressStore.CARVIER_DRIVE,
+                record = progressStore.getHighScore(GameProgressStore.CARVIER_DRIVE),
                 title = "Carvier al volante",
                 subtitle = "Conducción arcade · 3 carriles",
                 description = "Esquiva el tráfico, recoge monedas y reduce la velocidad en zonas escolares.",
@@ -249,10 +251,11 @@ fun GamesScreen(
 
         item {
             PlayableGameCard(
-                emoji = "🥊",
+                gameId = GameProgressStore.PELAO_ARENA,
+                record = progressStore.getHighScore(GameProgressStore.PELAO_ARENA),
                 title = "Don Pelao Arena",
                 subtitle = "Combate · combos · 3 rivales",
-                description = "Reacciona a peligros viales, esquiva los ataques y derrota a los jefes.",
+                description = "Resuelve situaciones de tránsito, bloquea ataques y derrota a tres rivales.",
                 accent = GamesGreen,
                 enabled = true,
                 onClick = onOpenArena
@@ -261,10 +264,11 @@ fun GamesScreen(
 
         item {
             PlayableGameCard(
-                emoji = "🔧",
+                gameId = GameProgressStore.AUTO_WORKSHOP,
+                record = progressStore.getHighScore(GameProgressStore.AUTO_WORKSHOP),
                 title = "Taller del Auto",
                 subtitle = "Diagnóstico interactivo · 4 fallas",
-                description = "Inspecciona el auto y elige las herramientas para cada falla.",
+                description = "Cuatro órdenes: identifica la pieza, utiliza la herramienta y toma una decisión segura.",
                 accent = GamesOrange,
                 enabled = true,
                 onClick = onOpenWorkshop
@@ -273,7 +277,8 @@ fun GamesScreen(
 
         item {
             PlayableGameCard(
-                emoji = "👨‍🦲💪",
+                gameId = GameProgressStore.BALD_CHALLENGE,
+                record = progressStore.getHighScore(GameProgressStore.BALD_CHALLENGE),
                 title = "Reto del Pelao · clásico",
                 subtitle = "5 rondas · 3 vidas · Pelao Power",
                 description = "Responde rápido, arma combos y llega al BOSS con el modo x2 cargado.",
@@ -287,7 +292,8 @@ fun GamesScreen(
 
         item {
             PlayableGameCard(
-                emoji = "🚦💥",
+                gameId = GameProgressStore.CROSSROADS_ARCADE,
+                record = progressStore.getHighScore(GameProgressStore.CROSSROADS_ARCADE),
                 title = "Cruce Caótico",
                 subtitle = "Arcade en tiempo real · 75 s",
                 description = "Controla los semáforos de una ciudad en movimiento, evita la congestión y da prioridad a las ambulancias.",
@@ -301,7 +307,8 @@ fun GamesScreen(
 
         item {
             PlayableGameCard(
-                emoji = "🛑",
+                gameId = GameProgressStore.SIGN_HUNT_ARCADE,
+                record = progressStore.getHighScore(GameProgressStore.SIGN_HUNT_ARCADE),
                 title = "Caza la Señal",
                 subtitle = "Seis señales · decisiones rápidas",
                 description = "Identifica la acción correcta ante señales chilenas; aprende con la explicación de cada respuesta.",
@@ -330,7 +337,7 @@ fun GamesScreen(
         } else if (sourceTest == null) {
             item {
                 Text(
-                    text = if (error.isNotBlank()) error else "Reto del Pelao necesita un examen accesible. Cruce Caótico funciona igualmente.",
+                    text = if (error.isNotBlank()) error else "El reto clásico requiere un examen accesible. Los demás juegos están disponibles.",
                     color = GamesGray,
                     fontSize = 13.sp
                 )
@@ -341,7 +348,8 @@ fun GamesScreen(
 
 @Composable
 private fun PlayableGameCard(
-    emoji: String,
+    gameId: String,
+    record: Int,
     title: String,
     subtitle: String,
     description: String,
@@ -349,70 +357,25 @@ private fun PlayableGameCard(
     enabled: Boolean,
     onClick: () -> Unit
 ) {
+    val c = MaterialTheme.colorScheme
     Card(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = vialColor(Color.White),
-            disabledContainerColor = vialColor(Color.White)
-        )
+        onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, c.outlineVariant),
+        colors = CardDefaults.cardColors(containerColor = c.surface, disabledContainerColor = c.surface)
     ) {
-        Column(modifier = Modifier.padding(21.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    modifier = Modifier.size(66.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = accent.copy(alpha = 0.12f)
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = emoji, fontSize = 31.sp)
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(15.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        color = GamesDark,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Text(
-                        text = subtitle,
-                        color = GamesGray,
-                        fontSize = 12.sp
-                    )
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(30.dp),
-                    color = accent.copy(alpha = 0.12f)
-                ) {
-                    Text(
-                        text = if (enabled) "JUGAR" else "CARGANDO",
-                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
-                        color = accent,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+        GameCover(gameId, Modifier.fillMaxWidth().height(140.dp))
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Text(subtitle.uppercase(), color = accent, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+            Text(title, color = c.onSurface, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+            Text(description, color = c.onSurfaceVariant, fontSize = 13.sp, lineHeight = 19.sp)
+            HorizontalDivider(color = c.outlineVariant)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (record > 0) "Récord: $record" else "Sin récord aún", color = c.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Surface(shape = RoundedCornerShape(12.dp), color = if (enabled) c.primaryContainer else c.surfaceVariant) {
+                    Text(if (enabled) "JUGAR  ›" else "NO DISPONIBLE", Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                        color = if (enabled) c.onPrimaryContainer else c.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = description,
-                color = GamesGray,
-                fontSize = 14.sp,
-                lineHeight = 20.sp
-            )
         }
     }
 }

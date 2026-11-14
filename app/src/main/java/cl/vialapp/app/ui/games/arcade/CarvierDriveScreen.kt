@@ -37,6 +37,7 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
                 val scheme = MaterialTheme.colorScheme
                 Surface(color = if (frame.stopChallenge) Color(0xFFB42318) else if (frame.schoolZone) Color(0xFF85520E) else scheme.surface, shape = RoundedCornerShape(12.dp)) {
                     val fg = if (frame.stopChallenge || frame.schoolZone) Color.White else scheme.onSurface
+                    Column(Modifier.fillMaxWidth().padding(9.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(when {
                         frame.stopChallenge && frame.stopCompleted && frame.stopped -> "PARE · cruce libre, pulsa Avanzar"
                         frame.stopChallenge && frame.stopCompleted -> "✓ PARE respetado"
@@ -44,7 +45,12 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
                         frame.stopChallenge -> "PARE · detención completa"
                         frame.schoolZone -> "ZONA ESCOLAR · máximo 30 km/h"
                         else -> "VELOCIDAD: ${if (frame.stopped) 0 else if (frame.slow) 30 else 50} km/h (simulada)"
-                    }, Modifier.fillMaxWidth().padding(9.dp), color = fg, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 13.sp)
+                    }, color = fg, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 13.sp)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("${if (frame.stopped) 0 else if (frame.slow) 30 else 50} km/h · simulado", color = fg, fontSize = 12.sp)
+                        Text("PARE ${frame.safeStops}/2 · ESCUELA ${frame.safeZones}/2", color = fg, fontSize = 11.sp)
+                    }
+                    }
                 }
                 DriveRoad(frame, Modifier.weight(1f).fillMaxWidth(), enabled, act)
             }
@@ -53,12 +59,15 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ArcadeControl("◀ Izq.", enabled && !frame.stopped && frame.lane > 0, Modifier.weight(1f)) { act(0) }
-                ArcadeControl(if (frame.slow) "30 km/h ✓" else "Reducir a 30", enabled && !frame.stopped, Modifier.weight(1.35f), frame.slow) { act(2) }
+                ArcadeControl(if (frame.slow) "30 → 50" else "50 → 30", enabled && !frame.stopped, Modifier.weight(1.35f), frame.slow) { act(2) }
                 ArcadeControl("Der. ▶", enabled && !frame.stopped && frame.lane < 2, Modifier.weight(1f)) { act(1) }
             }
-            if ((frame.stopChallenge && !frame.stopCompleted) || frame.stopped) {
-                ArcadeControl(if (frame.stopped && frame.stopCompleted) "AVANZAR" else if (frame.stopped) "DETENIDO · ESPERA" else "DETENER (PARE)", enabled && (!frame.stopped || frame.stopCompleted), Modifier.fillMaxWidth(), frame.stopCompleted) { act(3) }
-            }
+            ArcadeControl(when {
+                frame.stopped && frame.stopCompleted -> "AVANZAR · CRUCE LIBRE"
+                frame.stopped -> "DETENIDO · ESPERA"
+                frame.stopChallenge && !frame.stopCompleted -> "DETENER (PARE)"
+                else -> "DETENER · disponible ante PARE"
+            }, enabled && ((frame.stopChallenge && !frame.stopCompleted && !frame.stopped) || (frame.stopped && frame.stopCompleted)), Modifier.fillMaxWidth(), frame.stopCompleted && frame.stopped) { act(3) }
             }
         }
     )
@@ -68,7 +77,7 @@ private val roadPaints = listOf(Color(0xFFF97316), Color(0xFFEF4444), Color(0xFF
 private fun laneX(lane: Float) = 205f + lane * 145f
 
 @Composable
-private fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, act: (Int) -> Unit) {
+internal fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, act: (Int) -> Unit) {
     val currentAct by rememberUpdatedState(act)
     Canvas(modifier.clip(RoundedCornerShape(22.dp)).pointerInput(enabled) {
         if (enabled) {
@@ -90,7 +99,9 @@ private fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, a
         scale(size.width / 700f, size.height / 1000f, pivot = Offset.Zero) {
             drawRect(Brush.verticalGradient(listOf(Color(0xFF78A889), Color(0xFF43765E)), endY = 1000f), size = Size(700f, 1000f))
             drawRect(Color(0xFFA3B2AB), Offset(110f, 0f), Size(480f, 1000f))
-            drawRect(Color(0xFF354251), Offset(132f, 0f), Size(436f, 1000f))
+            drawRect(Brush.verticalGradient(listOf(Color(0xFF454F5C), Color(0xFF26384A)), endY = 1000f), Offset(132f, 0f), Size(436f, 1000f))
+            drawLine(Color(0xFFB3C5C8), Offset(120f, 0f), Offset(120f, 1000f), 5f)
+            drawLine(Color(0xFFB3C5C8), Offset(580f, 0f), Offset(580f, 1000f), 5f)
             drawLine(Color(0xFFE2E8F0), Offset(138f, 0f), Offset(138f, 1000f), 5f)
             drawLine(Color(0xFFE2E8F0), Offset(562f, 0f), Offset(562f, 1000f), 5f)
             val offset = (frame.distance * 14f) % 145f

@@ -81,10 +81,12 @@ fun CrossroadsChaosScreen(userKey: String, onBack: () -> Unit) {
             accumulator += ((now - previous) / 1_000_000_000f).coerceIn(0f, .10f)
             previous = now
             if (accumulator >= 1f / 30f) {
-                frame = engine.step(accumulator)
-                accumulator = 0f
+                while (accumulator >= 1f / 30f && !frame.finished) {
+                    frame = engine.step(1f / 30f)
+                    accumulator -= 1f / 30f
+                }
                 if (frame.finished) {
-                    saving = frame.passed > 0
+                    saving = frame.score > 0
                     phase = ArcadePhase.RESULT
                 }
             }
@@ -183,6 +185,8 @@ private fun ArcadePlay(
     onExit: () -> Unit, onPedestrian: () -> Unit, onSignal: (TrafficAxis) -> Unit
 ) {
     val c = MaterialTheme.colorScheme
+    val waitingVertical = frame.cars.count { it.lane.axis == TrafficAxis.VERTICAL && it.waiting > 0f }
+    val waitingHorizontal = frame.cars.count { it.lane.axis == TrafficAxis.HORIZONTAL && it.waiting > 0f }
     val time = ceil((TrafficEngine.DURATION - frame.elapsed).coerceAtLeast(0f).toDouble()).toInt()
     Column(
         Modifier.fillMaxSize().background(c.background).padding(horizontal = 12.dp, vertical = 8.dp),
@@ -240,8 +244,8 @@ private fun ArcadePlay(
             )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SignalButton("↕", "Norte / Sur", frame.green == TrafficAxis.VERTICAL, !paused && !frame.pedestrianRequested && frame.pedestrianCrossing <= 0f, Modifier.weight(1f)) { onSignal(TrafficAxis.VERTICAL) }
-            SignalButton("↔", "Este / Oeste", frame.green == TrafficAxis.HORIZONTAL, !paused && !frame.pedestrianRequested && frame.pedestrianCrossing <= 0f, Modifier.weight(1f)) { onSignal(TrafficAxis.HORIZONTAL) }
+            SignalButton("↕", "Norte / Sur · $waitingVertical", frame.green == TrafficAxis.VERTICAL, !paused && !frame.pedestrianRequested && frame.pedestrianCrossing <= 0f, Modifier.weight(1f)) { onSignal(TrafficAxis.VERTICAL) }
+            SignalButton("↔", "Este / Oeste · $waitingHorizontal", frame.green == TrafficAxis.HORIZONTAL, !paused && !frame.pedestrianRequested && frame.pedestrianCrossing <= 0f, Modifier.weight(1f)) { onSignal(TrafficAxis.HORIZONTAL) }
         }
         Button(
             onClick = onPedestrian,
@@ -279,7 +283,7 @@ private fun SignalButton(arrow: String, label: String, green: Boolean, enabled: 
         contentPadding = PaddingValues(6.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("$arrow  ${if (green) "●" else "○"}", fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = if (green && enabled) Color(0xFFBBF7D0) else c.onSurfaceVariant)
+            Text("$arrow  ●", fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = if (green && enabled) Color(0xFFBBF7D0) else c.error)
             Text(label, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             Text(if (green) "VERDE" else "ROJO", fontSize = 10.sp)
         }
