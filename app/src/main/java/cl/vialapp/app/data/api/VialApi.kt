@@ -1,6 +1,10 @@
 package cl.vialapp.app.data.api
 
+import okhttp3.RequestBody
+import okhttp3.ResponseBody
 import retrofit2.Response
+import retrofit2.http.PUT
+import retrofit2.http.DELETE
 import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
@@ -19,6 +23,24 @@ interface VialApi {
         @Field("username") email: String,
         @Field("password") password: String
     ): Response<LoginResponse>
+
+    @GET("users/me/avatar")
+    suspend fun getMyAvatar(@Header("Authorization") authorization: String): Response<AvatarResponse>
+
+    @PUT("users/me/avatar")
+    suspend fun putMyAvatar(
+        @Header("Authorization") authorization: String,
+        @Body photo: RequestBody
+    ): Response<AvatarResponse>
+
+    @DELETE("users/me/avatar")
+    suspend fun deleteMyAvatar(@Header("Authorization") authorization: String): Response<AvatarResponse>
+
+    @GET("users/avatars/{key}")
+    suspend fun getAvatar(
+        @Header("Authorization") authorization: String,
+        @Path("key") key: String
+    ): Response<ResponseBody>
 
     @GET("users/me")
     suspend fun getMe(

@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,12 +15,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cl.vialapp.app.R
 import cl.vialapp.app.data.api.ApiClient
 import cl.vialapp.app.data.api.LeaderboardEntryResponse
 import cl.vialapp.app.data.api.WeeklyLeaderboardResponse
 import cl.vialapp.app.data.session.SessionManager
-import cl.vialapp.app.ui.mascot.MascotPortrait
+import cl.vialapp.app.ui.profile.ProfileAvatar
 import cl.vialapp.app.ui.mascot.MascotReaction
 import cl.vialapp.app.ui.mascot.MascotReactionCard
 import cl.vialapp.app.ui.mascot.MascotReactions
@@ -227,7 +225,7 @@ private fun LeaguePodium(entries: List<LeaderboardEntryResponse>) {
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Text(medalEmoji(position), fontSize = 27.sp)
-                        LeagueAvatar(entry.mascotId, Modifier.size(52.dp))
+                        ProfileAvatar(entry.alias, entry.avatarKey, Modifier.size(52.dp))
                         Text(
                             if (entry.isMe) "Tú" else entry.alias,
                             fontSize = 11.sp, fontWeight = FontWeight.Bold,
@@ -277,7 +275,7 @@ private fun LeagueRow(entry: LeaderboardEntryResponse) {
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
-            LeagueAvatar(entry.mascotId, Modifier.size(42.dp))
+            ProfileAvatar(entry.alias, entry.avatarKey, Modifier.size(42.dp))
             Text(
                 if (entry.isMe) "Tú" else entry.alias,
                 modifier = Modifier.weight(1f),
@@ -286,20 +284,6 @@ private fun LeagueRow(entry: LeaderboardEntryResponse) {
                 fontSize = 13.sp
             )
             Text("${entry.xp} XP", color = LeagueBlue, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        }
-    }
-}
-
-@Composable
-private fun LeagueAvatar(mascotId: String?, modifier: Modifier) {
-    when (mascotId) {
-        "carvier", "mister_pelao" -> MascotPortrait(
-            drawable = if (mascotId == "mister_pelao") R.drawable.mascot_mister_pelao else R.drawable.mascot_carvier,
-            modifier = modifier,
-            cornerRadius = 16.dp
-        )
-        else -> Surface(modifier = modifier, shape = CircleShape, color = Color(0xFFE5EDFF)) {
-            Box(contentAlignment = Alignment.Center) { Text("🚗", fontSize = 19.sp) }
         }
     }
 }

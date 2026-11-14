@@ -18,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,11 +57,13 @@ import cl.vialapp.app.ui.leaderboard.WeeklyLeaderboardScreen
 import cl.vialapp.app.ui.mascot.MascotSelectionScreen
 import cl.vialapp.app.ui.mascot.MascotPortrait
 import cl.vialapp.app.ui.profile.LicenseClassPickerDialog
+import cl.vialapp.app.ui.profile.ProfilePhotoSection
 import cl.vialapp.app.ui.practice.PracticeScreen
 import cl.vialapp.app.ui.progress.ProgressScreen
 import cl.vialapp.app.ui.settings.StudySettingsScreen
 import cl.vialapp.app.ui.settings.StudySetupScreen
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 
 private data class BottomItem(
     val route: String,
@@ -78,6 +81,25 @@ fun VialAppNavigation(
 
     val context =
         LocalContext.current
+
+    // Photo state belongs to the signed-in account, independently of mascot selection.
+    val avatarKey = remember(user.id) { mutableStateOf<String?>(null) }
+    val avatarLoaded = remember(user.id) { mutableStateOf(false) }
+    LaunchedEffect(user.id) {
+        try {
+            val token = SessionManager(context).getAccessToken()
+            if (!token.isNullOrBlank()) {
+                val response = ApiClient.api.getMyAvatar("Bearer $token")
+                if (response.isSuccessful) avatarKey.value = response.body()?.key
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // Initials remain available while offline.
+        } finally {
+            avatarLoaded.value = true
+        }
+    }
 
     val studyPreferencesStore =
         remember(
@@ -446,6 +468,8 @@ fun VialAppNavigation(
 
                     user =
                         user,
+
+                    avatarKey = avatarKey.value,
 
                     onPractice = {
 
@@ -872,6 +896,10 @@ fun VialAppNavigation(
                     user =
                         user,
 
+                    avatarKey = avatarKey.value,
+                    avatarLoaded = avatarLoaded.value,
+                    onAvatarChanged = { avatarKey.value = it },
+
                     onStudySettings = {
                         navController.navigate(
                             "study_settings"
@@ -975,7 +1003,10 @@ fun ProfileScreen(
     onStudySettings: () -> Unit,
     onChangeMascot: () -> Unit,
     onUserUpdated: (UserResponse) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    avatarKey: String? = null,
+    avatarLoaded: Boolean = true,
+    onAvatarChanged: (String?) -> Unit = {}
 ) {
     val fullName =
         listOfNotNull(
@@ -1071,6 +1102,14 @@ fun ProfileScreen(
                 16.dp
             )
     ) {
+        item {
+            ProfilePhotoSection(
+                name = fullName,
+                avatarKey = avatarKey,
+                enabled = avatarLoaded,
+                onAvatarChanged = onAvatarChanged
+            )
+        }
 
         item {
 

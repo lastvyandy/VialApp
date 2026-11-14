@@ -7,7 +7,8 @@ data class LeaderboardEntryResponse(
     @SerializedName("alias") val alias: String,
     @SerializedName("xp") val xp: Int,
     @SerializedName("mascot_id") val mascotId: String? = null,
-    @SerializedName("is_me") val isMe: Boolean = false
+    @SerializedName("is_me") val isMe: Boolean = false,
+    @SerializedName("avatar_key") val avatarKey: String? = null
 )
 
 data class WeeklyLeaderboardResponse(
@@ -19,3 +20,5 @@ data class WeeklyLeaderboardResponse(
     @SerializedName("my_entry") val myEntry: LeaderboardEntryResponse? = null,
     @SerializedName("previous_medal") val previousMedal: Int? = null
 )
+
+data class AvatarResponse(val key: String? = null)

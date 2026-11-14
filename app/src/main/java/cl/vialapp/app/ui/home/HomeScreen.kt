@@ -3,7 +3,6 @@ package cl.vialapp.app.ui.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +22,7 @@ import cl.vialapp.app.data.api.UserResponse
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.gamification.HomeXpCard
+import cl.vialapp.app.ui.profile.ProfileAvatar
 
 private val HomeBlue = Color(0xFF2563EB)
 private val HomeDark = Color(0xFF172033)
@@ -39,7 +39,8 @@ fun HomeScreen(
     onExam: () -> Unit,
     onProgress: () -> Unit,
     onGames: () -> Unit,
-    onResumeExam: (Int) -> Unit
+    onResumeExam: (Int) -> Unit,
+    avatarKey: String? = null
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -144,7 +145,6 @@ fun HomeScreen(
     }
 
     val name = user.firstName?.takeIf { it.isNotBlank() } ?: "Conductor"
-    val initial = name.firstOrNull()?.uppercaseChar()?.toString() ?: "V"
     val licenseText = user.licenseClass?.let {
         if (it.startsWith("Clase", ignoreCase = true)) it else "Clase $it"
     } ?: "Licencia"
@@ -198,20 +198,11 @@ fun HomeScreen(
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFE8F0FF)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = initial,
-                        color = HomeBlue,
-                        fontSize = 21.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                ProfileAvatar(
+                    name = name,
+                    avatarKey = avatarKey,
+                    modifier = Modifier.size(52.dp)
+                )
             }
         }
 
