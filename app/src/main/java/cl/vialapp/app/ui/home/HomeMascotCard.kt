@@ -3,9 +3,9 @@ package cl.vialapp.app.ui.home
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -82,20 +82,19 @@ fun HomeMascotCard(
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        if (isDonPelao && greetingPortraitId != 0) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                MascotGreeting(characterName = characterName, phrase = null)
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            if (isDonPelao && greetingPortraitId != 0) {
+                val shape = RoundedCornerShape(20.dp)
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(320.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFF122B42)),
+                        .size(width = 94.dp, height = 105.dp)
+                        .clip(shape)
+                        .background(Color(0xFF122B42))
+                        .border(1.dp, Color(0xFFE2E8F0), shape),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
@@ -105,28 +104,16 @@ fun HomeMascotCard(
                         contentScale = ContentScale.Fit
                     )
                 }
-                Text(
-                    text = phrase,
-                    color = Color(0xFF64748B),
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp
-                )
-            }
-        } else {
-            Row(
-                modifier = Modifier.padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
+            } else {
                 MascotPortrait(
                     drawable = imageId,
                     modifier = Modifier.size(width = 94.dp, height = 105.dp),
                     cornerRadius = 20.dp,
                     contentDescription = characterName
                 )
-                Column(modifier = Modifier.weight(1f)) {
-                    MascotGreeting(characterName = characterName, phrase = phrase)
-                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                MascotGreeting(characterName = characterName, phrase = phrase)
             }
         }
     }
