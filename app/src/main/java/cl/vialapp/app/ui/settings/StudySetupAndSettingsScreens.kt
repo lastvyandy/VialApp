@@ -26,22 +26,24 @@ import androidx.compose.ui.unit.sp
 import cl.vialapp.app.data.settings.ReminderFrequency
 import cl.vialapp.app.data.settings.StudyPreferencesStore
 import java.util.Locale
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 
 
-private val SettingsBlue =
-    Color(0xFF2563EB)
+private val SettingsBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
 
-private val SettingsDark =
-    Color(0xFF172033)
+private val SettingsDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
 
-private val SettingsGray =
-    Color(0xFF64748B)
+private val SettingsGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
 
-private val SettingsBackground =
-    Color(0xFFF4F7FB)
+private val SettingsBackground: Color
+    @Composable get() = vialColor(Color(0xFFF4F7FB))
 
-private val SettingsGreen =
-    Color(0xFF16A34A)
+private val SettingsGreen: Color
+    @Composable get() = vialColor(Color(0xFF16A34A))
 
 
 private data class ReminderTimeOption(
@@ -608,7 +610,7 @@ private fun StudyPreferencesContent(
             colors =
                 CardDefaults.cardColors(
                     containerColor =
-                        Color.White
+                        vialColor(Color.White)
                 )
         ) {
 
@@ -873,9 +875,9 @@ private fun StudyPreferencesContent(
             colors =
                 CardDefaults.cardColors(
                     containerColor =
-                        Color(
+                        vialColor(Color(
                             0xFFEAF8F1
-                        )
+                        ))
                 )
         ) {
 
@@ -937,7 +939,7 @@ private fun StudyPreferencesContent(
             colors =
                 ButtonDefaults.buttonColors(
                     containerColor =
-                        SettingsBlue
+                        VialActionBlue, contentColor = Color.White
                 )
         ) {
 
@@ -1105,11 +1107,11 @@ private fun SelectableOption(
                     if (
                         selected
                     ) {
-                        Color(
+                        vialColor(Color(
                             0xFFEAF1FF
-                        )
+                        ))
                     } else {
-                        Color.White
+                        vialColor(Color.White)
                     }
             )
     ) {
@@ -1178,11 +1180,11 @@ private fun FrequencyOption(
                     if (
                         selected
                     ) {
-                        Color(
+                        vialColor(Color(
                             0xFFEAF1FF
-                        )
+                        ))
                     } else {
-                        Color.White
+                        vialColor(Color.White)
                     }
             )
     ) {

@@ -28,6 +28,7 @@ import cl.vialapp.app.data.session.SessionManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import cl.vialapp.app.ui.theme.vialColor
 
 // In-memory thumbnails only, scoped by authenticated session. No disk cache of personal photos.
 private val avatarCache = object : LruCache<String, Bitmap>(8 * 1024 * 1024) {
@@ -75,14 +76,14 @@ fun ProfileAvatar(
         }
         val photo = bitmap
         Box(
-            modifier = modifier.clip(CircleShape).background(Color(0xFFE8F0FF)),
+            modifier = modifier.clip(CircleShape).background(vialColor(Color(0xFFE8F0FF))),
             contentAlignment = Alignment.Center
         ) {
             if (photo != null) {
                 val image = remember(photo) { photo.asImageBitmap() }
                 Image(image, contentDescription = "Foto de perfil de $name", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             } else {
-                Text(profileInitials(name), color = Color(0xFF2563EB), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(profileInitials(name), color = vialColor(Color(0xFF2563EB)), fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
         }
     }

@@ -20,11 +20,16 @@ import cl.vialapp.app.data.api.CompleteProfileRequest
 import cl.vialapp.app.data.api.UserResponse
 import cl.vialapp.app.data.session.SessionManager
 import kotlinx.coroutines.launch
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 
 
-private val VialBlue = Color(0xFF2563EB)
-private val VialDark = Color(0xFF172033)
-private val VialGray = Color(0xFF64748B)
+private val VialBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val VialDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val VialGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
 
 
 @Composable
@@ -70,7 +75,7 @@ fun CompleteProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF7F9FC))
+            .background(vialColor(Color(0xFFF7F9FC)))
             .statusBarsPadding()
             .imePadding()
             .verticalScroll(rememberScrollState())
@@ -201,7 +206,7 @@ fun CompleteProfileScreen(
 
             Text(
                 text = errorMessage,
-                color = Color(0xFFDC2626),
+                color = vialColor(Color(0xFFDC2626)),
                 fontSize = 14.sp
             )
         }
@@ -302,7 +307,7 @@ fun CompleteProfileScreen(
             colors =
                 ButtonDefaults.buttonColors(
                     containerColor =
-                        VialBlue
+                        VialActionBlue, contentColor = Color.White
                 )
         ) {
 
@@ -339,16 +344,16 @@ private fun LicenseOption(
 
     val backgroundColor =
         if (selected) {
-            Color(0xFFE8F0FF)
+            vialColor(Color(0xFFE8F0FF))
         } else {
-            Color.White
+            vialColor(Color.White)
         }
 
     val borderColor =
         if (selected) {
             VialBlue
         } else {
-            Color(0xFFE2E8F0)
+            vialColor(Color(0xFFE2E8F0))
         }
 
 

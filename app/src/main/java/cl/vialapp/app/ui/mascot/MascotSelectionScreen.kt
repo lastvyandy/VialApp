@@ -37,10 +37,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.R
+import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.theme.VialActionBlue
 
-private val VialBlue = Color(0xFF2563EB)
-private val VialDark = Color(0xFF172033)
-private val VialGray = Color(0xFF64748B)
+private val VialBlue: Color
+    @Composable get() = vialColor(Color(0xFF2563EB))
+private val VialDark: Color
+    @Composable get() = vialColor(Color(0xFF172033))
+private val VialGray: Color
+    @Composable get() = vialColor(Color(0xFF64748B))
 
 /**
  * Mascot IDs match the values that will be stored in the backend.
@@ -60,7 +65,7 @@ fun MascotSelectionScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF4F7FB))
+            .background(vialColor(Color(0xFFF4F7FB)))
     ) {
         Column(
             modifier = Modifier
@@ -110,14 +115,14 @@ fun MascotSelectionScreen(
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = error,
-                    color = Color(0xFFDC2626),
+                    color = vialColor(Color(0xFFDC2626)),
                     fontSize = 13.sp
                 )
             }
         }
 
         Surface(
-            color = Color.White,
+            color = vialColor(Color.White),
             shadowElevation = 6.dp
         ) {
             Button(
@@ -128,7 +133,7 @@ fun MascotSelectionScreen(
                     .padding(18.dp)
                     .height(54.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = VialBlue)
+                colors = ButtonDefaults.buttonColors(containerColor = VialActionBlue, contentColor = Color.White)
             ) {
                 if (isSaving) {
                     CircularProgressIndicator(
@@ -157,10 +162,10 @@ private fun MascotOption(
             .fillMaxWidth()
             .clickable(onClick = onSelect),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = vialColor(Color.White)),
         border = BorderStroke(
             width = if (selected) 2.dp else 1.dp,
-            color = if (selected) VialBlue else Color(0xFFE2E8F0)
+            color = if (selected) VialBlue else vialColor(Color(0xFFE2E8F0))
         )
     ) {
         Row(

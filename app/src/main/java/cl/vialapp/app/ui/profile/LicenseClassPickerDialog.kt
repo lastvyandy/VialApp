@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import cl.vialapp.app.ui.theme.vialColor
 
 @Composable
 fun LicenseClassPickerDialog(
@@ -65,12 +66,12 @@ fun LicenseClassPickerDialog(
                         )
                         Column(modifier = Modifier.padding(start = 8.dp)) {
                             Text(title, fontWeight = FontWeight.SemiBold)
-                            Text(description, color = Color(0xFF64748B))
+                            Text(description, color = vialColor(Color(0xFF64748B)))
                         }
                     }
                 }
                 if (!error.isNullOrBlank()) {
-                    Text(error, color = Color(0xFFB91C1C))
+                    Text(error, color = vialColor(Color(0xFFB91C1C)))
                 }
             }
         },

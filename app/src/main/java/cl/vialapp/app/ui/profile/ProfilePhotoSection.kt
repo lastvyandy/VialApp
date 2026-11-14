@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import cl.vialapp.app.ui.theme.vialColor
 
 @Composable
 fun ProfilePhotoSection(
@@ -106,7 +107,7 @@ fun ProfilePhotoSection(
                                 busy = false
                             }
                         }
-                    }) { Text("Eliminar foto", color = Color(0xFFDC2626)) }
+                    }) { Text("Eliminar foto", color = vialColor(Color(0xFFDC2626))) }
                 } else {
                     TextButton(onClick = { options = false }) { Text("Cancelar") }
                 }
@@ -117,12 +118,12 @@ fun ProfilePhotoSection(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
     ) {
         Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             ProfileAvatar(name, avatarKey, Modifier.size(88.dp).clickable(enabled = enabled && !busy) { options = true })
             Spacer(Modifier.height(9.dp))
-            Text(name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF172033))
+            Text(name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = vialColor(Color(0xFF172033)))
             if (busy) {
                 Spacer(Modifier.height(8.dp))
                 CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
@@ -131,7 +132,7 @@ fun ProfilePhotoSection(
                     Text(if (avatarKey == null) "Añadir foto de perfil" else "Cambiar foto de perfil")
                 }
             }
-            error?.let { Text(it, fontSize = 13.sp, color = Color(0xFFDC2626)) }
+            error?.let { Text(it, fontSize = 13.sp, color = vialColor(Color(0xFFDC2626))) }
         }
     }
 }
