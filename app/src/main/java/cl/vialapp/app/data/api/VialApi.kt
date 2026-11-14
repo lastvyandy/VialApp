@@ -107,6 +107,11 @@ interface VialApi {
         @Path("testId") testId: Int
     ): Response<StudyTestResponse>
 
+    @GET("users/me/gamification/leaderboard/weekly")
+    suspend fun getWeeklyLeaderboard(
+        @Header("Authorization") authorization: String
+    ): Response<WeeklyLeaderboardResponse>
+
     @GET("users/me/gamification")
     suspend fun getGamificationProgress(
         @Header("Authorization") authorization: String

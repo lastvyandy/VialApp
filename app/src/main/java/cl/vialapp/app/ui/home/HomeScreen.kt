@@ -23,6 +23,7 @@ import cl.vialapp.app.data.api.UserResponse
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.gamification.HomeXpCard
+import cl.vialapp.app.ui.leaderboard.WeeklyLeaderboardShortcut
 
 private val HomeBlue = Color(0xFF2563EB)
 private val HomeDark = Color(0xFF172033)
@@ -39,7 +40,8 @@ fun HomeScreen(
     onExam: () -> Unit,
     onProgress: () -> Unit,
     onGames: () -> Unit,
-    onResumeExam: (Int) -> Unit
+    onResumeExam: (Int) -> Unit,
+    onLeaderboard: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -383,6 +385,10 @@ fun HomeScreen(
             }
         }
 
+
+        item {
+            WeeklyLeaderboardShortcut(onOpen = onLeaderboard)
+        }
 
         // Tu ruta de hoy
         item {

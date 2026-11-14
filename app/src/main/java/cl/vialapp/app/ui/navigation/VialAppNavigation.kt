@@ -52,6 +52,7 @@ import cl.vialapp.app.ui.games.baldchallenge.BaldChallengeScreen
 import cl.vialapp.app.ui.games.crossroads.CrossroadsChaosScreen
 import cl.vialapp.app.ui.games.signhunt.SignHuntScreen
 import cl.vialapp.app.ui.home.HomeScreen
+import cl.vialapp.app.ui.leaderboard.WeeklyLeaderboardScreen
 import cl.vialapp.app.ui.mascot.MascotSelectionScreen
 import cl.vialapp.app.ui.mascot.MascotPortrait
 import cl.vialapp.app.ui.profile.LicenseClassPickerDialog
@@ -474,6 +475,12 @@ fun VialAppNavigation(
                         navController.navigate(
                             "exam/$testId"
                         )
+                    },
+
+                    onLeaderboard = {
+                        navController.navigate("leaderboard/weekly") {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -486,6 +493,14 @@ fun VialAppNavigation(
              * MINIJUEGOS
              * ------------------------------------------------
              */
+            composable("leaderboard/weekly") {
+                WeeklyLeaderboardScreen(
+                    userKey = user.id,
+                    mascotId = user.mascotId,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
             composable(
                 route =
                     "games"

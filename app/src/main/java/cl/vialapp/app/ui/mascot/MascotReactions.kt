@@ -8,7 +8,8 @@ enum class MascotReaction(val expression: String) {
     KEEP_GOING("serious"),
     REVIEW("disappointed"),
     MISSION("happy"),
-    LEVEL_UP("celebrating")
+    LEVEL_UP("celebrating"),
+    PODIUM("celebrating")
 }
 
 object MascotReactions {
@@ -46,6 +47,7 @@ object MascotReactions {
                 MascotReaction.REVIEW -> "Así no vamos a sacar la licencia, po. ¡A repasar y darle de nuevo!"
                 MascotReaction.MISSION -> "¡Misión cumplida! Esa es la disciplina que me gusta."
                 MascotReaction.LEVEL_UP -> "¡Puro músculo cerebral! Sigue así, máquina."
+                MascotReaction.PODIUM -> "¡En el podio, máquina! Ahora a defender ese puesto."
             }
         } else {
             when (reaction) {
@@ -55,6 +57,7 @@ object MascotReactions {
                 MascotReaction.REVIEW -> "No te rindas. Vamos a aprender de los errores juntos."
                 MascotReaction.MISSION -> "¡Una misión más! Sigamos avanzando juntos."
                 MascotReaction.LEVEL_UP -> "¡Subimos de marcha! Qué orgullo llegar tan lejos."
+                MascotReaction.PODIUM -> "¡Llegamos al podio! Sigamos avanzando juntos."
             }
         }
 }
