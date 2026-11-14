@@ -13,6 +13,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import cl.vialapp.app.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -595,7 +597,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "👨‍🦲💪", fontSize = 38.sp)
+                    HomeFeatureIcon(R.drawable.ic_home_gamepad, Color(0xFFBFDBFE), Color(0xFF42608B))
                     Spacer(modifier = Modifier.width(15.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -632,7 +634,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "🚗💪", fontSize = 28.sp)
+                    HomeFeatureIcon(R.drawable.ic_home_growth, if (LocalVialAppearance.current.dark) Color(0xFFFCD38D) else Color(0xFF995C08), if (LocalVialAppearance.current.dark) Color(0xFF60492B) else Color(0xFFFFE8B6))
                     Spacer(modifier = Modifier.width(15.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -704,5 +706,13 @@ private fun scoreColor(score: Int): Color {
         score >= 80 -> HomeGreen
         score >= 60 -> HomeOrange
         else -> HomeRed
+    }
+}
+@Composable
+private fun HomeFeatureIcon(drawable: Int, tint: Color, background: Color) {
+    Surface(modifier = Modifier.size(58.dp), shape = RoundedCornerShape(18.dp), color = background) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(painter = painterResource(drawable), contentDescription = null, tint = tint, modifier = Modifier.size(32.dp))
+        }
     }
 }
