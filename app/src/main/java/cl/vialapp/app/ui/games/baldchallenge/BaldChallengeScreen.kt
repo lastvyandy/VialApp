@@ -305,14 +305,13 @@ fun BaldChallengeScreen(
             finished ||
             answered ||
             questions.isEmpty() ||
-            !roundReady
+            !roundReady ||
+            confirmExit
         ) {
             return@LaunchedEffect
         }
 
-        secondsLeft = 10
-        speedBonusExpired = false
-
+        // Round transitions already reset the timer; dismissing an exit dialog must not refill it.
         while (
             secondsLeft > 0 &&
             !answered &&

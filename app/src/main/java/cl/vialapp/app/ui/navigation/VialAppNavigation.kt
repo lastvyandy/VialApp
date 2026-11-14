@@ -642,8 +642,7 @@ fun VialAppNavigation(
             /*
              * CAZA LA SEÑAL
              *
-             * La ruta queda disponible aunque
-             * el juego esté en pausa en el hub.
+             * Catálogo local de señales reglamentarias.
              */
             composable(
                 route =
