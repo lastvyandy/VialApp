@@ -1,5 +1,6 @@
 package cl.vialapp.app.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,6 +26,7 @@ import cl.vialapp.app.ui.gamification.HomeXpCard
 import cl.vialapp.app.ui.profile.ProfileAvatar
 import cl.vialapp.app.ui.theme.vialColor
 import cl.vialapp.app.ui.theme.VialActionBlue
+import cl.vialapp.app.ui.theme.LocalVialAppearance
 
 private val HomeBlue: Color
     @Composable get() = vialColor(Color(0xFF2563EB))
@@ -38,6 +40,8 @@ private val HomeOrange: Color
     @Composable get() = vialColor(Color(0xFFF59E0B))
 private val HomeRed: Color
     @Composable get() = vialColor(Color(0xFFD92D20))
+private val HomeCardBorder: BorderStroke
+    @Composable get() = BorderStroke(1.dp, if (LocalVialAppearance.current.dark) Color(0xFF42536C) else Color(0xFFE2E8F0))
 private val HomeBackground: Color
     @Composable get() = vialColor(Color(0xFFF4F7FB))
 
@@ -398,6 +402,7 @@ fun HomeScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
+                border = HomeCardBorder,
                 colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
@@ -495,7 +500,8 @@ fun HomeScreen(
                     onClick = onProgress,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
+                    border = HomeCardBorder,
+                colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(
@@ -579,7 +585,11 @@ fun HomeScreen(
                 onClick = onGames,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = vialColor(Color(0xFF172033)))
+                border = BorderStroke(1.dp, Color(0xFF526B95)),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (LocalVialAppearance.current.dark) Color(0xFF293E60) else Color(0xFF172033),
+                    contentColor = Color.White
+                )
             ) {
                 Row(
                     modifier = Modifier.padding(20.dp),
@@ -597,13 +607,13 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             text = "Entrena, compite y supera tus récords.",
-                            color = Color.White.copy(alpha = 0.72f),
+                            color = Color(0xFFDCE7F6),
                             fontSize = 13.sp
                         )
                     }
                     Text(
                         text = "JUGAR ›",
-                        color = Color(0xFF93C5FD),
+                        color = Color(0xFFBFDBFE),
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
                     )
@@ -615,6 +625,7 @@ fun HomeScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, if (LocalVialAppearance.current.dark) Color(0xFF6C5432) else Color(0xFFF0DDB4)),
                 colors = CardDefaults.cardColors(containerColor = vialColor(Color(0xFFFFF7E6)))
             ) {
                 Row(
@@ -649,7 +660,7 @@ private fun HomeMetric(modifier: Modifier, value: String, label: String) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        color = vialColor(Color(0xFFF4F7FB))
+        color = if (LocalVialAppearance.current.dark) Color(0xFF2A394F) else Color(0xFFF4F7FB)
     ) {
         Column(
             modifier = Modifier.padding(vertical = 13.dp, horizontal = 8.dp),
@@ -674,6 +685,7 @@ private fun HomeActionCard(
         onClick = onClick,
         modifier = modifier.height(150.dp),
         shape = RoundedCornerShape(22.dp),
+        border = HomeCardBorder,
         colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
     ) {
         Column(modifier = Modifier.padding(18.dp)) {

@@ -63,6 +63,10 @@ fun VialAppTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("vialapp_appearance", Context.MODE_PRIVATE) }
     var dark by remember(prefs) { mutableStateOf(prefs.getBoolean("dark_mode", false)) }
+    // Preserve the choice of users who already used the appearance switch.
+    var configured by remember(prefs) {
+        mutableStateOf(prefs.getBoolean("appearance_configured", prefs.contains("dark_mode")))
+    }
     val scheme = if (dark) DarkColors else LightColors
     SideEffect {
         (context as? Activity)?.window?.let { window ->
@@ -74,11 +78,20 @@ fun VialAppTheme(content: @Composable () -> Unit) {
     }
     CompositionLocalProvider(LocalVialAppearance provides Appearance(dark) { value ->
         dark = value
-        prefs.edit().putBoolean("dark_mode", value).apply()
+        prefs.edit().putBoolean("dark_mode", value).putBoolean("appearance_configured", true).apply()
     }) {
         MaterialTheme(colorScheme = scheme, typography = Typography) {
             Surface(modifier = Modifier.fillMaxSize(), color = scheme.background, contentColor = scheme.onBackground) {
-                content()
+                if (configured) {
+                    content()
+                } else {
+                    FirstAppearanceScreen(initialDark = dark) { selectedDark ->
+                        dark = selectedDark
+                        configured = true
+                        prefs.edit().putBoolean("dark_mode", selectedDark)
+                            .putBoolean("appearance_configured", true).apply()
+                    }
+                }
             }
         }
     }
