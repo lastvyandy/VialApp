@@ -1668,6 +1668,23 @@ fun ProgressGamificationSection(
                 crossroadsHighScore
         )
 
+        GameRecordRow(
+            emoji = "🏎️",
+            title = "Carvier al volante",
+            score = store.getHighScore(GameProgressStore.CARVIER_DRIVE)
+        )
+        GameRecordRow(
+            emoji = "🥊",
+            title = "Don Pelao Arena",
+            score = store.getHighScore(GameProgressStore.PELAO_ARENA)
+        )
+        GameRecordRow(
+            emoji = "🔧",
+            title = "Taller del Auto",
+            score = store.getHighScore(GameProgressStore.AUTO_WORKSHOP)
+        )
+
+
 
         Spacer(
             modifier =

@@ -39,6 +39,9 @@ fun GamesScreen(
     userKey: String,
     onOpenBaldChallenge: (Int) -> Unit,
     onOpenCrossroadsChaos: () -> Unit,
+    onOpenCarvier: () -> Unit,
+    onOpenArena: () -> Unit,
+    onOpenWorkshop: () -> Unit,
     onBack: () -> Unit
 ) {
     BackHandler {
@@ -164,7 +167,7 @@ fun GamesScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Los puntos y récords se sincronizan de forma segura con tu cuenta de VialApp.",
+                            text = "Los XP se sincronizan con tu cuenta y los récords personales se guardan en este dispositivo.",
                             color = GamesGray,
                             fontSize = 13.sp,
                             lineHeight = 18.sp
@@ -233,8 +236,44 @@ fun GamesScreen(
 
         item {
             PlayableGameCard(
+                emoji = "🏎️",
+                title = "Carvier al volante",
+                subtitle = "Conducción arcade · 3 carriles",
+                description = "Esquiva el tráfico, recoge monedas y reduce la velocidad en zonas escolares.",
+                accent = GamesBlue,
+                enabled = true,
+                onClick = onOpenCarvier
+            )
+        }
+
+        item {
+            PlayableGameCard(
+                emoji = "🥊",
+                title = "Don Pelao Arena",
+                subtitle = "Combate · combos · 3 rivales",
+                description = "Reacciona a peligros viales, esquiva los ataques y derrota a los jefes.",
+                accent = GamesGreen,
+                enabled = true,
+                onClick = onOpenArena
+            )
+        }
+
+        item {
+            PlayableGameCard(
+                emoji = "🔧",
+                title = "Taller del Auto",
+                subtitle = "Diagnóstico interactivo · 4 fallas",
+                description = "Inspecciona el auto y elige las herramientas para cada falla.",
+                accent = GamesOrange,
+                enabled = true,
+                onClick = onOpenWorkshop
+            )
+        }
+
+        item {
+            PlayableGameCard(
                 emoji = "👨‍🦲💪",
-                title = "Reto del Pelao",
+                title = "Reto del Pelao · clásico",
                 subtitle = "5 rondas · 3 vidas · Pelao Power",
                 description = "Responde rápido, arma combos y llega al BOSS con el modo x2 cargado.",
                 accent = GamesGreen,
@@ -261,10 +300,6 @@ fun GamesScreen(
 
         item {
             PausedGameCard()
-        }
-
-        item {
-            ComingSoonGameCard()
         }
 
         if (loading) {
@@ -404,44 +439,6 @@ private fun PausedGameCard() {
             Text(
                 text = "EN PAUSA",
                 color = GamesOrange,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
-@Composable
-private fun ComingSoonGameCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = vialColor(Color(0xFFF8FAFC)))
-    ) {
-        Row(
-            modifier = Modifier.padding(19.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(text = "🔧🚗", fontSize = 31.sp)
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Taller del Auto",
-                    color = GamesDark,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Diagnostica problemas y demuestra cuánto sabes de mantenimiento.",
-                    color = GamesGray,
-                    fontSize = 12.sp,
-                    lineHeight = 17.sp
-                )
-            }
-            Text(
-                text = "PRONTO",
-                color = GamesGray,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )

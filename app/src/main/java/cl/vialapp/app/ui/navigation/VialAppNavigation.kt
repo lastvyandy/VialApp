@@ -49,6 +49,9 @@ import cl.vialapp.app.data.settings.StudyPreferencesStore
 import cl.vialapp.app.ui.exam.ExamScreen
 import cl.vialapp.app.ui.exams.ExamsScreen
 import cl.vialapp.app.ui.games.GamesScreen
+import cl.vialapp.app.ui.games.arcade.CarvierDriveScreen
+import cl.vialapp.app.ui.games.arcade.PelaoArenaScreen
+import cl.vialapp.app.ui.games.arcade.AutoWorkshopScreen
 import cl.vialapp.app.ui.games.baldchallenge.BaldChallengeScreen
 import cl.vialapp.app.ui.games.crossroads.CrossroadsChaosScreen
 import cl.vialapp.app.ui.games.signhunt.SignHuntScreen
@@ -250,7 +253,10 @@ fun VialAppNavigation(
                 currentRoute != "exam/{testId}" &&
                 currentRoute != "games/bald/{testId}" &&
                 currentRoute != "games/signs" &&
-                currentRoute != "games/crossroads"
+                currentRoute != "games/crossroads" &&
+                currentRoute != "games/carvier" &&
+                currentRoute != "games/arena" &&
+                currentRoute != "games/workshop"
 
 
     Scaffold(
@@ -545,11 +551,11 @@ fun VialAppNavigation(
                     },
 
                     onOpenCrossroadsChaos = {
-
-                        navController.navigate(
-                            "games/crossroads"
-                        )
+                        navController.navigate("games/crossroads")
                     },
+                    onOpenCarvier = { navController.navigate("games/carvier") },
+                    onOpenArena = { navController.navigate("games/arena") },
+                    onOpenWorkshop = { navController.navigate("games/workshop") },
 
                     onBack = {
 
@@ -558,6 +564,16 @@ fun VialAppNavigation(
                 )
             }
 
+
+            composable("games/carvier") {
+                CarvierDriveScreen(userKey = user.id, onBack = { navController.popBackStack() })
+            }
+            composable("games/arena") {
+                PelaoArenaScreen(userKey = user.id, onBack = { navController.popBackStack() })
+            }
+            composable("games/workshop") {
+                AutoWorkshopScreen(userKey = user.id, onBack = { navController.popBackStack() })
+            }
 
             /*
              * RETO DEL PELAO

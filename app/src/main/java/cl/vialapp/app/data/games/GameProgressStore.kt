@@ -568,6 +568,9 @@ class GameProgressStore(
         const val SIGN_HUNT = "sign_hunt"
         const val CROSSROADS_CHAOS = "crossroads_chaos"
         const val CROSSROADS_ARCADE = "crossroads_arcade"
+        const val CARVIER_DRIVE = "carvier_drive"
+        const val PELAO_ARENA = "pelao_arena"
+        const val AUTO_WORKSHOP = "auto_workshop"
 
         private const val PREFERENCES_NAME = "vialapp_games"
         private const val KEY_TOTAL_POINTS = "games_total_points"
