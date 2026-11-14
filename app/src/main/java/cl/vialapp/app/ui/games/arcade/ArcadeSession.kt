@@ -39,7 +39,8 @@ internal fun <S : ArcadeFrame> ArcadeSession(
     create: () -> ArcadeEngine<S>,
     onBack: () -> Unit,
     scene: @Composable (S, Modifier, Boolean, (Int) -> Unit) -> Unit,
-    controls: @Composable (S, Boolean, (Int) -> Unit) -> Unit
+    controls: @Composable (S, Boolean, (Int) -> Unit) -> Unit,
+    resultArt: (@Composable (S, Modifier) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val store = remember(context, userKey) { GameProgressStore(context, userKey) }
@@ -210,7 +211,11 @@ internal fun <S : ArcadeFrame> ArcadeSession(
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(15.dp)
         ) {
             Spacer(Modifier.height(18.dp))
-            Text(if (frame.won) "🏆" else "🏁", fontSize = 54.sp)
+            if (resultArt != null) {
+                resultArt(frame, Modifier.fillMaxWidth().height(230.dp))
+            } else {
+                Text(if (frame.won) "🏆" else "🏁", fontSize = 54.sp)
+            }
             Text(if (frame.won) "¡Desafío superado!" else "Fin de partida", color = c.onSurface,
                 fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
             Text("${frame.score}", color = c.primary, fontSize = 56.sp, fontWeight = FontWeight.ExtraBold)

@@ -182,6 +182,16 @@ internal class DriveEngine(seed: Int = Random.nextInt(), private val spawnTraffi
 }
 
 internal enum class FightPhase { TELEGRAPH, OPENING, RECOVERY }
+
+internal enum class PelaoPose(val resourceName: String) {
+    IDLE("don_pelao_idle"),
+    ATTACK_ONE("don_pelao_attack_1"),
+    ATTACK_TWO("don_pelao_attack_2"),
+    HIT("don_pelao_hit"),
+    BLOCK("don_pelao_block"),
+    VICTORY("don_pelao_victory"),
+    DEFEAT("don_pelao_defeat")
+}
 internal enum class Hazard(val label: String, val response: Int, val advice: String) {
     PEDESTRIAN("Peatón cruzando delante de ti", 0, "Detente antes del paso y deja cruzar."),
     STOP_SIGN("Señal PARE en tu vía", 0, "El PARE exige detenerse completamente."),
@@ -207,10 +217,18 @@ internal data class FightFrame(
     val attackLock: Float = 0f,
     val correctDecisions: Int = 0,
     val missedDecisions: Int = 0,
+    val actionPose: PelaoPose = PelaoPose.IDLE,
+    val poseTime: Float = 0f,
     override val message: String = "Observa el peligro y responde a tiempo."
 ) : ArcadeFrame {
     override val finished get() = hp <= 0 || boss > 3 || elapsed >= FightEngine.TIME
     override val won get() = boss > 3 && hp > 0
+    val pose: PelaoPose get() = when {
+        won -> PelaoPose.VICTORY
+        finished -> PelaoPose.DEFEAT
+        poseTime > 0f -> actionPose
+        else -> PelaoPose.IDLE
+    }
     override val health get() = "$hp HP"
     override val detail get() = "${(boss - 1).coerceAtMost(3)}/3 rivales · $correctDecisions decisiones correctas"
     override val lesson get() = "Detente ante PARE, luz roja y peatones que cruzan delante de ti. Reduce la velocidad si hay poca visibilidad y conserva la distancia de seguridad."
@@ -233,17 +251,20 @@ internal class FightEngine(seed: Int = Random.nextInt()) : ArcadeEngine<FightFra
         state = when (s.phase) {
             FightPhase.TELEGRAPH -> if (action == s.hazard.response) {
                 s.copy(phase = FightPhase.OPENING, remaining = 3.2f, score = s.score + 80,
-                    correctDecisions = s.correctDecisions + 1, message = s.hazard.advice + " ¡Ataca!")
+                    correctDecisions = s.correctDecisions + 1, actionPose = PelaoPose.BLOCK,
+                    poseTime = .55f, impact = 0f, message = s.hazard.advice + " ¡Ataca!")
             } else {
                 s.copy(hp = (s.hp - 15).coerceAtLeast(0), phase = FightPhase.RECOVERY,
-                    remaining = 2.2f, combo = 0, impact = .35f, missedDecisions = s.missedDecisions + 1, message = s.hazard.advice)
+                    remaining = 2.2f, combo = 0, impact = .35f, missedDecisions = s.missedDecisions + 1,
+                    actionPose = PelaoPose.HIT, poseTime = .8f, message = s.hazard.advice)
             }
             FightPhase.OPENING -> if (action == 3 && s.attackLock <= 0f) {
                 val enemy = (s.bossHp - 20).coerceAtLeast(0)
                 val combo = s.combo + 1
                 val hit = s.copy(bossHp = enemy, score = s.score + 100 + combo.coerceAtMost(10) * 10,
                     combo = combo, bestCombo = maxOf(s.bestCombo, combo), strikes = s.strikes + 1,
-                    attackLock = .4f, impact = .25f, message = "¡Combo x$combo! " + s.hazard.advice)
+                    attackLock = .4f, impact = .25f, actionPose = if (s.strikes % 2 == 0) PelaoPose.ATTACK_ONE else PelaoPose.ATTACK_TWO,
+                    poseTime = .34f, message = "¡Combo x$combo! " + s.hazard.advice)
                 if (enemy == 0) {
                     if (s.boss == 3) hit.copy(boss = 4, score = hit.score + 500, message = "¡Todos los rivales derrotados!")
                     else hit.copy(boss = s.boss + 1, bossHp = 100 + s.boss * 20, phase = FightPhase.RECOVERY,
@@ -260,11 +281,13 @@ internal class FightEngine(seed: Int = Random.nextInt()) : ArcadeEngine<FightFra
         var s = state.copy(elapsed = (state.elapsed + d).coerceAtMost(TIME),
             remaining = (state.remaining - d).coerceAtLeast(0f),
             impact = (state.impact - d).coerceAtLeast(0f),
-            attackLock = (state.attackLock - d).coerceAtLeast(0f))
+            attackLock = (state.attackLock - d).coerceAtLeast(0f),
+            poseTime = (state.poseTime - d).coerceAtLeast(0f))
         if (s.remaining <= 0f && !s.finished) {
             s = when (s.phase) {
                 FightPhase.TELEGRAPH -> s.copy(hp = (s.hp - 20).coerceAtLeast(0), combo = 0,
-                    phase = FightPhase.RECOVERY, remaining = 2.2f, impact = .4f, missedDecisions = s.missedDecisions + 1, message = s.hazard.advice)
+                    phase = FightPhase.RECOVERY, remaining = 2.2f, impact = .4f, missedDecisions = s.missedDecisions + 1,
+                    actionPose = PelaoPose.HIT, poseTime = .8f, message = s.hazard.advice)
                 FightPhase.OPENING, FightPhase.RECOVERY -> nextHazard(s)
             }
         }
