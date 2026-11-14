@@ -42,6 +42,7 @@ fun GamesScreen(
     onOpenCarvier: () -> Unit,
     onOpenArena: () -> Unit,
     onOpenWorkshop: () -> Unit,
+    onOpenSigns: () -> Unit,
     onBack: () -> Unit
 ) {
     BackHandler {
@@ -299,7 +300,15 @@ fun GamesScreen(
         }
 
         item {
-            PausedGameCard()
+            PlayableGameCard(
+                emoji = "🛑",
+                title = "Caza la Señal",
+                subtitle = "Seis señales · decisiones rápidas",
+                description = "Identifica la acción correcta ante señales chilenas; aprende con la explicación de cada respuesta.",
+                accent = GamesBlue,
+                enabled = true,
+                onClick = onOpenSigns
+            )
         }
 
         if (loading) {
@@ -403,44 +412,6 @@ private fun PlayableGameCard(
                 color = GamesGray,
                 fontSize = 14.sp,
                 lineHeight = 20.sp
-            )
-        }
-    }
-}
-
-@Composable
-private fun PausedGameCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = vialColor(Color(0xFFFFFBEB)))
-    ) {
-        Row(
-            modifier = Modifier.padding(19.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(text = "🛑👀", fontSize = 31.sp)
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Caza la Señal",
-                    color = GamesDark,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "En pausa mientras preparamos un catálogo visual de señaléticas realmente correcto.",
-                    color = GamesGray,
-                    fontSize = 12.sp,
-                    lineHeight = 17.sp
-                )
-            }
-            Text(
-                text = "EN PAUSA",
-                color = GamesOrange,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
             )
         }
     }

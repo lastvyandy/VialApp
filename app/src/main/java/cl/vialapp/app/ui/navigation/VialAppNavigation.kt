@@ -54,7 +54,7 @@ import cl.vialapp.app.ui.games.arcade.PelaoArenaScreen
 import cl.vialapp.app.ui.games.arcade.AutoWorkshopScreen
 import cl.vialapp.app.ui.games.baldchallenge.BaldChallengeScreen
 import cl.vialapp.app.ui.games.crossroads.CrossroadsChaosScreen
-import cl.vialapp.app.ui.games.signhunt.SignHuntScreen
+import cl.vialapp.app.ui.games.arcade.SignArcadeScreen
 import cl.vialapp.app.ui.home.HomeScreen
 import cl.vialapp.app.ui.leaderboard.WeeklyLeaderboardScreen
 import cl.vialapp.app.ui.mascot.MascotSelectionScreen
@@ -556,6 +556,7 @@ fun VialAppNavigation(
                     onOpenCarvier = { navController.navigate("games/carvier") },
                     onOpenArena = { navController.navigate("games/arena") },
                     onOpenWorkshop = { navController.navigate("games/workshop") },
+                    onOpenSigns = { navController.navigate("games/signs") },
 
                     onBack = {
 
@@ -649,9 +650,8 @@ fun VialAppNavigation(
                     "games/signs"
             ) {
 
-                SignHuntScreen(
-                    licenseClass =
-                        user.licenseClass,
+                SignArcadeScreen(
+                    userKey = user.id,
 
                     onBack = {
 

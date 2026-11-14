@@ -566,6 +566,7 @@ class GameProgressStore(
     companion object {
         const val BALD_CHALLENGE = "bald_challenge"
         const val SIGN_HUNT = "sign_hunt"
+        const val SIGN_HUNT_ARCADE = "sign_hunt_arcade"
         const val CROSSROADS_CHAOS = "crossroads_chaos"
         const val CROSSROADS_ARCADE = "crossroads_arcade"
         const val CARVIER_DRIVE = "carvier_drive"
