@@ -28,13 +28,14 @@ internal fun PelaoSprite(pose: PelaoPose, modifier: Modifier = Modifier) {
         val firstAttack = lookup(PelaoPose.ATTACK_ONE.resourceName)
             ?: lookup("don_pelao_attack")
             ?: lookup(PelaoPose.ATTACK_TWO.resourceName)
+            ?: lookup("don_pelao_happy")
             ?: idle
         mapOf(
             PelaoPose.IDLE to idle,
             PelaoPose.ATTACK_ONE to firstAttack,
             PelaoPose.ATTACK_TWO to (lookup(PelaoPose.ATTACK_TWO.resourceName) ?: firstAttack),
             PelaoPose.HIT to (lookup(PelaoPose.HIT.resourceName) ?: lookup("don_pelao_disappointed") ?: idle),
-            PelaoPose.BLOCK to (lookup(PelaoPose.BLOCK.resourceName) ?: idle),
+            PelaoPose.BLOCK to (lookup(PelaoPose.BLOCK.resourceName) ?: lookup("don_pelao_serious") ?: idle),
             PelaoPose.VICTORY to (lookup(PelaoPose.VICTORY.resourceName) ?: lookup("don_pelao_celebrating") ?: idle),
             PelaoPose.DEFEAT to (lookup(PelaoPose.DEFEAT.resourceName) ?: lookup("don_pelao_disappointed") ?: idle)
         )

@@ -40,6 +40,8 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import cl.vialapp.app.ui.theme.vialColor
 import cl.vialapp.app.ui.theme.VialActionBlue
+import cl.vialapp.app.ui.games.arcade.PelaoPose
+import cl.vialapp.app.ui.games.arcade.PelaoSprite
 
 
 private val GameBlue: Color
@@ -156,9 +158,17 @@ fun BaldChallengeScreen(
     }
 
 
+    var confirmExit by remember { mutableStateOf(false) }
     BackHandler {
-        onBack()
+        if (started && !finished) confirmExit = true else onBack()
     }
+    if (confirmExit) AlertDialog(
+        onDismissRequest = { confirmExit = false },
+        title = { Text("¿Abandonar el reto?") },
+        text = { Text("La partida actual no se guardará.") },
+        confirmButton = { TextButton(onClick = onBack) { Text("Salir") } },
+        dismissButton = { TextButton(onClick = { confirmExit = false }) { Text("Continuar") } }
+    )
 
 
     /*
@@ -533,10 +543,7 @@ fun BaldChallengeScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "👨‍🦲",
-                fontSize = 56.sp
-            )
+            PelaoSprite(PelaoPose.DEFEAT, Modifier.size(128.dp))
 
             Spacer(
                 modifier = Modifier.height(16.dp)
@@ -588,10 +595,13 @@ fun BaldChallengeScreen(
                 modifier = Modifier.height(34.dp)
             )
 
-            Text(
-                text = "👨‍🦲💪",
-                fontSize = 76.sp
-            )
+            Surface(
+                modifier = Modifier.fillMaxWidth().height(212.dp),
+                color = Color(0xFF203653),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                PelaoSprite(PelaoPose.IDLE, Modifier.fillMaxSize().padding(12.dp))
+            }
 
             Spacer(
                 modifier = Modifier.height(18.dp)
@@ -1077,7 +1087,7 @@ fun BaldChallengeScreen(
             ) {
 
                 Surface(
-                    modifier = Modifier.size(58.dp),
+                    modifier = Modifier.size(90.dp),
                     shape = RoundedCornerShape(18.dp),
                     color =
                         if (powerModeActive) {
@@ -1092,15 +1102,14 @@ fun BaldChallengeScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text =
-                                when {
-                                    powerModeActive -> "👨‍🦲⚡💪"
-                                    isBossRound -> "👨‍🦲🔥"
-                                    else -> "👨‍🦲💪"
-                                },
-                            fontSize = 27.sp
-                        )
+                        val pose = when {
+                            answered && answerWasCorrect -> PelaoPose.VICTORY
+                            answered -> PelaoPose.HIT
+                            powerModeActive -> PelaoPose.ATTACK_ONE
+                            isBossRound -> PelaoPose.BLOCK
+                            else -> PelaoPose.IDLE
+                        }
+                        PelaoSprite(pose, Modifier.fillMaxSize().padding(4.dp))
                     }
                 }
 
@@ -1537,12 +1546,8 @@ fun BaldChallengeScreen(
                         .height(54.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor =
-                            if (isBossRound) {
-                                GameOrange
-                            } else {
-                                GameBlue
-                            }
+                        containerColor = if (isBossRound) Color(0xFF995C08) else VialActionBlue,
+                        contentColor = Color.White
                     )
                 ) {
                     Text(
@@ -1618,15 +1623,7 @@ private fun CountdownScreen(
                 modifier = Modifier.height(30.dp)
             )
 
-            Text(
-                text =
-                    if (boss) {
-                        "👨‍🦲🔥💪"
-                    } else {
-                        "👨‍🦲💪"
-                    },
-                fontSize = 74.sp
-            )
+            PelaoSprite(if (boss) PelaoPose.BLOCK else PelaoPose.IDLE, Modifier.size(184.dp))
 
             Spacer(
                 modifier = Modifier.height(24.dp)
@@ -1953,15 +1950,14 @@ private fun BaldChallengeResult(
             modifier = Modifier.height(36.dp)
         )
 
-        Text(
-            text =
-                if (percentage >= 80) {
-                    "👨‍🦲🔥💪"
-                } else {
-                    "👨‍🦲💪"
-                },
-            fontSize = 70.sp
-        )
+        Surface(
+            color = Color(0xFF203653),
+            shape = RoundedCornerShape(22.dp),
+            modifier = Modifier.fillMaxWidth().height(200.dp)
+        ) {
+            PelaoSprite(if (percentage >= 80) PelaoPose.VICTORY else PelaoPose.DEFEAT,
+                Modifier.fillMaxSize().padding(12.dp))
+        }
 
         Spacer(
             modifier = Modifier.height(17.dp)
