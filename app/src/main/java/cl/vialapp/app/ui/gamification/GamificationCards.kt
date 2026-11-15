@@ -1,6 +1,10 @@
 package cl.vialapp.app.ui.gamification
 
 import cl.vialapp.app.ui.rewards.LocalRewards
+import cl.vialapp.app.ui.rewards.RewardXpLine
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -123,11 +127,7 @@ fun HomeXpCard(
                         cl.vialapp.app.ui.rewards.RewardCoinArt(Modifier.size(58.dp))
                         Text("+$coins monedas",color=GamificationOrange,fontWeight=FontWeight.Bold,fontSize=21.sp)
                     }
-                    Text(
-                        text = "+${reward.xpAwarded} XP",
-                        color = GamificationGreen,
-                        fontWeight = FontWeight.Bold
-                    )
+                    RewardXpLine(reward.xpAwarded,GamificationBlue)
                 }
             },
             confirmButton = {
@@ -138,10 +138,9 @@ fun HomeXpCard(
         )
     }
 
-    key(
-        refreshKey
-    ) {
-
+    // Read the current refresh key here without resetting the XP card's animation.
+    val missionRefresh = refreshKey
+    run {
         /*
          * Lectura directa:
          * al volver desde examen/juego, la Home toma
@@ -193,17 +192,20 @@ fun HomeXpCard(
             )
 
 
-            RemoteDailyMissionSection(
-                userKey = userKey,
-                store = store,
-                onXpUpdated = { reward ->
-                    if (!reward.duplicate && reward.xpAwarded > 0) {
-                        if(MascotReactions.isSupported(mascotId)) claimedReward = reward
-                        rewards.xp("Misión completada",reward.totalXp,reward.xpAwarded)
+            key(missionRefresh) {
+                RemoteDailyMissionSection(
+                    userKey = userKey,
+                    store = store,
+                    onXpUpdated = { reward ->
+                        if (!reward.duplicate && reward.xpAwarded > 0) {
+                            val hasMascot=MascotReactions.isSupported(mascotId)
+                            if(hasMascot) claimedReward = reward
+                            rewards.xp("Misión completada",reward.totalXp,reward.xpAwarded,showToast=!hasMascot)
+                        }
+                        refreshKey++
                     }
-                    refreshKey++
-                }
-            )
+                )
+            }
         }
     }
 }
@@ -396,6 +398,11 @@ private fun XpOverviewCard(
                 1f
             )
 
+    val animatedTotalXp by animateIntAsState(progress.totalXp,animationSpec=tween(850),label="totalXp")
+    val animatedLevelXp=key(progress.level){
+        val value by animateFloatAsState(xpProgress,animationSpec=tween(850),label="levelXp")
+        value
+    }
     val xpRemaining =
         (
                 progress.xpPerLevel -
@@ -501,7 +508,7 @@ private fun XpOverviewCard(
 
                     Text(
                         text =
-                            "${progress.totalXp} XP acumulados",
+                            "$animatedTotalXp XP acumulados",
                         color =
                             GamificationGray,
                         fontSize =
@@ -550,7 +557,7 @@ private fun XpOverviewCard(
 
             LinearProgressIndicator(
                 progress = {
-                    xpProgress
+                    animatedLevelXp
                 },
                 modifier =
                     Modifier

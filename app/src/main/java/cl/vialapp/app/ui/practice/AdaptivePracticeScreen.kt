@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.data.api.*
+import cl.vialapp.app.data.games.GameProgressStore
+import cl.vialapp.app.ui.rewards.LocalRewards
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.theme.vialColor
 import coil3.compose.AsyncImage
@@ -51,6 +53,8 @@ internal fun AdaptivePracticeEntry(onClick: () -> Unit) {
 @Composable
 fun AdaptivePracticeScreen(userKey: String, licenseClass: String?, onBack: () -> Unit) {
     val context = LocalContext.current
+    val rewards = LocalRewards.current
+    val store = remember(context,userKey){GameProgressStore(context,userKey)}
     val manager = remember(context) { SessionManager(context) }
     val scope = rememberCoroutineScope()
     var session by remember(userKey, licenseClass) { mutableStateOf<AdaptivePracticeSession?>(null) }
@@ -116,6 +120,8 @@ fun AdaptivePracticeScreen(userKey: String, licenseClass: String?, onBack: () ->
             )
             val body = response.body()
             if (response.isSuccessful && body != null) {
+                store.applyRemoteProgress(body.gamification)
+                if(!body.duplicate)rewards.xp("Práctica completada",body.gamification.totalXp,body.xpAwarded)
                 result = body
             } else {
                 locked = response.code() in listOf(400, 403, 409)
@@ -170,7 +176,7 @@ fun AdaptivePracticeScreen(userKey: String, licenseClass: String?, onBack: () ->
                                 LinearProgressIndicator(
                                     progress = { completed.correctas.toFloat() / completed.totalQuestions.coerceAtLeast(1) },
                                     modifier = Modifier.fillMaxWidth(), color = blue)
-                                Text(if (completed.xpAwarded > 0) "+${completed.xpAwarded} XP ganados"
+                                Text(if (!completed.duplicate && completed.xpAwarded > 0) "+${completed.xpAwarded} XP ganados"
                                     else "Tus respuestas ya forman parte de tu progreso.", color = green)
                                 Text("Revisa las respuestas y aprende de tus errores.", color = gray)
                             }
