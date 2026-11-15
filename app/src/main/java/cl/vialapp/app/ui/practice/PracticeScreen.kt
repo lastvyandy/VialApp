@@ -40,7 +40,8 @@ private val PracticeBackground: Color
 fun PracticeScreen(
     onPracticeCategory: (String) -> Unit,
     onTakeExam: () -> Unit,
-    onLearningPath: () -> Unit = {}
+    onLearningPath: () -> Unit = {},
+    onAdaptivePractice: () -> Unit = {}
 ) {
 
     val context =
@@ -182,7 +183,8 @@ fun PracticeScreen(
 
             EmptyPracticeState(
                 onTakeExam = onTakeExam,
-                onLearningPath = onLearningPath
+                onLearningPath = onLearningPath,
+                onAdaptivePractice = onAdaptivePractice
             )
         }
 
@@ -265,6 +267,7 @@ fun PracticeScreen(
                 }
 
 
+                item { AdaptivePracticeEntry(onClick = onAdaptivePractice) }
                 item { LearningPathEntry(onClick = onLearningPath) }
 
                 item {
@@ -695,7 +698,8 @@ private fun CategoryPracticeCard(
 @Composable
 private fun EmptyPracticeState(
     onTakeExam: () -> Unit,
-    onLearningPath: () -> Unit
+    onLearningPath: () -> Unit,
+    onAdaptivePractice: () -> Unit
 ) {
 
     Column(
@@ -759,7 +763,7 @@ private fun EmptyPracticeState(
 
         Text(
             text =
-                "Completa un examen para que VialApp pueda recomendarte qué practicar.",
+                "Realiza un examen o una práctica para descubrir qué temas necesitas reforzar.",
 
             color =
                 PracticeGray,
@@ -789,6 +793,8 @@ private fun EmptyPracticeState(
                 "Hacer mi primer examen"
             )
         }
+        Spacer(Modifier.height(14.dp))
+        AdaptivePracticeEntry(onClick = onAdaptivePractice)
         Spacer(Modifier.height(14.dp))
         LearningPathEntry(onClick = onLearningPath)
     }

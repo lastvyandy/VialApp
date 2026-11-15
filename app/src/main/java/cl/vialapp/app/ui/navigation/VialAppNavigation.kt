@@ -66,6 +66,7 @@ import cl.vialapp.app.ui.learning.LearningPathScreen
 import cl.vialapp.app.ui.learning.LearningChapterScreen
 import cl.vialapp.app.ui.achievements.CollectionEntryCard
 import cl.vialapp.app.ui.practice.PracticeScreen
+import cl.vialapp.app.ui.practice.AdaptivePracticeScreen
 import cl.vialapp.app.ui.progress.ProgressScreen
 import cl.vialapp.app.ui.settings.StudySettingsScreen
 import cl.vialapp.app.ui.settings.StudySetupScreen
@@ -263,7 +264,8 @@ fun VialAppNavigation(
                 currentRoute != "games/workshop" &&
                 currentRoute != "collection" &&
                 currentRoute != "learning" &&
-                currentRoute != "learning/{chapterId}"
+                currentRoute != "learning/{chapterId}" &&
+                currentRoute != "adaptive_practice"
 
 
     Scaffold(
@@ -682,6 +684,7 @@ fun VialAppNavigation(
             ) {
 
                 PracticeScreen(
+                    onAdaptivePractice = { navController.navigate("adaptive_practice") },
                     onLearningPath = { navController.navigate("learning") },
 
                     /*
@@ -914,6 +917,10 @@ fun VialAppNavigation(
              * PERFIL
              * ------------------------------------------------
              */
+            composable("adaptive_practice") {
+                AdaptivePracticeScreen(userKey = user.id, licenseClass = user.licenseClass,
+                    onBack = { navController.popBackStack() })
+            }
             composable("learning") {
                 LearningPathScreen(
                     userKey = user.id, mascotId = user.mascotId, licenseClass = user.licenseClass,

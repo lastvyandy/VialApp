@@ -113,6 +113,18 @@ interface VialApi {
         @Path("resultId") resultId: Int
     ): Response<ExamCorrectionResponse>
 
+    @POST("questions/adaptive/start")
+    suspend fun startAdaptivePractice(
+        @Header("Authorization") authorization: String,
+        @Query("clase_licencia") licenseClass: String?
+    ): Response<AdaptivePracticeSession>
+
+    @POST("questions/adaptive/submit")
+    suspend fun submitAdaptivePractice(
+        @Header("Authorization") authorization: String,
+        @Body request: AdaptivePracticeSubmission
+    ): Response<AdaptivePracticeResult>
+
     @GET("users/me/stats/categorias")
     suspend fun getCategoryStats(
         @Header("Authorization") authorization: String
