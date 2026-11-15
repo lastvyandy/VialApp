@@ -38,6 +38,7 @@ private val darkPalette = mapOf(
     Color(0xFFF8FAFC) to Color(0xFF263449),
     Color(0xFFF5F9FF) to Color(0xFF202F4A),
     Color(0xFFE8F0FF) to Color(0xFF233B68),
+    Color(0xFFE8F2FF) to Color(0xFF233B68),
     Color(0xFFEAF1FF) to Color(0xFF233B68),
     Color(0xFFE5EDFF) to Color(0xFF233B68),
     Color(0xFFEAF8F1) to Color(0xFF193D34),
