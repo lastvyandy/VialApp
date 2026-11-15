@@ -51,4 +51,12 @@ class SignEngineTest {
         assertTrue(engine.snapshot().elapsed>65f)
         assertEquals(1.7f,engine.snapshot().window,.001f)
     }
+    @Test fun difficultyRisesFasterButKeepsPlayableMinimum(){
+        val initial=SignEngine(1).snapshot()
+        assertEquals(7f,initial.window,.001f)
+        assertEquals(5.65f,initial.copy(index=5).window,.001f)
+        assertEquals(4.30f,initial.copy(index=10).window,.001f)
+        assertEquals(1.70f,initial.copy(index=20).window,.001f)
+        assertEquals(1.70f,initial.copy(index=100).window,.001f)
+    }
 }

@@ -43,7 +43,7 @@ internal data class SignFrame(
     override val message: String = "Observa la señal y elige qué debes hacer."
 ) : ArcadeFrame {
     val current get() = questions[index % questions.size]
-    val window get() = (7f-index*.23f).coerceAtLeast(1.7f)
+    val window get() = (7f-index*.27f).coerceAtLeast(1.7f)
     val speedTier get() = 1+index/5
     val approach get() = (flight/window).coerceIn(0f,1f)
     override val finished get() = lives <= 0 && feedback <= 0f
