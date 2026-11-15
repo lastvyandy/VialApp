@@ -5,10 +5,10 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -23,13 +23,49 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.data.games.GameProgressStore
+import cl.vialapp.app.data.api.ApiClient
+import cl.vialapp.app.data.session.SessionManager
+import cl.vialapp.app.ui.career.drawGarageVehicle
+import cl.vialapp.app.ui.career.garageColor
+import cl.vialapp.app.ui.career.zoneColors
+import cl.vialapp.app.ui.career.zoneName
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 
 @Composable
 fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val session = remember(context) { SessionManager(context) }
+    val prefs = remember(context,userKey) { context.getSharedPreferences("career_appearance_"+userKey, android.content.Context.MODE_PRIVATE) }
+    var style by remember(userKey) { mutableStateOf(prefs.getString("style","compact") ?: "compact") }
+    var paint by remember(userKey) { mutableStateOf(prefs.getString("paint","#38A9F0") ?: "#38A9F0") }
+    var zone by remember(userKey) { mutableStateOf(prefs.getString("zone","neighborhood") ?: "neighborhood") }
+    var ready by remember(userKey) { mutableStateOf(false) }
+    LaunchedEffect(userKey) {
+        try {
+            val token = session.getAccessToken()
+            val body = withTimeoutOrNull(2200L) {
+                token?.let { ApiClient.api.getCareer("Bearer "+it).takeIf { response -> response.isSuccessful }?.body() }
+            }
+            if (body != null) {
+                style = body.vehicles.firstOrNull { it.id == body.equippedVehicle }?.style ?: "compact"
+                paint = body.paints.firstOrNull { it.id == body.equippedPaint }?.hex ?: "#38A9F0"
+                zone = body.zone
+                prefs.edit().putString("style",style).putString("paint",paint).putString("zone",zone).apply()
+            }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { }
+        finally { ready = true }
+    }
+    if (!ready) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        return
+    }
+    val vehicleColor = garageColor(paint)
     ArcadeSession(
         userKey = userKey, gameId = GameProgressStore.CARVIER_DRIVE, title = "Carvier al volante",
-        subtitle = "Una carretera, tres carriles y 65 segundos para llegar a la meta.",
+        subtitle = zoneName(zone) + " · Tres carriles y 65 segundos para llegar a la meta.",
         rules = "Desliza o usa las flechas para cambiar de carril. Recoge monedas solo cuando sea seguro. En zona escolar activa 30 km/h. Cuando aparezca PARE, pulsa Detener, espera el aviso de cruce libre y pulsa Avanzar. Tienes tres vidas.",
         duration = DriveEngine.TIME, create = { DriveEngine() }, onBack = onBack,
         scene = { frame, modifier, enabled, act ->
@@ -52,7 +88,7 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
                     }
                     }
                 }
-                DriveRoad(frame, Modifier.weight(1f).fillMaxWidth(), enabled, act)
+                DriveRoad(frame, Modifier.weight(1f).fillMaxWidth(), enabled, act, style, vehicleColor, zone)
             }
         },
         controls = { frame, enabled, act ->
@@ -77,7 +113,8 @@ private val roadPaints = listOf(Color(0xFFF97316), Color(0xFFEF4444), Color(0xFF
 private fun laneX(lane: Float) = 205f + lane * 145f
 
 @Composable
-internal fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, act: (Int) -> Unit) {
+internal fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, act: (Int) -> Unit,
+                       vehicleStyle: String = "compact", vehicleColor: Color = Color(0xFF38A9F0), zone: String = "neighborhood") {
     val currentAct by rememberUpdatedState(act)
     Canvas(modifier.clip(RoundedCornerShape(22.dp)).pointerInput(enabled) {
         if (enabled) {
@@ -97,7 +134,7 @@ internal fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, 
         }
     }) {
         scale(size.width / 700f, size.height / 1000f, pivot = Offset.Zero) {
-            drawRect(Brush.verticalGradient(listOf(Color(0xFF78A889), Color(0xFF43765E)), endY = 1000f), size = Size(700f, 1000f))
+            drawRect(Brush.verticalGradient(zoneColors(zone), endY = 1000f), size = Size(700f, 1000f))
             drawRect(Color(0xFFA3B2AB), Offset(110f, 0f), Size(480f, 1000f))
             drawRect(Brush.verticalGradient(listOf(Color(0xFF454F5C), Color(0xFF26384A)), endY = 1000f), Offset(132f, 0f), Size(436f, 1000f))
             drawLine(Color(0xFFB3C5C8), Offset(120f, 0f), Offset(120f, 1000f), 5f)
@@ -109,9 +146,28 @@ internal fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, 
                 val y = i * 145f + offset
                 for (x in listOf(278f, 422f)) drawLine(Color(0xFFE5E7EB).copy(alpha = .85f), Offset(x, y), Offset(x, y + 67f), 5f)
                 for (x in listOf(54f, 646f)) {
-                    drawCircle(Color(0xFF254D43).copy(alpha = .35f), 36f, Offset(x + 5f, y + 25f))
-                    drawCircle(Color(0xFF28674B), 32f, Offset(x, y + 17f))
-                    drawCircle(Color(0xFF6EA16B), 19f, Offset(x - 6f, y + 11f))
+                    when (zone) {
+                        "city", "metro" -> {
+                            drawRoundRect(Color(0x66405063),Offset(x-38f,y-18f),Size(76f,84f),CornerRadius(6f))
+                            drawRoundRect(if(zone=="metro")Color(0xFF303B55) else Color(0xFFB5C1C8),Offset(x-34f,y-22f),Size(66f,78f),CornerRadius(5f))
+                            for (k in 0..2) drawRect(if(zone=="metro")Color(0xFFE8BD70) else Color(0xFF486B82),Offset(x-23f,y-10f+k*21f),Size(46f,8f))
+                        }
+                        "coast" -> {
+                            drawOval(Color(0xFFB5D9CE),Offset(x-38f,y+8f),Size(76f,12f))
+                            drawOval(Color(0x995FDEDD),Offset(x-33f,y+32f),Size(66f,8f))
+                        }
+                        "mountain" -> {
+                            val rock = Path().apply { moveTo(x-43f,y+46f); lineTo(x,y-34f); lineTo(x+43f,y+46f); close() }
+                            drawPath(rock,Color(0xFF536A7A))
+                            val snow = Path().apply { moveTo(x-17f,y-2f); lineTo(x,y-34f); lineTo(x+17f,y-2f); lineTo(x,y-9f); close() }
+                            drawPath(snow,Color(0xFFE5EFF5))
+                        }
+                        else -> {
+                            drawCircle(Color(0xFF254D43).copy(alpha = .35f), 36f, Offset(x + 5f, y + 25f))
+                            drawCircle(Color(0xFF28674B), 32f, Offset(x, y + 17f))
+                            drawCircle(Color(0xFF6EA16B), 19f, Offset(x - 6f, y + 11f))
+                        }
+                    }
                 }
             }
             if (frame.schoolZone) {
@@ -163,7 +219,7 @@ internal fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, 
                 }
             }
             val opacity = if (frame.invulnerable > 0f && (frame.elapsed * 10).toInt() % 2 == 0) .45f else 1f
-            roadCar(Offset(laneX(frame.carX), 830f), Color(0xFF38A9F0), true, opacity)
+            drawGarageVehicle(Offset(laneX(frame.carX), 830f), vehicleColor, vehicleStyle, opacity)
         }
     }
 }

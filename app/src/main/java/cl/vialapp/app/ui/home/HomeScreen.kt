@@ -27,6 +27,7 @@ import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.gamification.HomeXpCard
 import cl.vialapp.app.ui.learning.LearningPathEntry
 import cl.vialapp.app.ui.games.GamesQuickEntry
+import cl.vialapp.app.ui.career.CareerShortcuts
 import cl.vialapp.app.ui.profile.ProfileAvatar
 import cl.vialapp.app.ui.theme.vialColor
 import cl.vialapp.app.ui.theme.VialActionBlue
@@ -58,7 +59,9 @@ fun HomeScreen(
     onGames: () -> Unit,
     onResumeExam: (Int) -> Unit,
     avatarKey: String? = null,
-    onLearningPath: () -> Unit = {}
+    onLearningPath: () -> Unit = {},
+    onCareer: () -> Unit = {},
+    onGarage: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -225,6 +228,7 @@ fun HomeScreen(
         }
 
         item { GamesQuickEntry(onClick = onGames) }
+        item { CareerShortcuts(onCareer, onGarage) }
 
         // Compañero elegido: no modifica ni sincroniza el progreso.
         user.mascotId

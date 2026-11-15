@@ -49,6 +49,7 @@ import cl.vialapp.app.data.settings.StudyPreferencesStore
 import cl.vialapp.app.ui.exam.ExamScreen
 import cl.vialapp.app.ui.exams.ExamsScreen
 import cl.vialapp.app.ui.games.GamesScreen
+import cl.vialapp.app.ui.career.CareerScreen
 import cl.vialapp.app.ui.games.arcade.CarvierDriveScreen
 import cl.vialapp.app.ui.games.arcade.PelaoArenaScreen
 import cl.vialapp.app.ui.games.arcade.AutoWorkshopScreen
@@ -267,7 +268,8 @@ fun VialAppNavigation(
                 currentRoute != "learning" &&
                 currentRoute != "learning/{chapterId}" &&
                 currentRoute != "adaptive_practice" &&
-                currentRoute != "simulator"
+                currentRoute != "simulator" &&
+                currentRoute != "career" && currentRoute != "garage"
 
 
     Scaffold(
@@ -519,6 +521,8 @@ fun VialAppNavigation(
                     },
 
                     onLearningPath = { navController.navigate("learning") },
+                    onCareer = { navController.navigate("career") },
+                    onGarage = { navController.navigate("garage") },
                     onResumeExam = { testId ->
 
                         navController.navigate(
@@ -569,6 +573,8 @@ fun VialAppNavigation(
                     onOpenArena = { navController.navigate("games/arena") },
                     onOpenWorkshop = { navController.navigate("games/workshop") },
                     onOpenSigns = { navController.navigate("games/signs") },
+                    onCareer = { navController.navigate("career") },
+                    onGarage = { navController.navigate("garage") },
 
                     onBack = {
 
@@ -578,6 +584,14 @@ fun VialAppNavigation(
             }
 
 
+            composable("career") {
+                CareerScreen(user.id, false, onBack = { navController.popBackStack() },
+                    onActivity = { route -> navController.navigate(route) })
+            }
+            composable("garage") {
+                CareerScreen(user.id, true, onBack = { navController.popBackStack() },
+                    onActivity = { route -> navController.navigate(route) })
+            }
             composable("games/carvier") {
                 CarvierDriveScreen(userKey = user.id, onBack = { navController.popBackStack() })
             }

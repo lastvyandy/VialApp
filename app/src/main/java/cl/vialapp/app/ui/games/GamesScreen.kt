@@ -22,6 +22,7 @@ import cl.vialapp.app.data.api.AssignedTest
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.theme.vialColor
+import cl.vialapp.app.ui.career.CareerShortcuts
 
 private val GamesBlue: Color
     @Composable get() = vialColor(Color(0xFF2563EB))
@@ -46,7 +47,9 @@ fun GamesScreen(
     onOpenArena: () -> Unit,
     onOpenWorkshop: () -> Unit,
     onOpenSigns: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onCareer: () -> Unit = {},
+    onGarage: () -> Unit = {}
 ) {
     BackHandler {
         onBack()
@@ -149,6 +152,8 @@ fun GamesScreen(
                 lineHeight = 21.sp
             )
         }
+
+        item { CareerShortcuts(onCareer, onGarage) }
 
         item {
             Card(

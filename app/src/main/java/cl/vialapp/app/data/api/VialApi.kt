@@ -176,6 +176,13 @@ interface VialApi {
     @POST("users/me/gamification/achievements")
     suspend fun syncAchievements(@Header("Authorization") authorization: String): Response<AchievementCollectionResponse>
 
+    @GET("users/me/gamification/career")
+    suspend fun getCareer(@Header("Authorization") authorization: String): Response<CareerState>
+
+    @POST("users/me/gamification/career")
+    suspend fun changeCareer(@Header("Authorization") authorization: String,
+        @Body action: CareerAction): Response<CareerState>
+
     @GET("users/me/gamification")
     suspend fun getGamificationProgress(
         @Header("Authorization") authorization: String
