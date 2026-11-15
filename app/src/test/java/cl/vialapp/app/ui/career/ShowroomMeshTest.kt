@@ -25,4 +25,19 @@ class ShowroomMeshTest {
             }
         }
     }
+
+    @Test fun accessoryPartsChangeGeometryAndMaterialsWithoutChangingTheBaseModel() {
+        for(style in listOf("compact","hatch","sedan","suv","sport")){
+            val original=buildCarMesh(style)
+            val custom=buildCarMesh(style,GarageKit(wheels="wheels_gold",decal="decal_rally",wing="wing_gt"))
+            assertTrue(custom.faces.size>original.faces.size)
+            assertTrue(custom.faces.any{it.finish==Finish.RIM_GOLD})
+            assertTrue(custom.faces.any{it.finish==Finish.DECAL_LIGHT})
+            assertFalse(original.faces.any{it.finish==Finish.DECAL_LIGHT})
+            val camera=CarCamera(180f,78f)
+            assertTrue(custom.faces.filter(camera::visible).any{it.finish==Finish.DECAL_LIGHT})
+            for(face in custom.faces) for(point in face.points.map(camera::project))
+                assertTrue(point.x.isFinite() && point.y.isFinite() && point.depth.isFinite())
+        }
+    }
 }

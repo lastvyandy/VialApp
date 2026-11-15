@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import cl.vialapp.app.R
 import cl.vialapp.app.data.api.CareerState
 import cl.vialapp.app.data.api.GarageVehicle
+import cl.vialapp.app.data.api.GarageAccessory
 
 private val hero=Color(0xFF101C2A)
 private val panel=Color(0xFF1C2E41)
@@ -46,7 +47,15 @@ internal fun GarageShowroom(data:CareerState,enabled:Boolean,
     val activeVehicle=data.vehicles.firstOrNull{it.id==data.equippedVehicle}
     val activePaint=data.paints.firstOrNull{it.id==data.equippedPaint}
     val color=garageColor(paint?.hex?:"#38A9F0")
-    val previewIsActive=car?.id==data.equippedVehicle && paint?.id==data.equippedPaint
+    var slot by rememberSaveable { mutableStateOf("llantas") }
+    var accessoryId by rememberSaveable { mutableStateOf<String?>(null) }
+    val accessories=data.accessories.orEmpty()
+    val chosenAccessory=accessories.firstOrNull{it.id==accessoryId&&it.slot==slot}
+        ?: accessories.firstOrNull{it.id==data.equippedAccessories.orEmpty()[slot]}
+        ?: accessories.firstOrNull{it.slot==slot}
+    val equippedKit=garageKit(data.equippedAccessories)
+    val kit=garageKit(data.equippedAccessories.orEmpty() + (chosenAccessory?.let{mapOf(it.slot to it.id)} ?: emptyMap()))
+    val previewIsActive=car?.id==data.equippedVehicle && paint?.id==data.equippedPaint && kit==equippedKit
     fun turn(delta:Float){angle=((angle+delta)%360f+360f)%360f}
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(16.dp)){
         if(car!=null) {
@@ -68,7 +77,7 @@ internal fun GarageShowroom(data:CareerState,enabled:Boolean,
                             }
                         }
                     }
-                    ShowroomView(car.style,color,angle,::turn,modifier=Modifier.fillMaxWidth())
+                    ShowroomView(car.style,color,angle,::turn,modifier=Modifier.fillMaxWidth(),kit=kit)
                     Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically,
                         horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         TextButton(onClick={turn(-45f)},modifier=Modifier.semantics{contentDescription="Girar auto a la izquierda"},
@@ -159,6 +168,38 @@ internal fun GarageShowroom(data:CareerState,enabled:Boolean,
                 }
             }
         }
+        if(accessories.isNotEmpty()) {
+            Surface(shape=RoundedCornerShape(20.dp),color=c.surface,border=BorderStroke(1.dp,c.outlineVariant)){
+                Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                    Text("Taller de accesorios",fontSize=21.sp,fontWeight=FontWeight.ExtraBold,color=c.onSurface)
+                    Text("Combina piezas y prueba su aspecto antes de comprarlas.",color=c.onSurfaceVariant,fontSize=13.sp)
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        items(listOf("llantas" to "Llantas","vinilos" to "Vinilos","aleron" to "Alerones","neon" to "Neón"),key={it.first}){(key,label)->
+                            FilterChip(selected=slot==key,onClick={slot=key;accessoryId=null},label={Text(label)})
+                        }
+                    }
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(9.dp)){
+                        items(accessories.filter{it.slot==slot},key={it.id}){part->
+                            val selected=part.id==chosenAccessory?.id
+                            val equipped=part.id==data.equippedAccessories.orEmpty()[part.slot]
+                            PartTile(part,selected,equipped,car?.style?:"compact",color,equippedKit,
+                                onClick={accessoryId=part.id})
+                        }
+                    }
+                    chosenAccessory?.let{part->
+                        val equipped=part.id==data.equippedAccessories.orEmpty()[part.slot]
+                        Text(part.name,fontWeight=FontWeight.Bold,color=c.onSurface)
+                        Text(when{equipped->"Equipado";part.owned->"En tu colección";!part.available->"Completa "+part.requiredStages+" etapas de carrera";else->part.price.toString()+" monedas"},color=c.onSurfaceVariant,fontSize=13.sp)
+                        Button(onClick={if(part.owned)onAction("equip_accessory",part.id) else onPurchase("buy_accessory",part.id,part.name,part.price)},
+                            enabled=enabled&&!equipped&&(part.owned||(part.available&&data.coins>=part.price)),modifier=Modifier.fillMaxWidth()){
+                            Text(when{equipped->"Equipado";part.owned->"Equipar accesorio";!part.available->"Bloqueado";data.coins<part.price->"Monedas insuficientes";else->"Comprar accesorio"})
+                        }
+                        if(kit!=equippedKit) TextButton(onClick={accessoryId=null},modifier=Modifier.align(Alignment.CenterHorizontally)){Text("Volver a la configuración equipada")}
+                    }
+                    Text("Accesorios cosméticos compartidos entre tus vehículos. El neón solo se simula en el juego.",fontSize=11.sp,color=c.onSurfaceVariant)
+                }
+            }
+        }
         Surface(shape=RoundedCornerShape(19.dp),color=c.primaryContainer){
             Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)){
@@ -169,7 +210,7 @@ internal fun GarageShowroom(data:CareerState,enabled:Boolean,
                     }
                 }
                 Text((activeVehicle?.name?:"Compacto")+" · "+(activePaint?.name?:"Azul Vial"),color=c.onPrimaryContainer,fontWeight=FontWeight.SemiBold)
-                if(!previewIsActive) Text("Estás viendo una vista previa. En pista usarás el vehículo y la pintura equipados.",color=c.onPrimaryContainer,fontSize=12.sp)
+                if(!previewIsActive) Text("Estás viendo una vista previa. En pista usarás el vehículo, la pintura y los accesorios equipados.",color=c.onPrimaryContainer,fontSize=12.sp)
                 Button(onClick=onDrive,enabled=enabled,modifier=Modifier.fillMaxWidth().heightIn(min=50.dp),
                     shape=RoundedCornerShape(14.dp)){Text("Conducir en Carvier al volante",fontWeight=FontWeight.Bold)}
             }
@@ -197,6 +238,29 @@ private fun VehicleTile(model:GarageVehicle,chosen:Boolean,equipped:Boolean,colo
             Text(model.name,color=fg,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=1)
             Text(when{equipped->"Equipado";model.owned->"En colección";!model.available->"Etapa "+model.requiredStages;else->model.price.toString()+" monedas"},
                 color=if(chosen)c.onPrimaryContainer else c.onSurfaceVariant,fontSize=11.sp,maxLines=1)
+        }
+    }
+}
+
+@Composable
+private fun PartTile(part:GarageAccessory,chosen:Boolean,equipped:Boolean,style:String,color:Color,base:GarageKit,onClick:()->Unit){
+    val c=MaterialTheme.colorScheme
+    val preview=when(part.slot){
+        "llantas"->base.copy(wheels=part.id)
+        "vinilos"->base.copy(decal=part.id)
+        "aleron"->base.copy(wing=part.id)
+        else->base.copy(neon=part.id)
+    }
+    Surface(onClick=onClick,modifier=Modifier.width(148.dp).semantics{selected=chosen},
+        shape=RoundedCornerShape(16.dp),color=if(chosen)c.primaryContainer else c.surface,
+        border=BorderStroke(if(chosen)2.dp else 1.dp,if(chosen)c.primary else c.outlineVariant)){
+        Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(Color(0xFF203246))){
+                ShowroomThumbnail(style,color,Modifier.fillMaxWidth(),kit=preview)
+            }
+            Text(part.name,fontSize=13.sp,fontWeight=FontWeight.Bold,color=if(chosen)c.onPrimaryContainer else c.onSurface)
+            Text(when{equipped->"Equipado";part.owned->"Tuyo";!part.available->"Etapa "+part.requiredStages;else->part.price.toString()+" monedas"},
+                fontSize=11.sp,color=if(chosen)c.onPrimaryContainer else c.onSurfaceVariant)
         }
     }
 }

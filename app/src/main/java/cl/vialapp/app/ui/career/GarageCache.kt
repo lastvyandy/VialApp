@@ -8,5 +8,9 @@ internal fun cacheEquippedGarage(context:Context,userKey:String,state:CareerStat
     val model=state.vehicles.firstOrNull{it.id==state.equippedVehicle} ?: return
     val paint=state.paints.firstOrNull{it.id==state.equippedPaint} ?: return
     context.getSharedPreferences("career_appearance_"+userKey,Context.MODE_PRIVATE)
-        .edit().putString("style",model.style).putString("paint",paint.hex).putString("zone",state.zone).apply()
+        .edit().putString("style",model.style).putString("paint",paint.hex).putString("zone",state.zone)
+        .putString("wheels",state.equippedAccessories.orEmpty()["llantas"] ?: "wheels_stock")
+        .putString("decal",state.equippedAccessories.orEmpty()["vinilos"] ?: "decal_stock")
+        .putString("wing",state.equippedAccessories.orEmpty()["aleron"] ?: "wing_stock")
+        .putString("neon",state.equippedAccessories.orEmpty()["neon"] ?: "neon_stock").apply()
 }

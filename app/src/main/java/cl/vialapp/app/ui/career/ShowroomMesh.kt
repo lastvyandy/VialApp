@@ -12,7 +12,7 @@ internal data class V3(val x:Float,val y:Float,val z:Float) {
     fun unit():V3 { val n=sqrt(dot(this)); return if(n<.0001f)this else this*(1f/n) }
 }
 
-internal enum class Finish { PAINT, GLASS, RUBBER, RIM, GRILLE, HEADLAMP, TAILLAMP, TRIM, CHROME }
+internal enum class Finish { PAINT, GLASS, RUBBER, RIM, GRILLE, HEADLAMP, TAILLAMP, TRIM, CHROME, DECAL_LIGHT, DECAL_DARK, RIM_BLACK, RIM_GOLD }
 internal data class CarFace(val points:List<V3>,val finish:Finish,val normal:V3,val center:V3)
 internal data class CarMesh(val faces:List<CarFace>)
 internal data class CarSpec(val length:Float,val width:Float,val belt:Float,val roof:Float,
@@ -58,7 +58,7 @@ private class MeshBuilder {
     }
 }
 
-internal fun buildCarMesh(style:String):CarMesh {
+internal fun buildCarMesh(style:String, kit: GarageKit = GarageKit()):CarMesh {
     val s=carSpec(style)
     val b=MeshBuilder()
     val inside=V3(0f,s.belt*.66f,0f)
@@ -141,13 +141,39 @@ internal fun buildCarMesh(style:String):CarMesh {
         b.box(x,top(rear)-.12f,rear-.026f,noseW*.23f,.064f,.026f,Finish.TAILLAMP)
     }
     b.box(0f,.44f,rear-.018f,noseW*.34f,.08f,.018f,Finish.TRIM)
-    if(style=="sport"){
+    if(style=="sport" && kit.wing=="wing_stock"){
         for(side in listOf(-1f,1f)) b.box(side*.61f,s.tail+.07f,rear+.23f,.045f,.12f,.065f,Finish.TRIM)
         b.box(0f,s.tail+.19f,rear+.23f,s.width*.94f,.045f,.17f,Finish.PAINT)
+    }
+    if(kit.wing!="wing_stock"){
+        val gt=kit.wing=="wing_gt"
+        val y=s.tail+(if(gt).34f else .13f)
+        for(side in listOf(-1f,1f))
+            b.box(side*s.width*.61f,(s.tail+y)*.5f,rear+.24f,.045f,(y-s.tail)*.5f,.060f,Finish.TRIM)
+        b.box(0f,y,rear+.22f,s.width*.95f,.045f,if(gt).22f else .12f,Finish.TRIM)
+        if(gt)for(side in listOf(-1f,1f))
+            b.box(side*s.width*.94f,y+.025f,rear+.22f,.035f,.095f,.22f,Finish.CHROME)
+    }
+    if(kit.decal!="decal_stock"){
+        val finish=if(kit.decal=="decal_rally")Finish.DECAL_LIGHT else Finish.DECAL_DARK
+        val stripes=if(kit.decal=="decal_rally")listOf(-.16f to .11f,.16f to .11f) else listOf(0f to .22f)
+        for((x,w) in stripes){
+            val roofZ1=s.roofRear+.035f; val roofZ2=s.roofFront-.035f
+            b.panel(finish,cabin,V3(x-w,s.roof-.009f,roofZ1),V3(x+w,s.roof-.009f,roofZ1),
+                V3(x+w,s.roof+.009f,roofZ2),V3(x-w,s.roof+.009f,roofZ2))
+            for(i in 0 until zValues.lastIndex){
+                val a=zValues[i];val z=zValues[i+1]
+                if(a>=s.cabinFront || z<=s.cabinRear){
+                    b.panel(finish,inside,V3(x-w,top(a)+.008f,a),V3(x+w,top(a)+.008f,a),
+                        V3(x+w,top(z)+.008f,z),V3(x-w,top(z)+.008f,z))
+                }
+            }
+        }
     }
     if(style=="suv")for(side in listOf(-1f,1f))
         b.box(side*highW*.82f,s.roof+.04f,(s.roofFront+s.roofRear)*.5f,.04f,.04f,(s.roofFront-s.roofRear)*.42f,Finish.TRIM)
 
+    val rim=when(kit.wheels){"wheels_black"->Finish.RIM_BLACK;"wheels_gold"->Finish.RIM_GOLD;else->Finish.RIM}
     // Four tires, machined rims and radial spokes, all in the same 3D depth pass.
     for(side in listOf(-1f,1f))for(z in listOf(-s.wheelZ,s.wheelZ)){
         val center=V3(side*(s.width-.065f),s.tire,z)
@@ -164,14 +190,14 @@ internal fun buildCarMesh(style:String):CarMesh {
             b.panel(Finish.RUBBER,center,wheelPoint(outerX,radius,i),wheelPoint(outerX,radius,j),wheelPoint(outerX,radius*.72f,j),wheelPoint(outerX,radius*.72f,i))
             b.panel(Finish.RUBBER,center,wheelPoint(innerX,radius,i),wheelPoint(innerX,radius,j),V3(innerX,center.y,z))
             b.panel(Finish.GRILLE,center,wheelPoint(outerX+side*.004f,radius*.72f,i),wheelPoint(outerX+side*.004f,radius*.72f,j),V3(outerX+side*.004f,center.y,z))
-            b.panel(Finish.RIM,center,wheelPoint(outerX+side*.011f,radius*.72f,i),wheelPoint(outerX+side*.011f,radius*.72f,j),wheelPoint(outerX+side*.011f,radius*.61f,j),wheelPoint(outerX+side*.011f,radius*.61f,i))
+            b.panel(rim,center,wheelPoint(outerX+side*.011f,radius*.72f,i),wheelPoint(outerX+side*.011f,radius*.72f,j),wheelPoint(outerX+side*.011f,radius*.61f,j),wheelPoint(outerX+side*.011f,radius*.61f,i))
         }
         val spokes=if(style=="sport")6 else 5
         val x=outerX+side*.018f
         for(i in 0 until spokes){
             val angle=i*2.0*PI/spokes
             fun spoke(r:Float,a:Double)=V3(x,center.y+r*cos(a).toFloat(),z+r*sin(a).toFloat())
-            b.panel(Finish.RIM,center,spoke(radius*.16f,angle-.30),spoke(radius*.63f,angle-.11),
+            b.panel(rim,center,spoke(radius*.16f,angle-.30),spoke(radius*.63f,angle-.11),
                 spoke(radius*.63f,angle+.11),spoke(radius*.16f,angle+.30))
         }
         for(i in 0 until 12){

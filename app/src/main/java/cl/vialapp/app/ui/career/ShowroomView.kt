@@ -28,8 +28,8 @@ private val coolLight=V3(.75f,.55f,-.55f).unit()
 private val studioBlue=Color(0xFF93C5FD)
 
 @Composable
-internal fun ShowroomView(style:String,paint:Color,angle:Float,onRotate:(Float)->Unit,modifier:Modifier=Modifier) {
-    val mesh=remember(style){buildCarMesh(style)}
+internal fun ShowroomView(style:String,paint:Color,angle:Float,onRotate:(Float)->Unit,modifier:Modifier=Modifier,kit:GarageKit=GarageKit()) {
+    val mesh=remember(style,kit){buildCarMesh(style,kit)}
     val bodyColor by animateColorAsState(paint,animationSpec=tween(260),label="paint")
     val currentRotate by rememberUpdatedState(onRotate)
     Canvas(modifier.aspectRatio(1.43f)
@@ -43,18 +43,20 @@ internal fun ShowroomView(style:String,paint:Color,angle:Float,onRotate:(Float)-
         val u=minOf(size.width/640f,size.height/448f)
         scale(u,u,pivot=Offset.Zero){
             studio()
+            neonUnderCar(kit,Offset(320f,321f),230f,82f)
             drawModel(mesh,bodyColor,angle,Offset(320f,218f),112f)
         }
     }
 }
 
 @Composable
-internal fun ShowroomThumbnail(style:String,paint:Color,modifier:Modifier=Modifier) {
-    val mesh=remember(style){buildCarMesh(style)}
+internal fun ShowroomThumbnail(style:String,paint:Color,modifier:Modifier=Modifier,kit:GarageKit=GarageKit()) {
+    val mesh=remember(style,kit){buildCarMesh(style,kit)}
     Canvas(modifier.aspectRatio(1.45f)) {
         val u=minOf(size.width/200f,size.height/138f)
         scale(u,u,pivot=Offset.Zero){
             drawOval(Color(0x5510192A),Offset(20f,87f),Size(160f,32f))
+            neonUnderCar(kit,Offset(100f,101f),76f,29f)
             drawModel(mesh,paint,38f,Offset(100f,64f),36f)
         }
     }
@@ -94,7 +96,7 @@ private fun DrawScope.studio(){
     // Subtle floor illumination in front of the platform.
     drawLine(studioBlue.copy(alpha=.4f),Offset(105f,404f),Offset(535f,404f),1f)
 }
-private fun surfaceColor(face:CarFace,base:Color):Color{
+internal fun surfaceColor(face:CarFace,base:Color):Color{
     val n=face.normal
     val key=n.dot(studioLight).coerceAtLeast(0f)
     val fill=n.dot(coolLight).coerceAtLeast(0f)
@@ -110,6 +112,10 @@ private fun surfaceColor(face:CarFace,base:Color):Color{
         Finish.HEADLAMP -> lerp(Color(0xFFADCFE7),Color(0xFFFFFEED),.74f)
         Finish.TAILLAMP -> lerp(Color(0xFF95203A),Color(0xFFFF7C7C),.35f+key*.35f)
         Finish.TRIM -> lerp(Color(0xFF101A26),Color(0xFF526274),key*.42f)
+        Finish.DECAL_LIGHT -> lerp(Color(0xFFA5B6C6),Color.White,.42f+key*.48f)
+        Finish.DECAL_DARK -> lerp(Color(0xFF101820),Color(0xFF4A5663),key*.65f)
+        Finish.RIM_BLACK -> lerp(Color(0xFF0B121B),Color(0xFF586574),.14f+key*.45f)
+        Finish.RIM_GOLD -> lerp(Color(0xFF795020),Color(0xFFFFD887),.38f+key*.48f)
         Finish.CHROME -> lerp(Color(0xFF8FA7BA),Color(0xFFF8FAFC),.40f+key*.48f)
     }
 }
@@ -134,5 +140,13 @@ private fun DrawScope.drawModel(mesh:CarMesh,paint:Color,angle:Float,origin:Offs
         if(face.finish==Finish.GLASS){
             drawPath(path,Color(0xFF0C1926).copy(alpha=.85f),style=Stroke(if(unit>65f)1.05f else .35f))
         }
+    }
+}
+
+private fun DrawScope.neonUnderCar(kit:GarageKit,at:Offset,rx:Float,ry:Float){
+    val glow=kit.neonColor() ?: return
+    for(i in 4 downTo 1){
+        val f=i/4f
+        drawOval(glow.copy(alpha=.10f+(1f-f)*.13f),at-Offset(rx*f,ry*f),Size(rx*f*2f,ry*f*2f))
     }
 }

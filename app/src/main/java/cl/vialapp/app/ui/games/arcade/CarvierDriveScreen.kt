@@ -25,7 +25,12 @@ import androidx.compose.ui.unit.sp
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.api.ApiClient
 import cl.vialapp.app.data.session.SessionManager
-import cl.vialapp.app.ui.career.drawGarageVehicle
+import cl.vialapp.app.ui.career.GarageKit
+import cl.vialapp.app.ui.career.cachedKit
+import cl.vialapp.app.ui.career.garageKit
+import cl.vialapp.app.ui.career.cacheEquippedGarage
+import cl.vialapp.app.ui.career.rasterizeRoadCar
+import cl.vialapp.app.ui.career.drawRoadSprite
 import cl.vialapp.app.ui.career.garageColor
 import cl.vialapp.app.ui.career.zoneColors
 import cl.vialapp.app.ui.career.zoneName
@@ -42,6 +47,7 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
     var style by remember(userKey) { mutableStateOf(prefs.getString("style","compact") ?: "compact") }
     var paint by remember(userKey) { mutableStateOf(prefs.getString("paint","#38A9F0") ?: "#38A9F0") }
     var zone by remember(userKey) { mutableStateOf(prefs.getString("zone","neighborhood") ?: "neighborhood") }
+    var kit by remember(userKey) { mutableStateOf(cachedKit(prefs)) }
     var ready by remember(userKey) { mutableStateOf(false) }
     LaunchedEffect(userKey) {
         try {
@@ -53,7 +59,8 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
                 style = body.vehicles.firstOrNull { it.id == body.equippedVehicle }?.style ?: "compact"
                 paint = body.paints.firstOrNull { it.id == body.equippedPaint }?.hex ?: "#38A9F0"
                 zone = body.zone
-                prefs.edit().putString("style",style).putString("paint",paint).putString("zone",zone).apply()
+                kit = garageKit(body.equippedAccessories)
+                cacheEquippedGarage(context,userKey,body)
             }
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { }
@@ -71,7 +78,7 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
         duration = DriveEngine.TIME, create = { DriveEngine() }, onBack = onBack,
         resultArt = { _, modifier ->
             Box(modifier, contentAlignment = Alignment.Center) {
-                ShowroomThumbnail(style, vehicleColor, Modifier.fillMaxWidth(.90f))
+                ShowroomThumbnail(style, vehicleColor, Modifier.fillMaxWidth(.90f), kit=kit)
             }
         },
         scene = { frame, modifier, enabled, act ->
@@ -94,7 +101,7 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
                     }
                     }
                 }
-                DriveRoad(frame, Modifier.weight(1f).fillMaxWidth(), enabled, act, style, vehicleColor, zone)
+                DriveRoad(frame, Modifier.weight(1f).fillMaxWidth(), enabled, act, style, vehicleColor, zone, kit)
             }
         },
         controls = { frame, enabled, act ->
@@ -120,7 +127,9 @@ private fun laneX(lane: Float) = 205f + lane * 145f
 
 @Composable
 internal fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, act: (Int) -> Unit,
-                       vehicleStyle: String = "compact", vehicleColor: Color = Color(0xFF38A9F0), zone: String = "neighborhood") {
+                       vehicleStyle: String = "compact", vehicleColor: Color = Color(0xFF38A9F0), zone: String = "neighborhood", kit: GarageKit = GarageKit()) {
+    val playerSprite = remember(vehicleStyle,vehicleColor,kit) { rasterizeRoadCar(vehicleStyle,vehicleColor,kit) }
+    val trafficSprites = remember { roadPaints.mapIndexed { i,color -> rasterizeRoadCar(listOf("sedan","hatch","suv","compact")[i],color,GarageKit()) } }
     val currentAct by rememberUpdatedState(act)
     Canvas(modifier.clip(RoundedCornerShape(22.dp)).pointerInput(enabled) {
         if (enabled) {
@@ -209,7 +218,7 @@ internal fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, 
             frame.items.forEach { item ->
                 val center = Offset(laneX(item.lane.toFloat()), item.y * 1000f)
                 when (item.kind) {
-                    RoadItemKind.TRAFFIC -> roadCar(center, roadPaints[item.paint % roadPaints.size], false, 1f)
+                    RoadItemKind.TRAFFIC -> drawRoadSprite(trafficSprites[item.paint % trafficSprites.size],center,1f)
                     RoadItemKind.CONE -> {
                         drawRoundRect(Color(0xFF111827).copy(alpha = .3f), center - Offset(33f, 9f), Size(70f, 32f), CornerRadius(8f))
                         val cone = Path().apply { moveTo(center.x, center.y - 40f); lineTo(center.x - 27f, center.y + 18f); lineTo(center.x + 27f, center.y + 18f); close() }
@@ -225,7 +234,7 @@ internal fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, 
                 }
             }
             val opacity = if (frame.invulnerable > 0f && (frame.elapsed * 10).toInt() % 2 == 0) .45f else 1f
-            drawGarageVehicle(Offset(laneX(frame.carX), 830f), vehicleColor, vehicleStyle, opacity)
+            drawRoadSprite(playerSprite,Offset(laneX(frame.carX), 830f),opacity,kit.neonColor(),frame.stopped || frame.slow)
         }
     }
 }
