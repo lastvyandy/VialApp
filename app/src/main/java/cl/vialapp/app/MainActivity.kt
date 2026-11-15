@@ -83,7 +83,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         ApiClient.init(applicationContext)
-        StudyReminder.channel(applicationContext)
+        runCatching { StudyReminder.channel(applicationContext) }
         openPractice = savedInstanceState?.getBoolean("pending_practice",false) == true || intent.action == StudyReminder.OPEN_PRACTICE
         if(intent.action == StudyReminder.OPEN_PRACTICE) intent.action = null
 

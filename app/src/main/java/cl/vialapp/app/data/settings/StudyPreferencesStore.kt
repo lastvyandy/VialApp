@@ -147,7 +147,8 @@ class StudyPreferencesStore(
                 }
             )
             .apply()
-        cl.vialapp.app.engagement.StudyReminder.configure(appContext,accountKey)
+        runCatching { cl.vialapp.app.engagement.StudyReminder.configure(appContext,accountKey) }
+            .onFailure { android.util.Log.w("VialReminder","Schedule failed",it) }
     }
 
 

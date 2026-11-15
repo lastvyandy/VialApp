@@ -3,6 +3,9 @@ package cl.vialapp.app.ui.settings
 import android.app.TimePickerDialog
 import android.Manifest
 import android.app.Activity
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import cl.vialapp.app.engagement.StudyWidget
 import android.os.Build
 import android.content.Intent
 import android.provider.Settings
@@ -18,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -686,6 +690,29 @@ private fun StudyPreferencesContent(
             }
         }
 
+
+        if(onBack!=null) {
+            val widgetContext=LocalContext.current
+            val widgetManager=remember(widgetContext){AppWidgetManager.getInstance(widgetContext)}
+            var widgetMessage by remember { mutableStateOf("") }
+            Spacer(Modifier.height(12.dp))
+            Card(modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(20.dp),
+                colors=CardDefaults.cardColors(containerColor=vialColor(Color.White))) {
+                Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Text("Widget de progreso",color=SettingsDark,fontWeight=FontWeight.Bold,fontSize=16.sp)
+                    Text("Consulta tu nivel y racha desde la pantalla de inicio.",color=SettingsGray,fontSize=13.sp)
+                    OutlinedButton(modifier=Modifier.fillMaxWidth(),onClick={
+                        val accepted=runCatching {
+                            widgetManager.isRequestPinAppWidgetSupported &&
+                                widgetManager.requestPinAppWidget(ComponentName(widgetContext,StudyWidget::class.java),null,null)
+                        }.getOrDefault(false)
+                        widgetMessage=if(accepted) "Confirma la solicitud en tu pantalla de inicio."
+                            else "Mantén pulsada la pantalla de inicio y busca VialApp en Widgets."
+                    }) { Text("Añadir widget") }
+                    if(widgetMessage.isNotBlank())Text(widgetMessage,color=SettingsGray,fontSize=12.sp)
+                }
+            }
+        }
 
         if (
             remindersEnabled

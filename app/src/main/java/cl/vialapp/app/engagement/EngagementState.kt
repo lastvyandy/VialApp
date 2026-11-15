@@ -14,13 +14,13 @@ internal object EngagementState {
     fun mascot(c:Context)=prefs(c).getString("mascot","carvier")
     fun activate(c:Context,user:String,mascot:String?){
         prefs(c).edit().putString("active_user",user).putString("mascot",mascot?:"carvier").apply()
-        StudyReminder.schedule(c)
-        StudyWidget.updateAll(c)
+        runCatching { StudyReminder.configure(c,user) }.onFailure { android.util.Log.w("VialReminder","Schedule failed",it) }
+        runCatching { StudyWidget.updateAll(c) }
     }
     fun deactivate(c:Context){
         prefs(c).edit().remove("active_user").remove("mascot").apply()
-        StudyReminder.cancel(c)
-        StudyWidget.updateAll(c)
+        runCatching { StudyReminder.cancel(c) }
+        runCatching { StudyWidget.updateAll(c) }
     }
     private fun snapshots(c:Context,user:String)=c.getSharedPreferences("vialapp_engagement_progress_"+user,Context.MODE_PRIVATE)
     fun recordProgress(c:Context,user:String,remote:GamificationProgressResponse){
@@ -31,11 +31,11 @@ internal object EngagementState {
                 .putBoolean("studied",remote.streakActiveToday)
         }
         editor.apply()
-        if(activeUser(c)==user) StudyWidget.updateAll(c)
+        if(activeUser(c)==user) runCatching { StudyWidget.updateAll(c) }
     }
     fun markStudy(c:Context,user:String){
         snapshots(c,user).edit().putString("local_study_date",LocalDate.now().toString()).apply()
-        if(activeUser(c)==user)StudyWidget.updateAll(c)
+        if(activeUser(c)==user) runCatching { StudyWidget.updateAll(c) }
     }
     fun studiedToday(c:Context,user:String):Boolean{
         val p=snapshots(c,user)

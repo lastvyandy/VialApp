@@ -18,7 +18,9 @@ class StudyWidget:AppWidgetProvider(){
     companion object {
         internal fun updateAll(c:Context){
             val manager=AppWidgetManager.getInstance(c)
-            for(id in manager.getAppWidgetIds(ComponentName(c,StudyWidget::class.java)))render(c,manager,id)
+            for(id in manager.getAppWidgetIds(ComponentName(c,StudyWidget::class.java))) {
+                runCatching { render(c,manager,id) }.onFailure { android.util.Log.w("VialWidget","Widget update failed",it) }
+            }
         }
         private fun render(c:Context,manager:AppWidgetManager,id:Int){
             val user=EngagementState.activeUser(c)
@@ -29,7 +31,7 @@ class StudyWidget:AppWidgetProvider(){
             val views=RemoteViews(c.packageName,if(compact)R.layout.widget_study_compact else R.layout.widget_study)
             views.setImageViewResource(R.id.widget_mascot,if(user!=null&&EngagementState.mascot(c)=="mister_pelao")R.drawable.mascot_mister_pelao else R.drawable.mascot_carvier)
             views.setTextViewText(R.id.widget_level,when{user==null->"Tu ruta empieza aquí";xp==null->"Tu progreso";else->"Nivel "+(xp/500+1)})
-            views.setTextViewText(R.id.widget_xp,when{user==null->"Inicia sesión en VialApp";xp==null->"Abre la app para sincronizar";else->(xp%500).toString()+"/500 XP · Nivel siguiente"})
+            views.setTextViewText(R.id.widget_xp,when{user==null->"Inicia sesión en VialApp";xp==null->"Abre la app para sincronizar";else->(xp%500).toString()+"/500 XP · Guardado"})
             views.setTextViewText(R.id.widget_streak,when{user==null->"Aprende a tu ritmo";studied->"Estudio de hoy completado";streak!=null&&streak>0->"Racha: "+streak+(if(streak==1)" día" else " días");else->"Un poco más cada día"})
             views.setProgressBar(R.id.widget_progress,500,(xp?:0)%500,false)
             views.setTextViewText(R.id.widget_action,if(user==null)"Abrir VialApp" else "Practicar  ›")

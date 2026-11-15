@@ -29,7 +29,7 @@ internal object StudyReminder {
     private fun prefs(c:Context)=c.getSharedPreferences("vialapp_reminder_schedule",Context.MODE_PRIVATE)
     fun channel(c:Context){
         val manager=c.getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel(CHANNEL,"Recordatorios de estudio",NotificationManager.IMPORTANCE_DEFAULT).apply{
+        manager?.createNotificationChannel(NotificationChannel(CHANNEL,"Recordatorios de estudio",NotificationManager.IMPORTANCE_DEFAULT).apply{
             description="Avisos según tu rutina de práctica de VialApp"
         })
     }
@@ -41,9 +41,9 @@ internal object StudyReminder {
         Intent(c,StudyReminderReceiver::class.java).setAction(ALARM),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     fun cancel(c:Context){
-        c.getSystemService(AlarmManager::class.java).cancel(alarmIntent(c))
+        c.getSystemService(AlarmManager::class.java)?.cancel(alarmIntent(c))
         prefs(c).edit().remove("scheduled_user").remove("scheduled_at").apply()
-        c.getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID)
+        c.getSystemService(NotificationManager::class.java)?.cancel(NOTIFICATION_ID)
     }
     fun configure(c:Context,user:String){
         if(EngagementState.activeUser(c)!=user)return
@@ -67,7 +67,7 @@ internal object StudyReminder {
         }
         val at=nextStudyReminder(now,settings.reminderFrequency,settings.reminderHour,settings.reminderMinute,anchor).toInstant().toEpochMilli()
         p.edit().putString("scheduled_user",user).putLong("scheduled_at",at).apply()
-        c.getSystemService(AlarmManager::class.java).setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,alarmIntent(c))
+        c.getSystemService(AlarmManager::class.java)?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,alarmIntent(c))
     }
     fun deliver(c:Context){
         val p=prefs(c)
@@ -104,7 +104,7 @@ internal object StudyReminder {
     fun canNotify(c:Context):Boolean{
         if(Build.VERSION.SDK_INT>=33 && ContextCompat.checkSelfPermission(c,Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return false
         return NotificationManagerCompat.from(c).areNotificationsEnabled() &&
-            c.getSystemService(NotificationManager::class.java).getNotificationChannel(CHANNEL)?.importance!=NotificationManager.IMPORTANCE_NONE
+            c.getSystemService(NotificationManager::class.java)?.getNotificationChannel(CHANNEL)?.importance!=NotificationManager.IMPORTANCE_NONE
     }
 }
 
