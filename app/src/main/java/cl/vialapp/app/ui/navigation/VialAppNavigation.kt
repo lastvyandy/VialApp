@@ -64,6 +64,7 @@ import cl.vialapp.app.ui.profile.LicenseClassPickerDialog
 import cl.vialapp.app.ui.profile.ProfilePhotoSection
 import cl.vialapp.app.ui.achievements.CollectionScreen
 import cl.vialapp.app.ui.learning.LearningPathScreen
+import cl.vialapp.app.ui.library.VialLibraryScreen
 import cl.vialapp.app.ui.learning.LearningChapterScreen
 import cl.vialapp.app.ui.achievements.CollectionEntryCard
 import cl.vialapp.app.ui.practice.PracticeScreen
@@ -280,6 +281,7 @@ fun VialAppNavigation(
                 currentRoute != "games/arena" &&
                 currentRoute != "games/workshop" &&
                 currentRoute != "collection" &&
+                currentRoute != "library" &&
                 currentRoute != "learning" &&
                 currentRoute != "learning/{chapterId}" &&
                 currentRoute != "adaptive_practice" &&
@@ -715,6 +717,7 @@ fun VialAppNavigation(
             ) {
 
                 PracticeScreen(
+                    onLibrary = { navController.navigate("library") },
                     onAdaptivePractice = { navController.navigate("adaptive_practice") },
                     onGames = { navController.navigate("games") },
                     onSimulator = { navController.navigate("simulator") },
@@ -958,6 +961,9 @@ fun VialAppNavigation(
             composable("adaptive_practice") {
                 AdaptivePracticeScreen(userKey = user.id, licenseClass = user.licenseClass,
                     onBack = { navController.popBackStack() })
+            }
+            composable("library") {
+                VialLibraryScreen(userKey=user.id,licenseClass=user.licenseClass,onBack={navController.popBackStack()})
             }
             composable("learning") {
                 LearningPathScreen(

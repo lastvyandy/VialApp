@@ -24,6 +24,7 @@ import cl.vialapp.app.ui.theme.VialActionBlue
 import cl.vialapp.app.ui.learning.LearningPathEntry
 import cl.vialapp.app.ui.simulator.SimulatorEntry
 import cl.vialapp.app.ui.games.GamesQuickEntry
+import cl.vialapp.app.ui.library.LibraryEntry
 
 
 private val PracticeBlue: Color
@@ -47,7 +48,8 @@ fun PracticeScreen(
     onLearningPath: () -> Unit = {},
     onAdaptivePractice: () -> Unit = {},
     onSimulator: () -> Unit = {},
-    onGames: () -> Unit = {}
+    onGames: () -> Unit = {},
+    onLibrary: () -> Unit = {}
 ) {
 
     val context =
@@ -158,32 +160,14 @@ fun PracticeScreen(
 
 
         error.isNotEmpty() -> {
-
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            PracticeBackground
-                        )
-                        .padding(
-                            24.dp
-                        ),
-
-                contentAlignment =
-                    Alignment.Center
-            ) {
-
-                Text(
-                    text =
-                        error,
-
-                    color =
-                        vialColor(Color(0xFFD92D20))
-                )
+            Column(Modifier.fillMaxSize().background(PracticeBackground).verticalScroll(rememberScrollState()).padding(20.dp),
+                verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                Text("Practicar",fontSize=30.sp,fontWeight=FontWeight.Bold,color=PracticeDark)
+                LibraryEntry(onClick=onLibrary)
+                Text(error,color=PracticeGray,fontSize=14.sp)
+                Text("La biblioteca está disponible sin internet.",color=PracticeGray,fontSize=13.sp)
             }
         }
-
 
         stats.isEmpty() -> {
 
@@ -192,7 +176,8 @@ fun PracticeScreen(
                 onLearningPath = onLearningPath,
                 onAdaptivePractice = onAdaptivePractice,
                 onSimulator = onSimulator,
-                onGames = onGames
+                onGames = onGames,
+                onLibrary = onLibrary
             )
         }
 
@@ -275,6 +260,7 @@ fun PracticeScreen(
                 }
 
 
+                item { LibraryEntry(onClick = onLibrary) }
                 item { GamesQuickEntry(onClick = onGames) }
                 item { SimulatorEntry(onClick = onSimulator) }
                 item { AdaptivePracticeEntry(onClick = onAdaptivePractice) }
@@ -711,7 +697,8 @@ private fun EmptyPracticeState(
     onLearningPath: () -> Unit,
     onAdaptivePractice: () -> Unit,
     onSimulator: () -> Unit,
-    onGames: () -> Unit
+    onGames: () -> Unit,
+    onLibrary: () -> Unit
 ) {
 
     Column(
@@ -734,6 +721,8 @@ private fun EmptyPracticeState(
     ) {
 
 
+        LibraryEntry(onClick = onLibrary)
+        Spacer(Modifier.height(14.dp))
         GamesQuickEntry(onClick = onGames)
         Spacer(Modifier.height(20.dp))
         Text(
