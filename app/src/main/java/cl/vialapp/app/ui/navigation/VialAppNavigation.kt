@@ -682,6 +682,7 @@ fun VialAppNavigation(
             ) {
 
                 PracticeScreen(
+                    onLearningPath = { navController.navigate("learning") },
 
                     /*
                      * El usuario toca una

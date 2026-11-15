@@ -8,7 +8,9 @@ data class GamificationProgressResponse(
     @SerializedName("games_played") val gamesPlayed: Int = 0,
     @SerializedName("level") val level: Int = 1,
     @SerializedName("xp_in_level") val xpInLevel: Int = 0,
-    @SerializedName("xp_to_next_level") val xpToNextLevel: Int = 500
+    @SerializedName("xp_to_next_level") val xpToNextLevel: Int = 500,
+    @SerializedName("streak_days") val streakDays: Int? = null,
+    @SerializedName("streak_active_today") val streakActiveToday: Boolean? = null
 )
 
 data class GamificationGameEventRequest(

@@ -60,6 +60,7 @@ fun LearningPathScreen(
     val session = remember(context) { SessionManager(context) }
     val store = remember(context, userKey) { GameProgressStore(context, userKey) }
     var chapters by remember(userKey) { mutableStateOf<List<LearningChapterSummary>>(emptyList()) }
+    var streak by remember(userKey) { mutableIntStateOf(0) }
     var loading by remember(userKey) { mutableStateOf(true) }
     var error by remember(userKey) { mutableStateOf("") }
     var refresh by remember(userKey) { mutableIntStateOf(0) }
@@ -77,6 +78,7 @@ fun LearningPathScreen(
                 if (!response.isSuccessful || body == null) error = "No se pudo consultar la ruta."
                 else {
                     chapters = body.chapters.sortedBy { it.order }
+                    streak = body.gamification.streakDays ?: 0
                     store.applyRemoteProgress(body.gamification)
                 }
             }
@@ -109,7 +111,7 @@ fun LearningPathScreen(
                 if (total > 0) {
                     LinearProgressIndicator(progress = { answered.toFloat() / total },
                         modifier = Modifier.fillMaxWidth().height(8.dp), color = Color(0xFF86EFAC), trackColor = Color(0xFF5575A0))
-                    Text("$answered / $total actividades respondidas", color = Color(0xFFDBEAFE), fontSize = 12.sp)
+                    Text("$answered / $total actividades respondidas · Racha: $streak días", color = Color(0xFFDBEAFE), fontSize = 12.sp)
                 }
             }
         }
@@ -138,7 +140,7 @@ fun LearningPathScreen(
                 }
                 Text("Etapas", color = c.onSurface, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold,
                     modifier = Modifier.padding(top = 16.dp))
-                Text("Completa las actividades de cada etapa para abrir la siguiente.", color = c.onSurfaceVariant, fontSize = 13.sp)
+                Text("Responde las actividades de cada etapa para abrir la siguiente. Puedes repasar los errores las veces que quieras.", color = c.onSurfaceVariant, fontSize = 13.sp)
             }
             itemsIndexed(chapters, key = { _, item -> item.id }) { index, chapter ->
                 PathChapterNode(chapter, index, chapterAvailable(chapters, index), index == next) { onChapter(chapter.id) }

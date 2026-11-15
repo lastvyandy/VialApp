@@ -19,6 +19,7 @@ import cl.vialapp.app.data.api.CategoryStatResponse
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.theme.vialColor
 import cl.vialapp.app.ui.theme.VialActionBlue
+import cl.vialapp.app.ui.learning.LearningPathEntry
 
 
 private val PracticeBlue: Color
@@ -38,7 +39,8 @@ private val PracticeBackground: Color
 @Composable
 fun PracticeScreen(
     onPracticeCategory: (String) -> Unit,
-    onTakeExam: () -> Unit
+    onTakeExam: () -> Unit,
+    onLearningPath: () -> Unit = {}
 ) {
 
     val context =
@@ -179,8 +181,8 @@ fun PracticeScreen(
         stats.isEmpty() -> {
 
             EmptyPracticeState(
-                onTakeExam =
-                    onTakeExam
+                onTakeExam = onTakeExam,
+                onLearningPath = onLearningPath
             )
         }
 
@@ -262,6 +264,8 @@ fun PracticeScreen(
                     )
                 }
 
+
+                item { LearningPathEntry(onClick = onLearningPath) }
 
                 item {
 
@@ -690,7 +694,8 @@ private fun CategoryPracticeCard(
 
 @Composable
 private fun EmptyPracticeState(
-    onTakeExam: () -> Unit
+    onTakeExam: () -> Unit,
+    onLearningPath: () -> Unit
 ) {
 
     Column(
@@ -784,6 +789,8 @@ private fun EmptyPracticeState(
                 "Hacer mi primer examen"
             )
         }
+        Spacer(Modifier.height(14.dp))
+        LearningPathEntry(onClick = onLearningPath)
     }
 }
 

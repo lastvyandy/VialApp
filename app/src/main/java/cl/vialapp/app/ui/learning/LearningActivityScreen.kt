@@ -53,7 +53,7 @@ internal fun LearningActivityScreen(
         if (completed) onBack() else confirmExit = true
     }
     BackHandler { leave() }
-    LaunchedEffect(index, completed) { list.scrollToItem(0) }
+    LaunchedEffect(index) { list.scrollToItem(0) }
 
     fun submit() {
         val current = step ?: return

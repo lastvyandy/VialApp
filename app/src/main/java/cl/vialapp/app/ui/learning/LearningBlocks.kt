@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import coil3.svg.SvgDecoder
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 
@@ -135,8 +134,7 @@ private fun LearningIllustration(path: String, alt: String) {
     var zoom by remember(path) { mutableStateOf(false) }
     var failed by remember(path) { mutableStateOf(false) }
     val model = remember(context, path) {
-        ImageRequest.Builder(context).data("https://vialapp.cl" + path)
-            .decoderFactory(SvgDecoder.Factory()).build()
+        ImageRequest.Builder(context).data("https://vialapp.cl" + path).build()
     }
     Surface(color = Color.White, shape = RoundedCornerShape(12.dp)) {
         Box(Modifier.fillMaxWidth().heightIn(min = 100.dp, max = 260.dp).clickable { zoom = true }.padding(8.dp),
