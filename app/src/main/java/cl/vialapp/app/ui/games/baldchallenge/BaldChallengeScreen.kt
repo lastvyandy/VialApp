@@ -44,6 +44,13 @@ import cl.vialapp.app.ui.theme.vialColor
 import cl.vialapp.app.ui.theme.VialActionBlue
 import cl.vialapp.app.ui.games.arcade.PelaoPose
 import cl.vialapp.app.ui.games.arcade.PelaoSprite
+import cl.vialapp.app.ui.rewards.LocalRewards
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
 
 
 private val GameBlue: Color
@@ -72,6 +79,7 @@ fun BaldChallengeScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val rewards=LocalRewards.current
     val haptic = LocalHapticFeedback.current
 
     val sessionManager = remember {
@@ -463,6 +471,7 @@ fun BaldChallengeScreen(
                 xpEarned = result.xpAwarded
                 isNewRecord = result.isNewHighScore
                 rewardConfirmed = result.syncedWithBackend
+                if(result.syncedWithBackend)rewards.show("Reto completado",result.coinsAwarded,result.xpAwarded)
             } else {
                 isNewRecord = progressStore.recordRun(GameProgressStore.BALD_CHALLENGE, score, 0)
             }
@@ -1082,95 +1091,12 @@ fun BaldChallengeScreen(
                 .padding(20.dp)
         ) {
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                Surface(
-                    modifier = Modifier.size(90.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    color =
-                        if (powerModeActive) {
-                            vialColor(Color(0xFFF2EAFE))
-                        } else if (isBossRound) {
-                            vialColor(Color(0xFFFFF3E0))
-                        } else {
-                            vialColor(Color(0xFFEAF1FF))
-                        }
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val pose = when {
-                            answered && answerWasCorrect -> PelaoPose.VICTORY
-                            answered -> PelaoPose.HIT
-                            powerModeActive -> PelaoPose.ATTACK_ONE
-                            isBossRound -> PelaoPose.BLOCK
-                            else -> PelaoPose.IDLE
-                        }
-                        PelaoSprite(pose, Modifier.fillMaxSize().padding(4.dp))
-                    }
-                }
-
-                Spacer(
-                    modifier = Modifier.width(12.dp)
-                )
-
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = coachTitle,
-                        color =
-                            if (powerModeActive) {
-                                GamePurple
-                            } else {
-                                GameDark
-                            },
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-
-                    Text(
-                        text = coachSubtitle,
-                        color = GameGray,
-                        fontSize = 12.sp
-                    )
-                }
-
-                Surface(
-                    modifier = Modifier.size(60.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    color =
-                        timerColor.copy(
-                            alpha = 0.12f
-                        )
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text =
-                                if (speedBonusExpired) {
-                                    "×0"
-                                } else {
-                                    "$secondsLeft"
-                                },
-                            color = timerColor,
-                            fontSize =
-                                if (speedBonusExpired) {
-                                    16.sp
-                                } else {
-                                    22.sp
-                                },
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
+            ClassicStage(
+                round=currentIndex+1,total=questions.size,correct=correctCount,
+                answered=answered,right=answerWasCorrect,boss=isBossRound,power=powerModeActive,
+                seconds=secondsLeft,coachTitle=coachTitle,coachSubtitle=coachSubtitle,
+                earned=if(showPointsBurst)earnedPoints else 0
+            )
 
             if (
                 speedBonusExpired &&
@@ -2192,5 +2118,57 @@ private fun ResultMetric(
             color = GameGray,
             fontSize = 11.sp
         )
+    }
+}
+
+
+@Composable
+private fun ClassicStage(round:Int,total:Int,correct:Int,answered:Boolean,right:Boolean,boss:Boolean,power:Boolean,
+    seconds:Int,coachTitle:String,coachSubtitle:String,earned:Int){
+    val accent=when{answered&&right->Color(0xFF86EFAC);answered->Color(0xFFFCA5A5);power->Color(0xFFC4B5FD);boss->Color(0xFFFBBF24);else->Color(0xFF7DD3FC)}
+    val pose=when{answered&&right->PelaoPose.VICTORY;answered->PelaoPose.HIT;power->PelaoPose.ATTACK_ONE;boss->PelaoPose.BLOCK;else->PelaoPose.IDLE}
+    val pulse by animateFloatAsState(if(answered&&right)1.07f else if(answered).94f else 1f,animationSpec=spring(),label="classicPose")
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF182A42)).padding(10.dp),
+        verticalArrangement=Arrangement.spacedBy(8.dp)){
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+            repeat(total){index->
+                val active=index==round-1
+                val done=index<round-1 || active&&answered
+                Surface(Modifier.weight(1f).height(26.dp),color=if(active)accent else if(done)Color(0xFF2D7866)else Color(0xFF354763),
+                    shape=RoundedCornerShape(8.dp)){
+                    Box(contentAlignment=Alignment.Center){Text(if(index==total-1)"JEFE" else (index+1).toString(),
+                        color=if(active)Color(0xFF172033)else Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold)}
+                }
+            }
+        }
+        BoxWithConstraints(Modifier.fillMaxWidth().height(143.dp).clip(RoundedCornerShape(14.dp))){
+            Canvas(Modifier.fillMaxSize()){
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF354F76),Color(0xFF14223A))),size=size)
+                val floor=size.height*.83f
+                for(i in 0..7){
+                    val x=i*size.width/7f
+                    val height=size.height*(.24f+(i%3)*.09f)
+                    drawRect(Color(0xFF1B304D),Offset(x,floor-height),Size(size.width*.105f,height))
+                    repeat(3){j->drawRect(accent.copy(alpha=.25f),Offset(x+5f,floor-height+10f+j*12f),Size(7f,4f))}
+                }
+                drawRect(Color(0xFF33465D),Offset(0f,floor),Size(size.width,size.height-floor))
+                drawLine(accent.copy(alpha=.5f),Offset(0f,floor),Offset(size.width,floor),3f)
+                drawOval(Color.Black.copy(alpha=.33f),Offset(size.width*.05f,floor-6f),Size(size.width*.40f,15f))
+                drawCircle(accent.copy(alpha=.13f),size.height*.48f,Offset(size.width*.23f,size.height*.46f))
+            }
+            PelaoSprite(pose,Modifier.align(Alignment.BottomStart).width(maxWidth*.46f).fillMaxHeight(.95f)
+                .graphicsLayer{scaleX=pulse;scaleY=pulse}.padding(4.dp))
+            Column(Modifier.align(Alignment.CenterEnd).width(maxWidth*.53f).padding(end=8.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+                Text(if(boss)"DESAFÍO FINAL" else "RONDA "+round,color=accent,fontSize=11.sp,fontWeight=FontWeight.ExtraBold)
+                Text(coachTitle,color=Color.White,fontSize=15.sp,fontWeight=FontWeight.ExtraBold)
+                Text(coachSubtitle,color=Color(0xFFCCDCF2),fontSize=11.sp,lineHeight=14.sp)
+                if(earned>0)Text("+"+earned+" pts",color=accent,fontSize=20.sp,fontWeight=FontWeight.ExtraBold)
+            }
+        }
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            Text("BONUS "+seconds+"s",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold)
+            LinearProgressIndicator(progress={(seconds/10f).coerceIn(0f,1f)},modifier=Modifier.weight(1f).height(6.dp),color=accent,trackColor=Color(0xFF354763))
+            Text(correct.toString()+"/"+total+" aciertos",color=Color.White,fontSize=10.sp)
+        }
     }
 }

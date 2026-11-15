@@ -265,8 +265,8 @@ fun GamesScreen(
                 gameId = GameProgressStore.PELAO_ARENA,
                 record = progressStore.getHighScore(GameProgressStore.PELAO_ARENA),
                 title = "Don Pelao Arena",
-                subtitle = "Combate · combos · 3 rivales",
-                description = "Resuelve situaciones de tránsito, bloquea ataques y derrota a tres rivales.",
+                subtitle = "Combate · esquivas · especial · 3 rivales",
+                description = "Rompe la defensa con decisiones seguras, esquiva contraataques y carga Pelao Power.",
                 accent = GamesGreen,
                 enabled = true,
                 onClick = onOpenArena
@@ -321,8 +321,8 @@ fun GamesScreen(
                 gameId = GameProgressStore.SIGN_HUNT_ARCADE,
                 record = progressStore.getHighScore(GameProgressStore.SIGN_HUNT_ARCADE),
                 title = "Caza la Señal",
-                subtitle = "Seis señales · decisiones rápidas",
-                description = "Identifica la acción correcta ante señales chilenas; aprende con la explicación de cada respuesta.",
+                subtitle = "Seis oleadas · objetivos móviles",
+                description = "Atrapa la señal correcta mientras se acerca a la meta, encadena combos y supera oleadas cada vez más rápidas.",
                 accent = GamesBlue,
                 enabled = true,
                 onClick = onOpenSigns

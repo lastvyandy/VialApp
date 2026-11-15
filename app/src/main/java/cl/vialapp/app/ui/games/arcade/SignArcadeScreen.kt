@@ -1,6 +1,10 @@
 package cl.vialapp.app.ui.games.arcade
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,55 +33,86 @@ import cl.vialapp.app.data.games.GameProgressStore
 
 @Composable
 fun SignArcadeScreen(userKey: String, onBack: () -> Unit) {
-    ArcadeSession(userKey = userKey, gameId = GameProgressStore.SIGN_HUNT_ARCADE,
-        title = "Caza la Señal", subtitle = "Seis señales chilenas, decisiones rápidas y combos.",
-        rules = "Observa la señal que aparece sobre la carretera. Toca la acción correcta, no el nombre de la señal. Lee la explicación antes de pasar a la siguiente. Tienes tres vidas; las explicaciones no consumen tiempo.",
-        duration = SignEngine.TIME, create = { SignEngine() }, onBack = onBack,
-        scene = { frame, modifier, _, _ -> SignScene(frame, modifier) },
-        controls = { frame, enabled, act ->
-            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                frame.current.choices.forEachIndexed { index, choice ->
-                    val reveal = frame.answered >= 0
-                    val correct = choice == frame.current.sign
-                    val c = MaterialTheme.colorScheme
-                    Button(onClick = { act(index) }, enabled = enabled && !reveal,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = c.primaryContainer, contentColor = c.onPrimaryContainer,
-                            disabledContainerColor = if (reveal && correct) Color(0xFF166534)
-                            else if (reveal && index == frame.answered) Color(0xFFB42318) else c.surfaceVariant,
-                            disabledContentColor = if (reveal && (correct || index == frame.answered)) Color.White else c.onSurfaceVariant
-                        )) { Text(choice.meaning, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+    ArcadeSession(userKey=userKey,gameId=GameProgressStore.SIGN_HUNT_ARCADE,
+        title="Caza la Señal",subtitle="Atrapa señales en movimiento antes de que crucen la meta.",
+        rules="Lee la misión de la parte superior. Toca directamente la señal que corresponde mientras las tres bajan por la carretera. Acertar pronto da puntos extra; equivocarte o dejar escapar la señal cuesta una vida. Cada oleada es más rápida.",
+        duration=SignEngine.TIME,create={SignEngine()},onBack=onBack,showPlayMessages=false,
+        scene={frame,modifier,enabled,act->SignScene(frame,modifier,enabled,act)},
+        controls={frame,_,_->
+            val c=MaterialTheme.colorScheme
+            Surface(color=c.surfaceVariant,shape=RoundedCornerShape(14.dp)){
+                Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.SpaceBetween){
+                    Text("Capturadas "+frame.correct+"/"+frame.questions.size,fontWeight=FontWeight.Bold,color=c.onSurfaceVariant)
+                    Text("Combo ×"+frame.combo,color=c.primary,fontWeight=FontWeight.ExtraBold)
                 }
             }
-        }
-    )
+        })
 }
 
 @Composable
-private fun SignScene(frame: SignFrame, modifier: Modifier) {
-    Column(modifier.clip(RoundedCornerShape(18.dp)).background(Color(0xFF172C47)).padding(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text("SEÑAL ${(frame.index + 1).coerceAtMost(frame.questions.size)}/${frame.questions.size}",
-            fontSize = 12.sp, color = Color(0xFFBFDBFE), fontWeight = FontWeight.Bold)
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Canvas(Modifier.fillMaxSize()) {
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF8AC9E8), Color(0xFFD9EAE9))), size = size)
-                val horizon = size.height * .55f
-                drawRect(Color(0xFF79A77E), Offset(0f, horizon), Size(size.width, size.height - horizon))
-                val road = Path().apply {
-                    moveTo(size.width * .43f, horizon); lineTo(size.width * .57f, horizon)
-                    lineTo(size.width * .95f, size.height); lineTo(size.width * .05f, size.height); close()
-                }
-                drawPath(road, Color(0xFF3B4755))
-                drawLine(Color(0xFFF1F5F9), Offset(size.width * .5f, horizon + 6f), Offset(size.width * .5f, size.height), 4f)
-                drawLine(Color(0xFF536174), Offset(size.width * .50f, size.height * .45f), Offset(size.width * .50f, size.height * .88f), 10f)
-            }
-            RoadSignArt(frame.current.sign, Modifier.fillMaxHeight(.81f).aspectRatio(1f).padding(5.dp))
+private fun SignScene(frame:SignFrame,modifier:Modifier,enabled:Boolean,act:(Int)->Unit){
+    val revealing=frame.feedback>0f
+    val right=frame.answered>=0&&frame.current.choices[frame.answered]==frame.current.sign
+    val p=frame.approach
+    Column(modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF172C47)).padding(9.dp),
+        verticalArrangement=Arrangement.spacedBy(7.dp)){
+        Column(Modifier.fillMaxWidth().padding(4.dp),horizontalAlignment=Alignment.CenterHorizontally){
+            Text("OLEADA "+(frame.index+1).coerceAtMost(frame.questions.size)+"/"+frame.questions.size,
+                color=Color(0xFFBBD6FF),fontSize=11.sp,fontWeight=FontWeight.Bold)
+            Text(frame.current.sign.meaning,color=Color.White,fontSize=18.sp,fontWeight=FontWeight.ExtraBold,textAlign=TextAlign.Center)
         }
-        Text(if (frame.answered >= 0) frame.current.sign.title else "¿Qué debes hacer?",
-            color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        LinearProgressIndicator(progress={(1f-p).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth().height(6.dp),
+            color=if(p>.75f)Color(0xFFF87171)else Color(0xFF67E8F9),trackColor=Color(0xFF344962))
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(14.dp))){
+            Canvas(Modifier.fillMaxSize()){
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF8FB9D1),Color(0xFF3C6474))),size=size)
+                val side=size.width*.055f
+                drawRect(Color(0xFF344252),Offset(side,0f),Size(size.width-2*side,size.height))
+                for(i in 1..2){
+                    val x=side+(size.width-2*side)*i/3f
+                    val period=size.height*.20f
+                    for(k in -1..6){
+                        val y=k*period+(p*period*2f)%period
+                        drawLine(Color.White.copy(alpha=.65f),Offset(x,y),Offset(x,y+period*.48f),3f)
+                    }
+                }
+                for(i in 0..1){
+                    val x=if(i==0)side else size.width-side
+                    drawLine(Color(0xFFFFD477),Offset(x,0f),Offset(x,size.height),4f)
+                }
+                val finish=size.height*.90f
+                for(i in 0..11)for(j in 0..1)drawRect(if((i+j)%2==0)Color.White else Color(0xFF111827),
+                    Offset(i*size.width/12f,finish+j*8f),Size(size.width/12f,8f))
+            }
+            val cell=maxWidth/3f
+            val diameter=minOf(cell*.81f,maxHeight*.29f).coerceAtLeast(1.dp)
+            // The visual target and hit box share the same layout coordinates.
+            // Decoys get separate lane offsets so they are genuinely moving targets.
+            frame.current.choices.forEachIndexed { index,sign->
+                val laneProgress=(p*(.86f+index*.07f)+index*.045f).coerceIn(0f,1f)
+                val y=(maxHeight-diameter)*(.06f+.80f*laneProgress)
+                val selected=frame.answered==index
+                val color=when{
+                    revealing&&sign==frame.current.sign->Color(0xFF86EFAC)
+                    revealing&&selected->Color(0xFFFCA5A5)
+                    else->Color(0xFFDFE8F2)
+                }
+                Surface(modifier=Modifier.offset(x=cell*index+(cell-diameter)/2f,y=y).size(diameter)
+                    .clickable(enabled=enabled&&!revealing){act(index)}
+                    .semantics{contentDescription=sign.title},
+                    color=Color(0xFF1C354B).copy(alpha=.92f),shape=RoundedCornerShape(15.dp),
+                    border=BorderStroke(if(revealing&&sign==frame.current.sign)3.dp else 1.dp,color)){
+                    RoadSignArt(sign,Modifier.fillMaxSize().padding(5.dp))
+                }
+            }
+            if(revealing) Surface(Modifier.align(Alignment.BottomCenter).padding(6.dp),
+                color=if(right)Color(0xFF17613D)else Color(0xFF9B2727),shape=RoundedCornerShape(10.dp)){
+                Text(if(right)"¡CAPTURADA!" else if(frame.timedOut)"¡SE ESCAPÓ!" else "SEÑAL INCORRECTA",
+                    Modifier.padding(horizontal=12.dp,vertical=7.dp),color=Color.White,fontWeight=FontWeight.Bold,fontSize=12.sp)
+            }
+        }
+        Text(if(revealing)frame.current.sign.advice else "Toca la señal antes de la meta.",color=Color.White,
+            fontSize=12.sp,lineHeight=16.sp,textAlign=TextAlign.Center,modifier=Modifier.fillMaxWidth().heightIn(min=32.dp))
     }
 }
 

@@ -26,9 +26,13 @@ internal data class SignFrame(
     val correct: Int = 0,
     val combo: Int = 0,
     val missed: List<RoadSign> = emptyList(),
+    val flight: Float = 0f,
+    val timedOut: Boolean = false,
     override val message: String = "Observa la señal y elige qué debes hacer."
 ) : ArcadeFrame {
     val current get() = questions.getOrNull(index) ?: questions.last()
+    val window get() = (7f-index*.40f).coerceAtLeast(4.5f)
+    val approach get() = (flight/window).coerceIn(0f,1f)
     override val finished get() = elapsed >= SignEngine.TIME || lives <= 0 || index >= questions.size
     override val won get() = index >= questions.size && lives > 0
     override val health get() = "♥".repeat(lives) + "♡".repeat(3 - lives)
@@ -47,9 +51,9 @@ internal class SignEngine(seed: Int = Random.nextInt()) : ArcadeEngine<SignFrame
         val s = state
         if (s.finished || s.feedback > 0f || action !in s.current.choices.indices) return s
         val right = s.current.choices[action] == s.current.sign
-        state = if (right) s.copy(answered = action, feedback = 2.5f, correct = s.correct + 1,
-            combo = s.combo + 1, score = s.score + 180 + s.combo * 40, message = "¡Correcto! " + s.current.sign.advice)
-        else s.copy(answered = action, feedback = 3f, lives = (s.lives - 1).coerceAtLeast(0),
+        state = if (right) s.copy(answered = action, feedback = 1.45f, correct = s.correct + 1,
+            combo = s.combo + 1, score = s.score + 180 + s.combo * 40 + ((1f-s.approach)*60f).toInt(), message = "¡Correcto! " + s.current.sign.advice)
+        else s.copy(answered = action, feedback = 2.25f, lives = (s.lives - 1).coerceAtLeast(0),
             combo = 0, missed = s.missed + s.current.sign, message = s.current.sign.advice)
         return state
     }
@@ -59,8 +63,15 @@ internal class SignEngine(seed: Int = Random.nextInt()) : ArcadeEngine<SignFrame
         val d = dt.coerceAtMost(.05f)
         val remaining = (s.feedback - d).coerceAtLeast(0f)
         state = if (s.feedback > 0f && remaining == 0f)
-            s.copy(index = s.index + 1, answered = -1, feedback = 0f, message = "Observa la próxima señal.")
-        else s.copy(elapsed = (s.elapsed + if (s.feedback > 0f) 0f else d).coerceAtMost(TIME), feedback = remaining)
+            s.copy(index = s.index + 1, answered = -1, feedback = 0f, flight=0f, timedOut=false, message = "Atrapa la próxima señal.")
+        else if(s.feedback > 0f) s.copy(feedback=remaining)
+        else {
+            val next=s.copy(elapsed=(s.elapsed+d).coerceAtMost(TIME),flight=s.flight+d)
+            if(next.flight>=next.window && !next.finished) next.copy(
+                lives=(s.lives-1).coerceAtLeast(0), combo=0, timedOut=true, feedback=2.25f,
+                missed=s.missed+s.current.sign, message="Se escapó la señal. "+s.current.sign.advice)
+            else next
+        }
         return state
     }
     companion object { const val TIME = 65f }

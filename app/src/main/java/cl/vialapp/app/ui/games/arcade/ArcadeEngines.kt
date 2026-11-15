@@ -181,7 +181,7 @@ internal class DriveEngine(seed: Int = Random.nextInt(), private val spawnTraffi
     companion object { const val TIME = 65f }
 }
 
-internal enum class FightPhase { TELEGRAPH, OPENING, RECOVERY }
+internal enum class FightPhase { TELEGRAPH, OPENING, RECOVERY, COUNTER }
 
 internal enum class PelaoPose(val resourceName: String) {
     IDLE("don_pelao_idle"),
@@ -215,6 +215,10 @@ internal data class FightFrame(
     val strikes: Int = 0,
     val impact: Float = 0f,
     val attackLock: Float = 0f,
+    val power: Int = 0,
+    val openingHits: Int = 0,
+    val dodges: Int = 0,
+    val lastDamage: Int = 0,
     val correctDecisions: Int = 0,
     val missedDecisions: Int = 0,
     val actionPose: PelaoPose = PelaoPose.IDLE,
@@ -241,6 +245,7 @@ internal class FightEngine(seed: Int = Random.nextInt()) : ArcadeEngine<FightFra
     override fun snapshot() = state
     private fun nextHazard(s: FightFrame): FightFrame = s.copy(
         phase = FightPhase.TELEGRAPH,
+        openingHits = 0,
         hazard = Hazard.entries.filter { it != s.hazard }.random(random),
         remaining = (6f - (s.boss - 1) * .65f).coerceAtLeast(4.5f),
         message = "¡Lee el peligro!"
@@ -249,8 +254,8 @@ internal class FightEngine(seed: Int = Random.nextInt()) : ArcadeEngine<FightFra
         if (state.finished) return state
         val s = state
         state = when (s.phase) {
-            FightPhase.TELEGRAPH -> if (action == s.hazard.response) {
-                s.copy(phase = FightPhase.OPENING, remaining = 3.2f, score = s.score + 80,
+            FightPhase.TELEGRAPH -> if(action !in 0..2) s else if (action == s.hazard.response) {
+                s.copy(phase = FightPhase.OPENING, remaining = 3.2f, score = s.score + 80, power=(s.power+25).coerceAtMost(100), openingHits=0,
                     correctDecisions = s.correctDecisions + 1, actionPose = PelaoPose.BLOCK,
                     poseTime = .55f, impact = 0f, message = s.hazard.advice + " ¡Ataca!")
             } else {
@@ -258,19 +263,33 @@ internal class FightEngine(seed: Int = Random.nextInt()) : ArcadeEngine<FightFra
                     remaining = 2.2f, combo = 0, impact = .35f, missedDecisions = s.missedDecisions + 1,
                     actionPose = PelaoPose.HIT, poseTime = .8f, message = s.hazard.advice)
             }
-            FightPhase.OPENING -> if (action == 3 && s.attackLock <= 0f) {
-                val enemy = (s.bossHp - 20).coerceAtLeast(0)
-                val combo = s.combo + 1
-                val hit = s.copy(bossHp = enemy, score = s.score + 100 + combo.coerceAtMost(10) * 10,
-                    combo = combo, bestCombo = maxOf(s.bestCombo, combo), strikes = s.strikes + 1,
-                    attackLock = .4f, impact = .25f, actionPose = if (s.strikes % 2 == 0) PelaoPose.ATTACK_ONE else PelaoPose.ATTACK_TWO,
-                    poseTime = .34f, message = "¡Combo x$combo! " + s.hazard.advice)
-                if (enemy == 0) {
-                    if (s.boss == 3) hit.copy(boss = 4, score = hit.score + 500, message = "¡Todos los rivales derrotados!")
-                    else hit.copy(boss = s.boss + 1, bossHp = 100 + s.boss * 20, phase = FightPhase.RECOVERY,
-                        remaining = 1.2f, score = hit.score + 250, message = "¡Rival derrotado!")
-                } else hit
-            } else s
+            FightPhase.OPENING -> if ((action == 3 || action == 4 && s.power>=100) && s.attackLock <= 0f) {
+                val special=action==4
+                val damage=if(special)45 else 20
+                val enemy=(s.bossHp-damage).coerceAtLeast(0)
+                val combo=s.combo+1
+                val hit=s.copy(bossHp=enemy,score=s.score+100+combo.coerceAtMost(10)*10+(if(special)150 else 0),
+                    combo=combo,bestCombo=maxOf(s.bestCombo,combo),strikes=s.strikes+1,
+                    attackLock=if(special).72f else .4f,impact=.27f,
+                    actionPose=if(special||s.strikes%2==0)PelaoPose.ATTACK_ONE else PelaoPose.ATTACK_TWO,
+                    poseTime=.34f,power=if(special)0 else (s.power+15).coerceAtMost(100),
+                    openingHits=s.openingHits+1,lastDamage=minOf(damage,s.bossHp),
+                    message=if(special)"¡PELAO POWER!" else "¡Combo x$combo!")
+                if(enemy==0){
+                    if(s.boss==3)hit.copy(boss=4,score=hit.score+500,message="¡Todos los rivales derrotados!")
+                    else hit.copy(boss=s.boss+1,bossHp=100+s.boss*20,phase=FightPhase.RECOVERY,
+                        remaining=1.2f,score=hit.score+250,hp=(hit.hp+15).coerceAtMost(100),combo=0,
+                        message="¡Rival derrotado! Recuperas 15 HP.")
+                }else if(s.boss>=2 && hit.openingHits>=if(s.boss==2)3 else 2){
+                    hit.copy(phase=FightPhase.COUNTER,remaining=if(s.boss==2)1.4f else 1.0f,
+                        message="¡Contraataque! Esquiva ahora.")
+                }else hit
+            }else s
+            FightPhase.COUNTER -> if(action==5 && s.remaining>0f){
+                s.copy(phase=FightPhase.OPENING,remaining=1.9f,openingHits=0,attackLock=0f,
+                    dodges=s.dodges+1,score=s.score+90,power=(s.power+20).coerceAtMost(100),
+                    actionPose=PelaoPose.BLOCK,poseTime=.5f,message="¡Esquiva perfecta! Contraataca.")
+            }else s
             FightPhase.RECOVERY -> s
         }
         return state
@@ -288,13 +307,15 @@ internal class FightEngine(seed: Int = Random.nextInt()) : ArcadeEngine<FightFra
                 FightPhase.TELEGRAPH -> s.copy(hp = (s.hp - 20).coerceAtLeast(0), combo = 0,
                     phase = FightPhase.RECOVERY, remaining = 2.2f, impact = .4f, missedDecisions = s.missedDecisions + 1,
                     actionPose = PelaoPose.HIT, poseTime = .8f, message = s.hazard.advice)
+                FightPhase.COUNTER -> s.copy(hp=(s.hp-18).coerceAtLeast(0),combo=0,phase=FightPhase.RECOVERY,
+                    remaining=1.3f,impact=.45f,actionPose=PelaoPose.HIT,poseTime=.8f,message="El rival te alcanzó. Esquiva el próximo golpe.")
                 FightPhase.OPENING, FightPhase.RECOVERY -> nextHazard(s)
             }
         }
         state = s
         return s
     }
-    companion object { const val TIME = 75f }
+    companion object { const val TIME = 90f }
 }
 
 internal enum class WorkshopPart(val label: String, val tool: String, val symptom: String, val fact: String, val check: String, val choices: List<String>, val correct: Int) {
