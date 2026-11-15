@@ -46,7 +46,8 @@ internal fun <S : ArcadeFrame> ArcadeSession(
     controls: @Composable (S, Boolean, (Int) -> Unit) -> Unit,
     resultArt: (@Composable (S, Modifier) -> Unit)? = null,
     showPlayMessages: Boolean = true,
-    endless:Boolean = false
+    endless:Boolean = false,
+    compactCombatHud:Boolean = false
 ) {
     val context = LocalContext.current
     val store = remember(context, userKey) { GameProgressStore(context, userKey) }
@@ -114,11 +115,16 @@ internal fun <S : ArcadeFrame> ArcadeSession(
             val now = withFrameNanos { it }
             carry += ((now - last) / 1_000_000_000f).coerceIn(0f, .12f)
             last = now
+            val priorScore=frame.score
+            val priorHealth=frame.health
             var updated = false
             while (carry >= 1f / 30f && !frame.finished) {
                 frame = engine.step(1f / 30f)
                 carry -= 1f / 30f
                 updated = true
+            }
+            if(updated && compactCombatHud && (frame.score>priorScore || frame.health!=priorHealth)){
+                haptic.performHapticFeedback(if(frame.score>priorScore)HapticFeedbackType.TextHandleMove else HapticFeedbackType.LongPress)
             }
             if (updated) finishIfOver()
         }
@@ -195,6 +201,13 @@ internal fun <S : ArcadeFrame> ArcadeSession(
                     Text(if (paused) "▶ Seguir" else "Ⅱ Pausa")
                 }
             }
+            if(compactCombatHud){
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
+                    Text(frame.score.toString()+" pts",color=c.primary,fontWeight=FontWeight.ExtraBold,fontSize=17.sp)
+                    Text(ceil((duration-frame.elapsed).coerceAtLeast(0f).toDouble()).toInt().toString()+" s",color=c.onSurface,fontWeight=FontWeight.Bold)
+                    TextButton(onClick={paused=true;help=true},contentPadding=PaddingValues(0.dp)){Text("Ayuda")}
+                }
+            }else{
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 ArcadeMetric("PUNTOS", frame.score.toString(), Modifier.weight(1f))
                 ArcadeMetric("TIEMPO", if(endless) "${frame.elapsed.toInt()}s" else "${ceil((duration - frame.elapsed).coerceAtLeast(0f).toDouble()).toInt()}s", Modifier.weight(1f))
@@ -206,6 +219,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
             }
             if(!endless) LinearProgressIndicator(progress = { (frame.elapsed / duration).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(4.dp))
+            }
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 scene(frame, Modifier.fillMaxSize(), !paused, ::act)
                 if (paused) Surface(color = Color(0xEE172033), shape = RoundedCornerShape(18.dp)) {

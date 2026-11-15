@@ -265,8 +265,8 @@ fun GamesScreen(
                 gameId = GameProgressStore.PELAO_ARENA,
                 record = progressStore.getHighScore(GameProgressStore.PELAO_ARENA),
                 title = "Don Pelao Arena",
-                subtitle = "Acción en tiempo real · tres rivales",
-                description = "Muévete, golpea, bloquea y esquiva. Domina la distancia y derrota a tres rivales sin preguntas.",
+                subtitle = "Combate y conocimiento · tres rivales",
+                description = "Domina el combate, rompe seis escudos con conocimientos viales y derrota a tres rivales.",
                 accent = GamesGreen,
                 enabled = true,
                 onClick = onOpenArena

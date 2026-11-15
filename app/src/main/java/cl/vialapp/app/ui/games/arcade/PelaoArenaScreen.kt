@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,25 +30,14 @@ import kotlin.math.sin
 @Composable
 fun PelaoArenaScreen(userKey:String,onBack:()->Unit){
     ArcadeSession(userKey=userKey,gameId=GameProgressStore.PELAO_ARENA,title="Don Pelao Arena",
-        subtitle="Combate de acción · tres rivales · una arena",
-        rules="Muévete con las flechas, acércate a distancia de golpe y alterna ataques rápidos y fuertes. El rival anuncia sus golpes: bloquea los normales y esquiva las cargas rojas. Golpea o defiéndete bien para cargar el especial. No hay preguntas durante el combate. Derrota a los tres rivales antes de 120 segundos.",
+        subtitle="Combate y seguridad vial · tres rivales · seis escudos",
+        rules="Mantén el mando izquierdo para moverte. Pulsa el puño para atacar, el escudo para bloquear y la flecha para esquivar. El rayo activa el especial al 100%. Cada rival posee dos escudos: responde correctamente para eliminarlos. El cronómetro se detiene durante los desafíos.",
         duration=ArenaCombatEngine.TIME,create={ArenaCombatEngine()},onBack=onBack,showPlayMessages=false,
-        scene={f,m,_,_->CombatScene(f,m)},resultArt={f,m->PelaoSprite(f.pose,m)},
-        controls={f,enabled,act->
-            Column(verticalArrangement=Arrangement.spacedBy(5.dp)){
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                    ArcadeControl("◀",enabled&&f.lock<=0f,Modifier.weight(.7f)){act(0)}
-                    ArcadeControl("▶",enabled&&f.lock<=0f,Modifier.weight(.7f)){act(1)}
-                    ArcadeControl("Rápido",enabled&&f.lock<=0f,Modifier.weight(1.3f)){act(2)}
-                    ArcadeControl("Fuerte",enabled&&f.lock<=0f,Modifier.weight(1.3f)){act(3)}
-                }
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                    ArcadeControl("Bloquear",enabled&&f.lock<=0f,Modifier.weight(1f)){act(4)}
-                    ArcadeControl("Esquivar",enabled&&f.evadeLock<=0f,Modifier.weight(1f),f.phase==ArenaPhase.WINDUP&&f.attack==RivalAttack.CHARGE){act(5)}
-                    ArcadeControl("Especial",enabled&&f.power>=100&&f.lock<=0f,Modifier.weight(1f),f.power>=100){act(6)}
-                }
-            }
-        })
+        scene={f,m,enabled,act->
+            if(f.phase==ArenaPhase.KNOWLEDGE && f.question!=null) ArenaKnowledgePanel(f,m,enabled,act)
+            else CombatScene(f,m)
+        },resultArt={f,m->Canvas(m){val u=minOf(size.width/180f,size.height/235f);translate(size.width/2,size.height*.93f){scale(u,u,pivot=Offset.Zero){drawPelao(f)}}}},
+        controls={f,enabled,act->if(f.phase!=ArenaPhase.KNOWLEDGE) ArenaControls(f,enabled,act)})
 }
 
 @Composable
@@ -65,20 +53,16 @@ private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
             CombatHealth(name,f.rivalHp,f.rivalMax,ink,Modifier.weight(1f))
         }
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){
-            Text("RIVAL "+f.rival.coerceAtMost(3)+"/3",color=Color(0xFFBCD2EF),fontSize=11.sp,fontWeight=FontWeight.Bold)
+            Text("RIVAL "+f.rival.coerceAtMost(3)+"/3 · ESCUDOS "+(2-f.shieldsBroken),color=Color(0xFFBCD2EF),fontSize=11.sp,fontWeight=FontWeight.Bold)
             LinearProgressIndicator(progress={f.power/100f},modifier=Modifier.weight(1f).height(7.dp),color=Color(0xFFF9C950),trackColor=Color(0xFF334860))
             Text("POWER "+f.power+"%",color=Color(0xFFFFDF83),fontSize=10.sp,fontWeight=FontWeight.Bold)
         }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(13.dp))){
-            val arenaW=maxWidth
-            val arenaH=maxHeight
-            val playerWidth=minOf(arenaW*.38f,arenaH*.64f)
-            val playerHeight=arenaH*.64f
-            val y=arenaH*.16f
             Canvas(Modifier.fillMaxSize()){
                 val w=size.width;val h=size.height
                 val floor=h*.80f
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF202B4D),Color(0xFF3C5370),Color(0xFF151D2B))),size=size)
+                val sky=when(f.rival){1->listOf(Color(0xFF584051),Color(0xFFB77B59),Color(0xFF303349));2->listOf(Color(0xFF142147),Color(0xFF355D83),Color(0xFF192139));else->listOf(Color(0xFF35202E),Color(0xFF7D3947),Color(0xFF211C2B))}
+                drawRect(Brush.verticalGradient(sky),size=size)
                 // Layered industrial arena, beams and lit spectator silhouettes.
                 for(i in 0..7){
                     val x=i*w/7f
@@ -101,10 +85,11 @@ private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
                     drawRoundRect((if(heavy)Color(0xFFEF4444) else Color(0xFFFBBF24)).copy(alpha=.24f),
                         Offset((f.rivalX*w-range).coerceAtLeast(0f),floor-9f),Size(range,18f),CornerRadius(6f))
                 }
-                val unit=minOf(w/360f,h/230f)
+                val unit=minOf(w/330f,h/220f)
                 val cx=w*f.rivalX+(if(f.impact>0f)unit*7f*sin(f.impact*32f)else 0f)
                 val cy=floor
                 translate(cx,cy){scale(unit,unit,pivot=Offset.Zero){drawArenaRival(f,ink)}}
+                translate(w*f.playerX,cy){scale(unit,unit,pivot=Offset.Zero){drawPelao(f)}}
                 if(f.impact>0f){
                     val x=w*(f.playerX+f.rivalX)/2f;val yy=floor-h*.26f
                     repeat(8){i->
@@ -113,18 +98,6 @@ private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
                         drawLine(Color(0xFFFDE68A).copy(alpha=(f.impact/.24f).coerceIn(0f,1f)),Offset(x,yy)+d*(12f*unit),Offset(x,yy)+d*(38f*unit),4f*unit,StrokeCap.Round)
                     }
                 }
-            }
-            PelaoSprite(f.pose,Modifier.offset(x=arenaW*f.playerX-playerWidth/2,y=y).width(playerWidth).height(playerHeight)
-                .graphicsLayer {
-                    val m=f.move
-                    val punch=if(m!=null&&f.lock>0f)sin((f.lock/m.lock).coerceIn(0f,1f)*Math.PI.toFloat())else 0f
-                    translationX=18.dp.toPx()*punch-if(f.evade>0f)9.dp.toPx() else 0f
-                    rotationZ=-10f*punch+(if(f.playerImpact>0f)10f else 0f)
-                    scaleX=1f+.08f*punch
-                    scaleY=scaleX
-                })
-            if(f.guard>0f)Box(Modifier.offset(x=arenaW*f.playerX-playerWidth/2,y=y).width(playerWidth).height(playerHeight)){
-                Canvas(Modifier.fillMaxSize()){drawOval(Color(0xFF7DD3FC).copy(alpha=.65f),style=Stroke(3.dp.toPx()))}
             }
             if(tell)Surface(Modifier.align(Alignment.TopCenter).padding(5.dp),color=if(heavy)Color(0xFF9B2730)else Color(0xFF775522),shape=RoundedCornerShape(10.dp)){
                 Column(Modifier.widthIn(max=230.dp).padding(horizontal=12.dp,vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally){

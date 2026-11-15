@@ -1,8 +1,9 @@
 package cl.vialapp.app.ui.games.arcade
 
 import kotlin.math.abs
+import kotlin.random.Random
 
-internal enum class ArenaPhase { APPROACH, WINDUP, STRIKE, RECOVER, ROUND_CLEAR }
+internal enum class ArenaPhase { APPROACH, WINDUP, STRIKE, RECOVER, ROUND_CLEAR, KNOWLEDGE }
 internal enum class ArenaMove(val windup:Float,val lock:Float,val range:Float,val damage:Int){
     JAB(.09f,.34f,.28f,13), HEAVY(.22f,.65f,.32f,26), SPECIAL(.17f,.90f,.46f,50)
 }
@@ -19,6 +20,9 @@ internal data class ArenaCombatFrame(
     val guard:Float=0f,val evade:Float=0f,val evadeLock:Float=0f,
     val power:Int=0,val combo:Int=0,val bestCombo:Int=0,val dodges:Int=0,
     val impact:Float=0f,val playerImpact:Float=0f,val freeze:Float=0f,val damage:Int=0,
+    val shieldsBroken:Int=0,val knowledgeCorrect:Int=0,val knowledgeMissed:Int=0,
+    val question:ArenaQuestion?=null,val selected:Int=-1,
+    val shieldDamage:Int=0,
     override val message:String="Acércate y golpea."
 ):ArcadeFrame{
     val rivalMax:Int get()=when(rival){1->85;2->110;else->145}
@@ -26,8 +30,8 @@ internal data class ArenaCombatFrame(
     override val finished get()=hp<=0||rival>3||elapsed>=ArenaCombatEngine.TIME
     override val won get()=rival>3&&hp>0
     override val health get()="$hp HP"
-    override val detail get()="${(rival-1).coerceIn(0,3)}/3 rivales · combo ×$bestCombo · $dodges esquivas"
-    override val lesson get()="Anticipa los ataques, bloquea golpes ligeros y esquiva cargas. En este combate ficticio, como al conducir, observar y anticiparse es más importante que reaccionar tarde."
+    override val detail get()="${(rival-1).coerceIn(0,3)}/3 rivales · $knowledgeCorrect/6 escudos · $knowledgeMissed errores · combo ×$bestCombo"
+    override val lesson get()="La seguridad vial requiere observar, respetar la prioridad y anticipar riesgos. Rompe los escudos aplicando estos conocimientos; el combate es ficticio."
     val pose:PelaoPose get()=when{
         won->PelaoPose.VICTORY;finished->PelaoPose.DEFEAT;playerImpact>0f->PelaoPose.HIT
         evade>0f||guard>0f->PelaoPose.BLOCK
@@ -38,14 +42,40 @@ internal data class ArenaCombatFrame(
 
 /** Fixed-step action combat. Input is independent of questions, collision uses distance,
  * and damage is applied exactly once at a move's active frame. */
-internal class ArenaCombatEngine:ArcadeEngine<ArenaCombatFrame>{
+internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCombatFrame>{
+    private val random=Random(seed)
+    private var questions=ArenaQuestions.forRival(1,random)
+    private var questionIndex=0
     private var s=ArenaCombatFrame()
+    private fun nextQuestion():ArenaQuestion {
+        if(questionIndex>=questions.size){questions=ArenaQuestions.forRival(s.rival,random);questionIndex=0}
+        return questions[questionIndex++]
+    }
     override fun snapshot()=s
     override fun act(action:Int):ArenaCombatFrame{
-        if(s.finished||s.phase==ArenaPhase.ROUND_CLEAR)return s
+        if((s.finished&&s.phase!=ArenaPhase.KNOWLEDGE)||s.phase==ArenaPhase.ROUND_CLEAR)return s
+        if(s.phase==ArenaPhase.KNOWLEDGE){
+            val q=s.question ?: return s
+            if(action in 20..22 && s.selected<0){
+                val index=action-20
+                s=if(index==q.correct){
+                    val damage=s.rivalMax/5
+                    s.copy(selected=index,shieldsBroken=s.shieldsBroken+1,knowledgeCorrect=s.knowledgeCorrect+1,
+                        shieldDamage=s.shieldDamage+damage,rivalHp=(s.rivalHp-damage).coerceAtLeast(1),
+                        power=(s.power+25).coerceAtMost(100),score=s.score+damage*10+100,
+                        message="¡Escudo roto! +25 de energía")
+                }else s.copy(selected=index,knowledgeMissed=s.knowledgeMissed+1,hp=(s.hp-8).coerceAtLeast(0),combo=0,
+                    message="El escudo resiste. −8 HP")
+            }else if(action==23&&s.selected>=0){
+                s=if(s.selected==q.correct)s.copy(phase=ArenaPhase.RECOVER,phaseTime=1.2f,
+                    question=null,selected=-1,lock=0f,move=null,hitIn=0f,message="¡Contraataca!")
+                else s.copy(question=nextQuestion(),selected=-1,message="Intenta otro desafío")
+            }
+            return s
+        }
         when(action){
             0,1->if(s.lock<=0f&&s.evade<=0f){
-                val next=(s.playerX+if(action==0)-.095f else .095f).coerceIn(.085f,s.rivalX-.14f)
+                val next=(s.playerX+if(action==0)-.065f else .065f).coerceIn(.085f,s.rivalX-.14f)
                 s=s.copy(playerX=next,guard=0f)
             }
             2,3,6->if(s.lock<=0f&&s.evade<=0f&&s.playerImpact<=0f){
@@ -72,7 +102,7 @@ internal class ArenaCombatEngine:ArcadeEngine<ArenaCombatFrame>{
         else->when(f.attackNumber%3){0->RivalAttack.CHARGE;1->RivalAttack.QUICK;else->RivalAttack.SWEEP}
     }
     override fun step(dt:Float):ArenaCombatFrame{
-        if(s.finished||dt<=0f)return s
+        if(s.finished||dt<=0f||s.phase==ArenaPhase.KNOWLEDGE)return s
         val d=dt.coerceAtMost(.05f)
         if(s.freeze>0f){s=s.copy(freeze=(s.freeze-d).coerceAtLeast(0f));return s}
         val old=s
@@ -89,11 +119,18 @@ internal class ArenaCombatEngine:ArcadeEngine<ArenaCombatFrame>{
             if(f.distance<=m.range){
                 val armored=f.rival>=2&&f.phase==ArenaPhase.APPROACH&&m==ArenaMove.JAB
                 val damage=if(armored)4 else m.damage
-                val dealt=minOf(damage,f.rivalHp)
+                // Two mandatory shields each remove 20% of maximum HP via knowledge.
+                val threshold=when(f.shieldsBroken){0->f.rivalMax*4/5;1->f.rivalMax*2/5;else->0}
+                val dealt=minOf(damage,(f.rivalHp-threshold).coerceAtLeast(0))
                 val combo=f.combo+1
-                f=f.copy(rivalHp=(f.rivalHp-damage).coerceAtLeast(0),score=f.score+dealt*10+combo.coerceAtMost(12)*8,
+                f=f.copy(rivalHp=f.rivalHp-dealt,score=f.score+dealt*10+combo.coerceAtMost(12)*8,
                     combo=combo,bestCombo=maxOf(f.bestCombo,combo),power=(f.power+if(m==ArenaMove.SPECIAL)0 else 10).coerceAtMost(100),
                     impact=.24f,freeze=.065f,damage=dealt,message=if(armored)"¡Guardia del rival!" else "¡Impacto!")
+                if(f.shieldsBroken<2&&f.rivalHp==threshold){
+                    s=f.copy(phase=ArenaPhase.KNOWLEDGE,question=nextQuestion(),selected=-1,move=null,hitIn=0f,lock=0f,
+                        guard=0f,evade=0f,freeze=0f,message="¡Escudo de conocimiento!")
+                    return s
+                }
                 if(f.rivalHp<=0){
                     if(f.rival==3){s=f.copy(rival=4,score=f.score+700,message="¡Campeón!");return s}
                     s=f.copy(phase=ArenaPhase.ROUND_CLEAR,phaseTime=1.35f,score=f.score+350,message="¡KO! +15 HP");return s
@@ -128,9 +165,11 @@ internal class ArenaCombatEngine:ArcadeEngine<ArenaCombatFrame>{
             ArenaPhase.STRIKE->if(f.phaseTime<=0f)f=f.copy(phase=ArenaPhase.RECOVER,
                 phaseTime=if(f.attack==RivalAttack.CHARGE)1.05f else .75f,message=if(f.playerImpact>0f)f.message else "¡Contraataca!")
             ArenaPhase.RECOVER->if(f.phaseTime<=0f)f=f.copy(phase=ArenaPhase.APPROACH,phaseTime=.45f)
+            ArenaPhase.KNOWLEDGE->Unit
             ArenaPhase.ROUND_CLEAR->if(f.phaseTime<=0f){
                 val rival=f.rival+1
-                f=f.copy(rival=rival,rivalHp=if(rival==2)110 else 145,hp=(f.hp+15).coerceAtMost(100),
+                questions=ArenaQuestions.forRival(rival,random);questionIndex=0
+                f=f.copy(shieldsBroken=0,question=null,selected=-1,rival=rival,rivalHp=if(rival==2)110 else 145,hp=(f.hp+15).coerceAtMost(100),
                     playerX=.24f,rivalX=.76f,phase=ArenaPhase.APPROACH,phaseTime=.8f,attackNumber=0,
                     move=null,lock=0f,hitIn=0f,guard=0f,evade=0f,combo=0,message="¡Nuevo rival!")
             }
