@@ -1,6 +1,8 @@
 package cl.vialapp.app.ui.practice
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +22,7 @@ import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.theme.vialColor
 import cl.vialapp.app.ui.theme.VialActionBlue
 import cl.vialapp.app.ui.learning.LearningPathEntry
+import cl.vialapp.app.ui.simulator.SimulatorEntry
 
 
 private val PracticeBlue: Color
@@ -41,7 +44,8 @@ fun PracticeScreen(
     onPracticeCategory: (String) -> Unit,
     onTakeExam: () -> Unit,
     onLearningPath: () -> Unit = {},
-    onAdaptivePractice: () -> Unit = {}
+    onAdaptivePractice: () -> Unit = {},
+    onSimulator: () -> Unit = {}
 ) {
 
     val context =
@@ -184,7 +188,8 @@ fun PracticeScreen(
             EmptyPracticeState(
                 onTakeExam = onTakeExam,
                 onLearningPath = onLearningPath,
-                onAdaptivePractice = onAdaptivePractice
+                onAdaptivePractice = onAdaptivePractice,
+                onSimulator = onSimulator
             )
         }
 
@@ -267,6 +272,7 @@ fun PracticeScreen(
                 }
 
 
+                item { SimulatorEntry(onClick = onSimulator) }
                 item { AdaptivePracticeEntry(onClick = onAdaptivePractice) }
                 item { LearningPathEntry(onClick = onLearningPath) }
 
@@ -699,13 +705,15 @@ private fun CategoryPracticeCard(
 private fun EmptyPracticeState(
     onTakeExam: () -> Unit,
     onLearningPath: () -> Unit,
-    onAdaptivePractice: () -> Unit
+    onAdaptivePractice: () -> Unit,
+    onSimulator: () -> Unit
 ) {
 
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .background(
                     PracticeBackground
                 )
@@ -793,6 +801,8 @@ private fun EmptyPracticeState(
                 "Hacer mi primer examen"
             )
         }
+        Spacer(Modifier.height(14.dp))
+        SimulatorEntry(onClick = onSimulator)
         Spacer(Modifier.height(14.dp))
         AdaptivePracticeEntry(onClick = onAdaptivePractice)
         Spacer(Modifier.height(14.dp))

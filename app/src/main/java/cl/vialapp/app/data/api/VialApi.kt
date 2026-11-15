@@ -147,6 +147,14 @@ interface VialApi {
         @Path("testId") testId: Int
     ): Response<StudyTestResponse>
 
+    @GET("learning/simulator")
+    suspend fun getSimulator(@Header("Authorization") authorization: String): Response<SimulatorCatalog>
+
+    @POST("learning/simulator/{scenarioId}/complete")
+    suspend fun completeSimulator(@Header("Authorization") authorization: String,
+        @Path("scenarioId") scenarioId: String,
+        @Body request: SimulatorCompletionRequest): Response<SimulatorCompletionResponse>
+
     @GET("learning")
     suspend fun getLearningPath(@Header("Authorization") authorization: String): Response<LearningPathResponse>
 

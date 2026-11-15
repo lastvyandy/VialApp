@@ -29,6 +29,7 @@ import cl.vialapp.app.data.api.ApiClient
 import cl.vialapp.app.data.api.LearningChapterSummary
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
+import cl.vialapp.app.ui.simulator.SimulatorEntry
 import kotlinx.coroutines.CancellationException
 
 @Composable
@@ -53,7 +54,8 @@ fun LearningPathEntry(onClick: () -> Unit) {
 @Composable
 fun LearningPathScreen(
     userKey: String, mascotId: String?, licenseClass: String?,
-    onBack: () -> Unit, onChapter: (String) -> Unit, onExam: () -> Unit
+    onBack: () -> Unit, onChapter: (String) -> Unit, onExam: () -> Unit,
+    onSimulator: () -> Unit = {}
 ) {
     val c = MaterialTheme.colorScheme
     val context = LocalContext.current
@@ -115,6 +117,7 @@ fun LearningPathScreen(
                 }
             }
         }
+        item { SimulatorEntry(onClick = onSimulator) }
         if (!licenseClass.equals("B", ignoreCase = true)) item {
             Surface(color = c.surfaceVariant, shape = RoundedCornerShape(12.dp)) {
                 Text("Esta ruta se basa en el material de Clase B. Puede ayudarte a repasar temas comunes, pero no reemplaza la preparación específica de tu clase.",
