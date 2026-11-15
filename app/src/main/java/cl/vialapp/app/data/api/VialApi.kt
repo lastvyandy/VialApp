@@ -17,6 +17,12 @@ import retrofit2.http.Query
 
 interface VialApi {
 
+    @POST("users/")
+    suspend fun register(@Body request: RegistrationRequest): Response<UserResponse>
+
+    @POST("users/password-reset/request")
+    suspend fun requestPasswordReset(@Body request: PasswordResetRequest): Response<PasswordResetMessage>
+
     @FormUrlEncoded
     @POST("users/login")
     suspend fun login(
