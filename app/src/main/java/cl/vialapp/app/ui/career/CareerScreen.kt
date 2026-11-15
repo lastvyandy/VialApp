@@ -68,7 +68,10 @@ fun CareerScreen(userKey:String, initiallyGarage:Boolean,onBack:()->Unit,onActiv
             val token=session.getAccessToken()
             val response=token?.let { ApiClient.api.getCareer("Bearer "+it) }
             val body=response?.body()
-            if(response?.isSuccessful==true && body!=null) state=body
+            if(response?.isSuccessful==true && body!=null) {
+                state=body
+                cacheEquippedGarage(context,userKey,body)
+            }
             else error="No pudimos cargar tu carrera. Inténtalo nuevamente."
         } catch(e:CancellationException){throw e}
         catch(_:Exception){error="No pudimos conectar con VialApp."}
@@ -82,7 +85,10 @@ fun CareerScreen(userKey:String, initiallyGarage:Boolean,onBack:()->Unit,onActiv
                 val token=session.getAccessToken()
                 val response=token?.let{ApiClient.api.changeCareer("Bearer "+it,CareerAction(action,id))}
                 val body=response?.body()
-                if(response?.isSuccessful==true && body!=null) state=body
+                if(response?.isSuccessful==true && body!=null) {
+                state=body
+                cacheEquippedGarage(context,userKey,body)
+            }
                 else error=if(response?.code()==409) "Revisa tus objetivos o saldo de monedas y actualiza." else "No se pudo guardar el cambio. Reintenta."
             } catch(e:CancellationException){throw e}
             catch(_:Exception){error="Se perdió la conexión. Actualiza antes de continuar."}
@@ -123,8 +129,8 @@ fun CareerScreen(userKey:String, initiallyGarage:Boolean,onBack:()->Unit,onActiv
         }
         val data=state
         if(data!=null) {
-            item { Wallet(data) }
             if(!garage) {
+                item { Wallet(data) }
                 item {
                     Text("Tu recorrido",fontSize=22.sp,fontWeight=FontWeight.Bold,color=c.onSurface)
                     Text("${data.stages.count { it.claimed }} de ${data.stages.size} etapas completadas",color=c.onSurfaceVariant)
@@ -137,54 +143,11 @@ fun CareerScreen(userKey:String, initiallyGarage:Boolean,onBack:()->Unit,onActiv
                     Button(onClick={garage=true},modifier=Modifier.fillMaxWidth()){Text("Ir a mi garaje")}
                 }
             } else {
-                val active=data.vehicles.firstOrNull{it.id==data.equippedVehicle}
-                val paint=data.paints.firstOrNull{it.id==data.equippedPaint}
-                val color=garageColor(paint?.hex?:"#38A9F0")
-                item {
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                        .background(Brush.verticalGradient(listOf(Color(0xFF314967),Color(0xFF192536))))
-                        .padding(16.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                        Text("VEHÍCULO ACTIVO",fontSize=11.sp,color=Color(0xFFB8CFEA),fontWeight=FontWeight.Bold)
-                        VehiclePreview(active?.style?:"compact",color,Modifier.fillMaxWidth(.75f))
-                        Text(active?.name?:"Compacto",fontSize=22.sp,fontWeight=FontWeight.ExtraBold,color=Color.White)
-                        Text((paint?.name?:"Azul Vial")+" · "+zoneName(data.zone),color=Color(0xFFCCDAEC),fontSize=13.sp)
-                        Spacer(Modifier.height(10.dp))
-                        Button(onClick={onActivity("games/carvier")},enabled=!busy,modifier=Modifier.fillMaxWidth()){Text("Salir a la pista")}
-                    }
-                }
-                item { Text("Vehículos",fontSize=22.sp,fontWeight=FontWeight.Bold,color=c.onSurface) }
-                items(data.vehicles,key={it.id}) { vehicle ->
-                    Card(shape=RoundedCornerShape(17.dp),colors=CardDefaults.cardColors(containerColor=c.surface),border=BorderStroke(1.dp,c.outlineVariant)) {
-                        Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                            VehiclePreview(vehicle.style,color,Modifier.width(94.dp))
-                            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                                Text(vehicle.name,fontWeight=FontWeight.Bold,color=c.onSurface)
-                                Text(if(vehicle.owned)"En tu garaje" else if(!vehicle.available)"Completa ${vehicle.requiredStages} etapas" else "${vehicle.price} monedas",color=c.onSurfaceVariant,fontSize=12.sp)
-                                val equipped=vehicle.id==data.equippedVehicle
-                                OutlinedButton(enabled=!busy&&!loading&&!equipped&&(vehicle.owned||(vehicle.available&&data.coins>=vehicle.price)),
-                                    onClick={if(vehicle.owned)act("equip_vehicle",vehicle.id) else pending=PendingPurchase("buy_vehicle",vehicle.id,vehicle.name,vehicle.price)}) {
-                                    Text(if(equipped)"Equipado" else if(vehicle.owned)"Equipar" else if(!vehicle.available)"Bloqueado" else "Comprar")
-                                }
-                            }
-                        }
-                    }
-                }
-                item { Text("Pinturas",fontSize=22.sp,fontWeight=FontWeight.Bold,color=c.onSurface) }
-                items(data.paints,key={it.id}) { option ->
-                    Surface(color=c.surface,shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,c.outlineVariant)) {
-                        Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(garageColor(option.hex)))
-                            Column(Modifier.weight(1f)) {
-                                Text(option.name,color=c.onSurface,fontWeight=FontWeight.Bold)
-                                Text(if(option.owned)"Disponible" else "${option.price} monedas",color=c.onSurfaceVariant,fontSize=12.sp)
-                            }
-                            val equipped=option.id==data.equippedPaint
-                            OutlinedButton(enabled=!busy&&!loading&&!equipped&&(option.owned||data.coins>=option.price),
-                                onClick={if(option.owned)act("equip_paint",option.id) else pending=PendingPurchase("buy_paint",option.id,option.name,option.price)}) {
-                                Text(if(equipped)"Activo" else if(option.owned)"Pintar" else "Comprar")
-                            }
-                        }
-                    }
+                item(key="garage_showroom") {
+                    GarageShowroom(data,!busy&&!loading,
+                        onAction={action,id->act(action,id)},
+                        onPurchase={action,id,name,price->pending=PendingPurchase(action,id,name,price)},
+                        onDrive={onActivity("games/carvier")})
                 }
             }
             item { Text("Monedas virtuales sin valor monetario. Los vehículos y pinturas son cosméticos y no otorgan ventajas.",color=c.onSurfaceVariant,fontSize=12.sp) }

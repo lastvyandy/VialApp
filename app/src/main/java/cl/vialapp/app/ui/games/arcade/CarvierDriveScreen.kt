@@ -29,6 +29,7 @@ import cl.vialapp.app.ui.career.drawGarageVehicle
 import cl.vialapp.app.ui.career.garageColor
 import cl.vialapp.app.ui.career.zoneColors
 import cl.vialapp.app.ui.career.zoneName
+import cl.vialapp.app.ui.career.ShowroomThumbnail
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
@@ -68,6 +69,11 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
         subtitle = zoneName(zone) + " · Tres carriles y 65 segundos para llegar a la meta.",
         rules = "Desliza o usa las flechas para cambiar de carril. Recoge monedas solo cuando sea seguro. En zona escolar activa 30 km/h. Cuando aparezca PARE, pulsa Detener, espera el aviso de cruce libre y pulsa Avanzar. Tienes tres vidas.",
         duration = DriveEngine.TIME, create = { DriveEngine() }, onBack = onBack,
+        resultArt = { _, modifier ->
+            Box(modifier, contentAlignment = Alignment.Center) {
+                ShowroomThumbnail(style, vehicleColor, Modifier.fillMaxWidth(.90f))
+            }
+        },
         scene = { frame, modifier, enabled, act ->
             Column(modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 val scheme = MaterialTheme.colorScheme
