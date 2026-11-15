@@ -1,6 +1,15 @@
 package cl.vialapp.app.ui.settings
 
 import android.app.TimePickerDialog
+import android.Manifest
+import android.app.Activity
+import android.os.Build
+import android.content.Intent
+import android.provider.Settings
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
+import cl.vialapp.app.engagement.StudyReminder
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -221,6 +230,7 @@ fun StudySetupScreen(
                 markConfigured =
                     true
             )
+            if(remindersEnabled) requestReminderPermission(context)
 
             onFinished()
         },
@@ -380,6 +390,7 @@ fun StudySettingsScreen(
                 markConfigured =
                     true
             )
+            if(remindersEnabled) requestReminderPermission(context)
 
             saved =
                 true
@@ -679,6 +690,18 @@ private fun StudyPreferencesContent(
         if (
             remindersEnabled
         ) {
+            val notificationContext = LocalContext.current
+            TextButton(onClick={
+                if(Build.VERSION.SDK_INT>=33 && ContextCompat.checkSelfPermission(notificationContext,Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED &&
+                    (notificationContext as? Activity)!=null &&
+                    ActivityCompat.shouldShowRequestPermissionRationale(notificationContext as Activity,Manifest.permission.POST_NOTIFICATIONS)) {
+                    requestReminderPermission(notificationContext)
+                } else {
+                    notificationContext.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE,notificationContext.packageName))
+                }
+            }) { Text("Permisos y notificaciones de Android") }
+            Text("Los avisos pueden retrasarse por el ahorro de batería.",color=SettingsGray,fontSize=12.sp)
 
             Spacer(
                 modifier =
@@ -1293,4 +1316,12 @@ private fun buildSummary(
         )
 
     return "📚 Meta: $dailyMinutes min/día · 🔔 Recordatorio $frequencyText a las $time."
+}
+
+private fun requestReminderPermission(context:android.content.Context) {
+    StudyReminder.channel(context)
+    val activity=context as? Activity ?: return
+    if(Build.VERSION.SDK_INT>=33 && ContextCompat.checkSelfPermission(activity,Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){
+        ActivityCompat.requestPermissions(activity,arrayOf(Manifest.permission.POST_NOTIFICATIONS),419)
+    }
 }

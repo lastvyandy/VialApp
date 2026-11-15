@@ -24,6 +24,8 @@ class StudyPreferencesStore(
     context: Context,
     userKey: String = "local"
 ) {
+    private val appContext = context.applicationContext
+    private val accountKey = userKey
     private val safeUserKey =
         userKey
             .replace(
@@ -145,6 +147,7 @@ class StudyPreferencesStore(
                 }
             )
             .apply()
+        cl.vialapp.app.engagement.StudyReminder.configure(appContext,accountKey)
     }
 
 

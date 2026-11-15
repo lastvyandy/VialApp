@@ -88,7 +88,9 @@ private data class BottomItem(
 fun VialAppNavigation(
     user: UserResponse,
     onUserUpdated: (UserResponse) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    openPracticeRequested: Boolean = false,
+    onPracticeRequestHandled: () -> Unit = {}
 ) {
 
     val context =
@@ -157,6 +159,13 @@ fun VialAppNavigation(
             ?.destination
             ?.route
 
+
+    LaunchedEffect(openPracticeRequested,currentRoute) {
+        if(openPracticeRequested && currentRoute!=null && currentRoute !in setOf("study_setup","mascot_selection")) {
+            if(currentRoute!="practice") navController.navigate("practice") { launchSingleTop=true }
+            onPracticeRequestHandled()
+        }
+    }
 
     /*
      * BARRA INFERIOR

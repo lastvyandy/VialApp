@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="14dp" android:gravity="center_vertical"
+    android:background="@drawable/widget_study_background">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="VIALAPP  /  TU RUTA"
+                android:textColor="#9DCCFF" android:textSize="10sp" android:textStyle="bold" android:maxLines="1" />
+            <TextView android:id="@+id/widget_level" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Nivel 3" android:textColor="#F5F9FF" android:textSize="22sp" android:textStyle="bold" android:maxLines="2" />
+            <TextView android:id="@+id/widget_streak" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Racha: 5 días" android:textColor="#D3E4F8" android:textSize="12sp" android:maxLines="2" />
+        </LinearLayout>
+        <ImageView android:id="@+id/widget_mascot" android:layout_width="64dp" android:layout_height="64dp"
+            android:layout_marginStart="7dp" android:scaleType="fitCenter" android:src="@drawable/mascot_carvier"
+            android:contentDescription="@string/widget_mascot_description" android:background="@drawable/widget_mascot_background" />
+    </LinearLayout>
+    <ProgressBar android:id="@+id/widget_progress" style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent" android:layout_height="8dp" android:layout_marginTop="9dp"
+        android:max="500" android:progress="270" android:progressTint="#7EC9FE" android:progressBackgroundTint="#435A77" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+        android:layout_marginTop="7dp" android:gravity="center_vertical">
+        <TextView android:id="@+id/widget_xp" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:text="270/500 XP · Nivel siguiente" android:textColor="#D3E4F8" android:textSize="11sp" android:maxLines="2" />
+        <TextView android:id="@+id/widget_action" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="6dp" android:gravity="center" android:background="@drawable/widget_action_background"
+            android:paddingHorizontal="12dp" android:paddingVertical="9dp" android:text="Practicar  ›" android:textSize="13sp"
+            android:textStyle="bold" android:textColor="#102846" android:minHeight="36dp" />
+    </LinearLayout>
+</LinearLayout>

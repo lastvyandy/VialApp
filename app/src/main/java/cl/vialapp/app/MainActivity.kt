@@ -1,6 +1,9 @@
 package cl.vialapp.app
 
 import android.os.Bundle
+import android.content.Intent
+import cl.vialapp.app.engagement.EngagementState
+import cl.vialapp.app.engagement.StudyReminder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -60,11 +63,29 @@ import cl.vialapp.app.ui.navigation.VialAppNavigation
 import cl.vialapp.app.ui.profile.CompleteProfileScreen
 
 class MainActivity : ComponentActivity() {
+    private var openPractice by mutableStateOf(false)
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("pending_practice",openPractice)
+        super.onSaveInstanceState(outState)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.action == StudyReminder.OPEN_PRACTICE) {
+            openPractice = true
+            intent.action = null
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         ApiClient.init(applicationContext)
+        StudyReminder.channel(applicationContext)
+        openPractice = savedInstanceState?.getBoolean("pending_practice",false) == true || intent.action == StudyReminder.OPEN_PRACTICE
+        if(intent.action == StudyReminder.OPEN_PRACTICE) intent.action = null
 
         enableEdgeToEdge()
 
@@ -163,6 +184,14 @@ class MainActivity : ComponentActivity() {
                 }
 
 
+                LaunchedEffect(currentUser?.id,currentUser?.mascotId,checkingSession) {
+                    if(!checkingSession) {
+                        val verified=currentUser
+                        if(verified!=null) EngagementState.activate(applicationContext,verified.id,verified.mascotId)
+                        else if(sessionManager.getAccessToken().isNullOrBlank()) EngagementState.deactivate(applicationContext)
+                    }
+                }
+
                 if (checkingSession) {
 
                     Box(
@@ -198,6 +227,8 @@ class MainActivity : ComponentActivity() {
 
                     VialAppNavigation(
                         user = currentUser!!,
+                        openPracticeRequested = openPractice,
+                        onPracticeRequestHandled = { openPractice = false },
                         onUserUpdated = { updatedUser -> currentUser = updatedUser },
                         onLogout = {
 

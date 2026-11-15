@@ -3,6 +3,7 @@ package cl.vialapp.app.data.session
 import android.content.Context
 
 class SessionManager(context: Context) {
+    private val appContext = context.applicationContext
 
     private val preferences =
         context.getSharedPreferences(
@@ -29,6 +30,7 @@ class SessionManager(context: Context) {
             .edit()
             .clear()
             .apply()
+        cl.vialapp.app.engagement.EngagementState.deactivate(appContext)
     }
 
 

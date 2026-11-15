@@ -57,6 +57,8 @@ class GameProgressStore(
     context: Context,
     userKey: String? = null
 ) {
+    private val appContext = context.applicationContext
+    private val engagementUser = userKey
     private val preferences =
         context.getSharedPreferences(
             if (userKey.isNullOrBlank()) {
@@ -162,6 +164,7 @@ class GameProgressStore(
             .putInt(KEY_TOTAL_POINTS, remote.totalPoints.coerceAtLeast(0))
             .putInt(KEY_TOTAL_RUNS, remote.gamesPlayed.coerceAtLeast(0))
             .apply()
+        engagementUser?.takeIf { it.isNotBlank() }?.let { cl.vialapp.app.engagement.EngagementState.recordProgress(appContext,it,remote) }
     }
 
     private fun applyRemoteGameEvent(
@@ -190,6 +193,12 @@ class GameProgressStore(
         editor.putInt(KEY_TOTAL_POINTS, event.totalPoints.coerceAtLeast(0))
         editor.putInt(KEY_TOTAL_RUNS, event.gamesPlayed.coerceAtLeast(0))
         editor.apply()
+        engagementUser?.takeIf { it.isNotBlank() }?.let {
+            cl.vialapp.app.engagement.EngagementState.recordProgress(appContext,it,
+                GamificationProgressResponse(totalXp=event.totalXp,totalPoints=event.totalPoints,gamesPlayed=event.gamesPlayed,
+                    level=event.level,xpInLevel=event.xpInLevel,xpToNextLevel=event.xpToNextLevel,
+                    streakDays=event.streakDays,streakActiveToday=event.streakActiveToday))
+        }
 
         return newHighScore
     }
@@ -317,7 +326,9 @@ class GameProgressStore(
                 gamesPlayed = reward.gamesPlayed,
                 level = reward.level,
                 xpInLevel = reward.xpInLevel,
-                xpToNextLevel = reward.xpToNextLevel
+                xpToNextLevel = reward.xpToNextLevel,
+                streakDays = reward.streakDays,
+                streakActiveToday = reward.streakActiveToday
             )
         )
 
@@ -521,6 +532,7 @@ class GameProgressStore(
     }
 
     private fun markStudyDay(today: LocalDate) {
+        engagementUser?.takeIf { it.isNotBlank() }?.let { cl.vialapp.app.engagement.EngagementState.markStudy(appContext,it) }
         if (preferences.getBoolean(studyDayKey(today), false)) {
             return
         }
