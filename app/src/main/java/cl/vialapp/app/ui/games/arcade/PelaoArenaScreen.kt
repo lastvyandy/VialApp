@@ -14,149 +14,172 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import cl.vialapp.app.data.games.GameProgressStore
 import androidx.compose.ui.unit.sp
+import cl.vialapp.app.data.games.GameProgressStore
 import kotlin.math.sin
 
 @Composable
-fun PelaoArenaScreen(userKey: String, onBack: () -> Unit) {
-    ArcadeSession(
-        userKey = userKey, gameId = GameProgressStore.PELAO_ARENA, title = "Don Pelao Arena",
-        subtitle = "Tres rivales con patrones propios, esquivas y un ataque especial.",
-        rules = "Resuelve el peligro de tránsito para romper la guardia. Golpea para cargar Pelao Power y usa el especial cuando llegue a 100%. Los rivales avanzados contraatacan; esquiva en cuanto se encienda la alerta roja. Cada victoria recupera hasta 15 HP. Combate ficticio.",
-        duration = FightEngine.TIME, create = { FightEngine() }, onBack = onBack, showPlayMessages=false,
-        scene = { frame, modifier, _, _ -> FightScene(frame, modifier) },
-        resultArt = { frame, modifier ->
-            PelaoSprite(frame.pose, modifier)
-        },
-        controls = { frame, enabled, act ->
-            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    val ready = enabled && frame.phase == FightPhase.TELEGRAPH
-                    ArcadeControl("Detenerse", ready, Modifier.weight(1f)) { act(0) }
-                    ArcadeControl("Reducir", ready, Modifier.weight(1f)) { act(1) }
-                    ArcadeControl("Distancia", ready, Modifier.weight(1f)) { act(2) }
+fun PelaoArenaScreen(userKey:String,onBack:()->Unit){
+    ArcadeSession(userKey=userKey,gameId=GameProgressStore.PELAO_ARENA,title="Don Pelao Arena",
+        subtitle="Combate de acción · tres rivales · una arena",
+        rules="Muévete con las flechas, acércate a distancia de golpe y alterna ataques rápidos y fuertes. El rival anuncia sus golpes: bloquea los normales y esquiva las cargas rojas. Golpea o defiéndete bien para cargar el especial. No hay preguntas durante el combate. Derrota a los tres rivales antes de 120 segundos.",
+        duration=ArenaCombatEngine.TIME,create={ArenaCombatEngine()},onBack=onBack,showPlayMessages=false,
+        scene={f,m,_,_->CombatScene(f,m)},resultArt={f,m->PelaoSprite(f.pose,m)},
+        controls={f,enabled,act->
+            Column(verticalArrangement=Arrangement.spacedBy(5.dp)){
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+                    ArcadeControl("◀",enabled&&f.lock<=0f,Modifier.weight(.7f)){act(0)}
+                    ArcadeControl("▶",enabled&&f.lock<=0f,Modifier.weight(.7f)){act(1)}
+                    ArcadeControl("Rápido",enabled&&f.lock<=0f,Modifier.weight(1.3f)){act(2)}
+                    ArcadeControl("Fuerte",enabled&&f.lock<=0f,Modifier.weight(1.3f)){act(3)}
                 }
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)){
-                    ArcadeControl("Golpear",enabled&&frame.phase==FightPhase.OPENING&&frame.attackLock<=0f,Modifier.weight(1f),frame.phase==FightPhase.OPENING){act(3)}
-                    ArcadeControl("Especial "+frame.power+"%",enabled&&frame.phase==FightPhase.OPENING&&frame.attackLock<=0f&&frame.power>=100,Modifier.weight(1f),frame.power>=100){act(4)}
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+                    ArcadeControl("Bloquear",enabled&&f.lock<=0f,Modifier.weight(1f)){act(4)}
+                    ArcadeControl("Esquivar",enabled&&f.evadeLock<=0f,Modifier.weight(1f),f.phase==ArenaPhase.WINDUP&&f.attack==RivalAttack.CHARGE){act(5)}
+                    ArcadeControl("Especial",enabled&&f.power>=100&&f.lock<=0f,Modifier.weight(1f),f.power>=100){act(6)}
                 }
-                ArcadeControl("ESQUIVAR",enabled&&frame.phase==FightPhase.COUNTER,Modifier.fillMaxWidth(),frame.phase==FightPhase.COUNTER){act(5)}
             }
-        }
-    )
+        })
 }
 
 @Composable
-private fun FightScene(frame: FightFrame, modifier: Modifier) {
-    val opening = frame.phase == FightPhase.OPENING
-    val counter=frame.phase==FightPhase.COUNTER
-    val pose = frame.pose
-    val attacking = pose == PelaoPose.ATTACK_ONE || pose == PelaoPose.ATTACK_TWO
-    val takingDamage = pose == PelaoPose.HIT
-    val enemyMax = 100 + (frame.boss - 1).coerceIn(0, 2) * 20
-    val enemyColor = when (frame.boss) { 1 -> Color(0xFFF97316); 2 -> Color(0xFFA78BFA); else -> Color(0xFFFB7185) }
-    val enemyName = when (frame.boss) { 1 -> "IMPRUDENTE"; 2 -> "DISTRAÍDO"; else -> "TEMERARIO" }
-    Column(modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF15253A)).padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Column(Modifier.weight(1f)) {
-                Text("DON PELAO · ${frame.hp} HP", color = Color(0xFFDBEAFE), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                LinearProgressIndicator(progress = { frame.hp / 100f }, Modifier.fillMaxWidth().height(7.dp), color = Color(0xFF4ADE80), trackColor = Color(0xFF35445A))
-            }
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text("$enemyName · ${frame.bossHp} HP", color = enemyColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                LinearProgressIndicator(progress = { (frame.bossHp.toFloat() / enemyMax).coerceIn(0f, 1f) }, Modifier.fillMaxWidth().height(7.dp), color = enemyColor, trackColor = Color(0xFF35445A))
-            }
+private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
+    val name=when(f.rival){1->"IMPRUDENTE";2->"DISTRAÍDO";else->"TEMERARIO"}
+    val ink=when(f.rival){1->Color(0xFFF7AA44);2->Color(0xFF73C8F5);else->Color(0xFFED647C)}
+    val tell=f.phase==ArenaPhase.WINDUP
+    val heavy=tell&&f.attack==RivalAttack.CHARGE
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(Color(0xFF101C2E)).padding(9.dp),
+        verticalArrangement=Arrangement.spacedBy(7.dp)){
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
+            CombatHealth("DON PELAO",f.hp,100,Color(0xFF73E0AC),Modifier.weight(1f))
+            CombatHealth(name,f.rivalHp,f.rivalMax,ink,Modifier.weight(1f))
         }
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp),verticalAlignment=Alignment.CenterVertically){
-            Text("RIVAL "+frame.boss.coerceAtMost(3)+"/3",color=Color(0xFFDBEAFE),fontSize=11.sp,fontWeight=FontWeight.Bold)
-            LinearProgressIndicator(progress={frame.power/100f},modifier=Modifier.weight(1f).height(7.dp),color=Color(0xFFFBBF24),trackColor=Color(0xFF35445A))
-            Text("POWER "+frame.power+"%",color=Color(0xFFFDE68A),fontSize=10.sp,fontWeight=FontWeight.Bold)
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){
+            Text("RIVAL "+f.rival.coerceAtMost(3)+"/3",color=Color(0xFFBCD2EF),fontSize=11.sp,fontWeight=FontWeight.Bold)
+            LinearProgressIndicator(progress={f.power/100f},modifier=Modifier.weight(1f).height(7.dp),color=Color(0xFFF9C950),trackColor=Color(0xFF334860))
+            Text("POWER "+f.power+"%",color=Color(0xFFFFDF83),fontSize=10.sp,fontWeight=FontWeight.Bold)
         }
-        Surface(color = if(counter)Color(0xFFB42318) else if (opening) Color(0xFF166534) else Color(0xFF31455F), shape = RoundedCornerShape(11.dp)) {
-            Column(Modifier.fillMaxWidth().padding(7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    when (frame.phase) { FightPhase.TELEGRAPH -> frame.hazard.label; FightPhase.OPENING -> "¡GUARDIA ROTA!"; FightPhase.COUNTER -> "¡ESQUIVA AHORA!"; FightPhase.RECOVERY -> frame.message },
-                    fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
-                )
-                Text(if (opening) "VENTANA DE ATAQUE" else if(counter) "CONTRAATAQUE" else if (frame.phase == FightPhase.TELEGRAPH) "ELIGE UNA DECISIÓN SEGURA" else "PREPARACIÓN", color = Color(0xFFDBEAFE), fontSize = 10.sp)
-                if(opening)Text(frame.hazard.advice,color=Color(0xFFDBEAFE),fontSize=10.sp,textAlign=TextAlign.Center,maxLines=2)
-                LinearProgressIndicator(progress = { (frame.remaining / (if(counter) (if(frame.boss==2)1.4f else 1f) else if (opening) 3.2f else 6f)).coerceIn(0f, 1f) },
-                    Modifier.fillMaxWidth().height(4.dp), color = if (opening) Color(0xFF86EFAC) else Color(0xFFFBBF24), trackColor = Color(0xFF172033))
-            }
-        }
-        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(12.dp))) {
-            Canvas(Modifier.fillMaxSize()) {
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF20344C), Color(0xFF4C6D83))), size = size)
-                val floor = size.height * .82f
-                repeat(7) { i ->
-                    val w = size.width / 7
-                    val h = size.height * (.19f + (i % 3) * .09f)
-                    drawRect(Color(0xFF263B50), Offset(i * w, floor - h), Size(w * .8f, h))
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(13.dp))){
+            val arenaW=maxWidth
+            val arenaH=maxHeight
+            val playerWidth=minOf(arenaW*.38f,arenaH*.64f)
+            val playerHeight=arenaH*.64f
+            val y=arenaH*.16f
+            Canvas(Modifier.fillMaxSize()){
+                val w=size.width;val h=size.height
+                val floor=h*.80f
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF202B4D),Color(0xFF3C5370),Color(0xFF151D2B))),size=size)
+                // Layered industrial arena, beams and lit spectator silhouettes.
+                for(i in 0..7){
+                    val x=i*w/7f
+                    val bh=h*(.24f+(i%3)*.055f)
+                    drawRect(Color(0xFF24344D),Offset(x,floor-bh),Size(w*.09f,bh))
+                    drawRect(ink.copy(alpha=.20f),Offset(x+3f,floor-bh+8f),Size(w*.06f,4f))
                 }
-                drawRect(Color(0xFF455366), Offset(0f, floor), Size(size.width, size.height - floor))
-                drawLine(Color(0xFFFCD34D), Offset(0f, floor + 9f), Offset(size.width, floor + 9f), 3f)
-                drawOval(Color(0xFF111827).copy(alpha = .38f), Offset(size.width * .10f, floor - 4f), Size(size.width * .33f, 15f))
-                if (opening) drawCircle(Color(0xFF86EFAC).copy(alpha = .11f), size.width * .26f, Offset(size.width * .76f, size.height * .51f))
-                val cx = size.width * (if(counter) .76f-.17f*(1f-(frame.remaining/1.4f).coerceIn(0f,1f)) else if(attacking&&frame.impact>0f) .80f else .76f)
-                val cy = size.height * .53f + sin(frame.elapsed * 5f) * size.height * .018f
-                val unit = minOf(size.width / 330f, size.height / 220f)
-                if(counter){
-                    drawCircle(Color(0xFFEF4444).copy(alpha=.17f),size.width*.35f,Offset(cx,cy))
-                    drawLine(Color(0xFFFCA5A5),Offset(cx,cy),Offset(size.width*.28f,cy),5f)
+                drawRect(Color(0xFF25364A),Offset(0f,h*.12f),Size(w,h*.065f))
+                for(i in 0..4){
+                    val x=(i+.5f)*w/5f
+                    drawCircle(Color(0xFFCFDDF1).copy(alpha=.10f),w*.12f,Offset(x,h*.16f))
+                    drawRoundRect(Color(0xFFE7EFFF),Offset(x-9f,h*.14f),Size(18f,5f),CornerRadius(2f))
                 }
-                scale(unit, unit, pivot = Offset(cx, cy)) {
-                    drawOval(Color(0xFF111827).copy(alpha = .5f), Offset(cx - 51f, floor - 7f), Size(103f, 15f))
-                    // Stylized road-hazard robot, not a static emoji token.
-                    drawRoundRect(enemyColor, Offset(cx - 43f, cy - 22f), Size(86f, 77f), CornerRadius(if(frame.boss==3)6f else 20f))
-                    drawRoundRect(Color(0xFF23334A),Offset(cx-25f,cy+1f),Size(50f,34f),CornerRadius(8f))
-                    if(frame.boss==2)drawCircle(Color(0xFF67E8F9),12f,Offset(cx,cy+18f))
-                    else if(frame.boss==3){for(i in -1..1)drawLine(Color(0xFFFBBF24),Offset(cx+i*13f,cy+8f),Offset(cx+i*13f,cy+27f),5f)}
-                    else drawLine(Color(0xFFFDE68A),Offset(cx-12f,cy+18f),Offset(cx+12f,cy+18f),6f)
-                    drawRoundRect(Color(0xFF192638), Offset(cx - 32f, cy - 49f), Size(64f, 39f), CornerRadius(12f))
-                    drawRoundRect(if (opening) Color(0xFF86EFAC) else Color(0xFFFCA5A5), Offset(cx - 23f, cy - 35f), Size(46f, 12f), CornerRadius(5f))
-                    for (dx in listOf(-54f, 39f)) {
-                        drawRoundRect(enemyColor, Offset(cx + dx, cy + 1f), Size(18f, 53f), CornerRadius(8f))
-                        drawCircle(Color(0xFF111827), 12f, Offset(cx + dx + 9f, cy + 48f))
-                    }
-                    drawRoundRect(Color(0xFF182537), Offset(cx - 33f, cy + 48f), Size(27f, 23f), CornerRadius(5f))
-                    drawRoundRect(Color(0xFF182537), Offset(cx + 6f, cy + 48f), Size(27f, 23f), CornerRadius(5f))
-                    if (attacking && frame.impact > 0f) {
-                        val strike = Path().apply { moveTo(cx - 46f, cy - 38f); lineTo(cx - 10f, cy - 5f); lineTo(cx - 28f, cy + 4f); lineTo(cx + 2f, cy + 29f); lineTo(cx - 64f, cy + 2f); close() }
-                        drawPath(strike, Color(0xFFFDE68A))
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF4A6079),Color(0xFF1C2B3E)),startY=floor,endY=h),Offset(0f,floor),Size(w,h-floor))
+                for(i in 0..6)drawLine(Color(0xFF6D8297).copy(alpha=.38f),Offset(w*.5f+(i-3)*w*.06f,floor),Offset((i-3)*w*.45f+w*.5f,h),2f)
+                drawLine(Color(0xFFE7B951),Offset(0f,floor),Offset(w,floor),3f)
+                for(x in listOf(f.playerX,f.rivalX))drawOval(Color.Black.copy(alpha=.42f),Offset(w*x-w*.092f,floor-7f),Size(w*.184f,14f))
+                if(tell){
+                    val range=f.attack.range*w
+                    drawRoundRect((if(heavy)Color(0xFFEF4444) else Color(0xFFFBBF24)).copy(alpha=.24f),
+                        Offset((f.rivalX*w-range).coerceAtLeast(0f),floor-9f),Size(range,18f),CornerRadius(6f))
+                }
+                val unit=minOf(w/360f,h/230f)
+                val cx=w*f.rivalX+(if(f.impact>0f)unit*7f*sin(f.impact*32f)else 0f)
+                val cy=floor
+                translate(cx,cy){scale(unit,unit,pivot=Offset.Zero){drawArenaRival(f,ink)}}
+                if(f.impact>0f){
+                    val x=w*(f.playerX+f.rivalX)/2f;val yy=floor-h*.26f
+                    repeat(8){i->
+                        val angle=i*6.283185f/8f
+                        val d=Offset(kotlin.math.cos(angle),kotlin.math.sin(angle))
+                        drawLine(Color(0xFFFDE68A).copy(alpha=(f.impact/.24f).coerceIn(0f,1f)),Offset(x,yy)+d*(12f*unit),Offset(x,yy)+d*(38f*unit),4f*unit,StrokeCap.Round)
                     }
                 }
             }
-            // Give each sprite the same full-body canvas, anchored just above the arena floor.
-            // Slight horizontal movement is inside the allocated bounds, so no head or feet are cropped.
-            val lunge = if (attacking) (maxWidth * .045f) * (frame.poseTime / .34f).coerceIn(0f, 1f) else 0.dp
-            val recoil = if (takingDamage) maxWidth * .025f else 0.dp
-            Box(
-                Modifier.align(Alignment.BottomStart)
-                    .padding(start = maxWidth * .04f + lunge - recoil, bottom = maxHeight * .12f)
-                    .width(maxWidth * .53f)
-                    .height(maxHeight * .85f)
-            ) {
-                PelaoSprite(pose, Modifier.fillMaxSize().graphicsLayer {
-                        val t=(frame.poseTime/.55f).coerceIn(0f,1f)
-                        translationX=when{attacking->18.dp.toPx()*t; takingDamage->-10.dp.toPx()*t; pose==PelaoPose.BLOCK && frame.dodges>0->-12.dp.toPx()*t;else->0f}
-                        rotationZ=when{attacking->-7f*t;takingDamage->9f*t;else->0f}
-                        scaleX=if(attacking)1f+.06f*t else 1f
-                        scaleY=scaleX
-                    })
+            PelaoSprite(f.pose,Modifier.offset(x=arenaW*f.playerX-playerWidth/2,y=y).width(playerWidth).height(playerHeight)
+                .graphicsLayer {
+                    val m=f.move
+                    val punch=if(m!=null&&f.lock>0f)sin((f.lock/m.lock).coerceIn(0f,1f)*Math.PI.toFloat())else 0f
+                    translationX=18.dp.toPx()*punch-if(f.evade>0f)9.dp.toPx() else 0f
+                    rotationZ=-10f*punch+(if(f.playerImpact>0f)10f else 0f)
+                    scaleX=1f+.08f*punch
+                    scaleY=scaleX
+                })
+            if(f.guard>0f)Box(Modifier.offset(x=arenaW*f.playerX-playerWidth/2,y=y).width(playerWidth).height(playerHeight)){
+                Canvas(Modifier.fillMaxSize()){drawOval(Color(0xFF7DD3FC).copy(alpha=.65f),style=Stroke(3.dp.toPx()))}
             }
-            if (takingDamage && frame.impact > 0f) {
-                Box(Modifier.matchParentSize().background(Color(0xFFEF4444).copy(alpha = .16f)))
-            }
-            if (attacking) Text("−${frame.lastDamage} HP · ×${frame.combo}", color = Color(0xFFFDE68A), fontWeight = FontWeight.ExtraBold,
-                fontSize = 25.sp, modifier = Modifier.align(Alignment.TopCenter).padding(8.dp))
+            if(tell)Surface(Modifier.align(Alignment.TopCenter).padding(5.dp),color=if(heavy)Color(0xFF9B2730)else Color(0xFF775522),shape=RoundedCornerShape(10.dp)){
+                Column(Modifier.widthIn(max=230.dp).padding(horizontal=12.dp,vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                    Text(if(heavy)"CARGA · ESQUIVA" else if(f.attack==RivalAttack.SWEEP)"BARRIDO · BLOQUEA" else "GOLPE · BLOQUEA",color=Color.White,fontWeight=FontWeight.ExtraBold,fontSize=12.sp)
+                    LinearProgressIndicator(progress={1f-(f.phaseTime/f.attack.tell).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth().height(4.dp),color=Color.White,trackColor=Color.White.copy(alpha=.2f))
+                }
+            }else if(f.phase==ArenaPhase.ROUND_CLEAR)Text("¡KO!",Modifier.align(Alignment.Center),fontSize=44.sp,color=Color(0xFFFDE68A),fontWeight=FontWeight.ExtraBold)
+            if(f.impact>0f)Text("−"+f.damage,Modifier.align(Alignment.CenterEnd).padding(12.dp),color=Color(0xFFFFDA75),fontSize=25.sp,fontWeight=FontWeight.ExtraBold)
         }
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
+            Text(f.message,modifier=Modifier.weight(1f),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold,maxLines=1)
+            if(f.combo>1)Text("×"+f.combo+" COMBO",color=Color(0xFFFDE68A),fontSize=12.sp,fontWeight=FontWeight.ExtraBold)
+        }
+    }
+}
+@Composable
+private fun CombatHealth(name:String,hp:Int,max:Int,color:Color,modifier:Modifier){
+    Column(modifier,verticalArrangement=Arrangement.spacedBy(4.dp)){
+        Text(name+" · "+hp,color=Color(0xFFE5ECF8),fontSize=11.sp,fontWeight=FontWeight.ExtraBold,maxLines=1)
+        LinearProgressIndicator(progress={(hp.toFloat()/max).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth().height(9.dp),color=color,trackColor=Color(0xFF3B4659))
+    }
+}
+
+/** Articulated original robot: limbs, wind-up and hit arcs are tied to the simulation. */
+private fun DrawScope.drawArenaRival(f:ArenaCombatFrame,armor:Color){
+    val sizeFactor=when(f.rival){1->.92f;2->1.0f;else->1.12f}
+    val bob=sin(f.elapsed*6f)*2.5f
+    val tell=f.phase==ArenaPhase.WINDUP
+    val strike=f.phase==ArenaPhase.STRIKE
+    val lean=if(strike)-13f else if(tell)7f else 0f
+    scale(sizeFactor,sizeFactor,pivot=Offset.Zero){
+        val body=Color(0xFF39495F)
+        val dark=Color(0xFF182536)
+        val edge=Color(0xFF9BB1C9)
+        fun limb(a:Offset,b:Offset,c:Offset){
+            drawLine(dark,a,b,19f,StrokeCap.Round);drawLine(armor,a,b,13f,StrokeCap.Round)
+            drawLine(dark,b,c,18f,StrokeCap.Round);drawLine(body,b,c,12f,StrokeCap.Round)
+            drawCircle(edge,6f,b);drawCircle(dark,12f,c);drawCircle(armor,8f,c)
+        }
+        limb(Offset(-17f,-65f),Offset(-24f,-34f),Offset(-32f,-9f))
+        limb(Offset(17f,-65f),Offset(24f,-32f),Offset(32f,-9f))
+        drawRoundRect(dark,Offset(-46f+lean,-10f),Size(31f,10f),CornerRadius(4f))
+        drawRoundRect(dark,Offset(15f+lean,-10f),Size(31f,10f),CornerRadius(4f))
+        val x=lean;val yy=-100f+bob
+        val chest=Path().apply{moveTo(x-35f,yy-34f);lineTo(x+35f,yy-34f);lineTo(x+26f,yy+25f);lineTo(x-26f,yy+25f);close()}
+        drawPath(chest,dark);drawPath(chest,armor.copy(alpha=.90f),style=Stroke(5f))
+        drawRoundRect(body,Offset(x-23f,yy-21f),Size(46f,31f),CornerRadius(7f))
+        drawCircle(if(tell)Color(0xFFFDE68A) else armor,if(f.rival==3)11f else 8f,Offset(x,yy-5f))
+        val frontHand=when{strike->Offset(x-84f,yy-8f);tell->Offset(x-17f,yy-58f);else->Offset(x-47f,yy-15f)}
+        limb(Offset(x-37f,yy-22f),Offset(x-49f,yy+5f),frontHand)
+        limb(Offset(x+35f,yy-22f),Offset(x+46f,yy+4f),Offset(x+39f,yy-16f))
+        drawRoundRect(armor,Offset(x-27f,yy-74f),Size(54f,39f),CornerRadius(if(f.rival==3)5f else 11f))
+        drawRoundRect(dark,Offset(x-21f,yy-66f),Size(42f,15f),CornerRadius(5f))
+        drawRoundRect(if(tell)Color(0xFFFFD166)else Color(0xFFDBF7FF),Offset(x-15f,yy-62f),Size(29f,5f),CornerRadius(2f))
+        if(f.rival==2)drawLine(edge,Offset(x+18f,yy-75f),Offset(x+26f,yy-92f),3f,StrokeCap.Round)
+        if(f.rival==3)for(dx in listOf(-39f,39f))drawRoundRect(armor,Offset(x+dx-10f,yy-42f),Size(20f,19f),CornerRadius(3f))
     }
 }
