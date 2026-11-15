@@ -37,6 +37,8 @@ import cl.vialapp.app.ui.career.zoneName
 import cl.vialapp.app.ui.career.ShowroomThumbnail
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 @Composable
@@ -64,7 +66,12 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
             }
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { }
-        finally { ready = true }
+        finally { }
+        withContext(Dispatchers.Default) {
+            rasterizeRoadCar(style,garageColor(paint),kit)
+            roadPaints.forEachIndexed { i,color -> rasterizeRoadCar(trafficStyles[i],color,GarageKit()) }
+        }
+        ready = true
     }
     if (!ready) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -74,7 +81,7 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
     ArcadeSession(
         userKey = userKey, gameId = GameProgressStore.CARVIER_DRIVE, title = "Carvier al volante",
         subtitle = zoneName(zone) + " · Tres carriles y 65 segundos para llegar a la meta.",
-        rules = "Desliza o usa las flechas para cambiar de carril. Recoge monedas solo cuando sea seguro. En zona escolar activa 30 km/h. Cuando aparezca PARE, pulsa Detener, espera el aviso de cruce libre y pulsa Avanzar. Tienes tres vidas.",
+        rules = "Desliza o usa las flechas para cambiar de carril. Recoge monedas solo cuando sea seguro. En la zona escolar simulada activa 30 km/h; en la vía real respeta la señalización y los horarios de entrada y salida. Cuando aparezca PARE, pulsa Detener, espera el aviso de cruce libre y pulsa Avanzar. Tienes tres vidas.",
         duration = DriveEngine.TIME, create = { DriveEngine() }, onBack = onBack,
         resultArt = { _, modifier ->
             Box(modifier, contentAlignment = Alignment.Center) {
@@ -122,6 +129,7 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
     )
 }
 
+private val trafficStyles=listOf("sedan","hatch","suv","compact")
 private val roadPaints = listOf(Color(0xFFF97316), Color(0xFFEF4444), Color(0xFF14B8A6), Color(0xFFA78BFA))
 private fun laneX(lane: Float) = 205f + lane * 145f
 
@@ -129,7 +137,7 @@ private fun laneX(lane: Float) = 205f + lane * 145f
 internal fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, act: (Int) -> Unit,
                        vehicleStyle: String = "compact", vehicleColor: Color = Color(0xFF38A9F0), zone: String = "neighborhood", kit: GarageKit = GarageKit()) {
     val playerSprite = remember(vehicleStyle,vehicleColor,kit) { rasterizeRoadCar(vehicleStyle,vehicleColor,kit) }
-    val trafficSprites = remember { roadPaints.mapIndexed { i,color -> rasterizeRoadCar(listOf("sedan","hatch","suv","compact")[i],color,GarageKit()) } }
+    val trafficSprites = remember { roadPaints.mapIndexed { i,color -> rasterizeRoadCar(trafficStyles[i],color,GarageKit()) } }
     val currentAct by rememberUpdatedState(act)
     Canvas(modifier.clip(RoundedCornerShape(22.dp)).pointerInput(enabled) {
         if (enabled) {

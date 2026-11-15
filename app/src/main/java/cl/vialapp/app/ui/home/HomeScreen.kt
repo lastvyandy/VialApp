@@ -32,6 +32,9 @@ import cl.vialapp.app.ui.profile.ProfileAvatar
 import cl.vialapp.app.ui.theme.vialColor
 import cl.vialapp.app.ui.theme.VialActionBlue
 import cl.vialapp.app.ui.theme.LocalVialAppearance
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 private val HomeBlue: Color
     @Composable get() = vialColor(Color(0xFF2563EB))
@@ -111,57 +114,32 @@ fun HomeScreen(
         }
 
 
-// Cargar XP oficial desde FastAPI
-        try {
-            val xpResponse = ApiClient.api.getGamificationProgress(
-                authorization = "Bearer $token"
-            )
-
-            val remoteProgress =
-                if (xpResponse.isSuccessful) {
-                    xpResponse.body()
-                } else {
-                    null
-                }
-
-            if (remoteProgress != null) {
-                progressStore.applyRemoteProgress(remoteProgress)
-                xpLoaded = true
-            } else {
-                xpLoadFailed = true
+        // Independent reads are concurrent, isolated, and cancelled on navigation.
+        coroutineScope {
+            launch {
+                try {
+                    val response=ApiClient.api.getGamificationProgress("Bearer $token")
+                    val remote=response.body()?.takeIf { response.isSuccessful }
+                    if(remote!=null){progressStore.applyRemoteProgress(remote);xpLoaded=true}
+                    else xpLoadFailed=true
+                } catch(e:CancellationException){throw e}
+                catch(_:Exception){xpLoadFailed=true}
             }
-
-        } catch (e: Exception) {
-            xpLoadFailed = true
-            e.printStackTrace()
-        }
-
-
-        // Estadísticas avanzadas
-        try {
-            val statsResponse = ApiClient.api.getAdvancedStats(
-                authorization = "Bearer $token"
-            )
-            if (statsResponse.isSuccessful) {
-                stats = statsResponse.body()
+            launch {
+                try {
+                    val response=ApiClient.api.getAdvancedStats("Bearer $token")
+                    if(response.isSuccessful)stats=response.body()
+                } catch(e:CancellationException){throw e}
+                catch(_:Exception){}
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        // Examen activo en curso
-        try {
-            val activeResponse = ApiClient.api.getActiveAttempt(
-                authorization = "Bearer $token"
-            )
-            if (activeResponse.isSuccessful) {
-                val body = activeResponse.body()
-                activeAttempt = if (body?.status == "active") body else null
+            launch {
+                try {
+                    val response=ApiClient.api.getActiveAttempt("Bearer $token")
+                    if(response.isSuccessful)activeAttempt=response.body()?.takeIf{it.status=="active"}
+                } catch(e:CancellationException){throw e}
+                catch(_:Exception){}
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
-
         dashboardLoading = false
     }
 

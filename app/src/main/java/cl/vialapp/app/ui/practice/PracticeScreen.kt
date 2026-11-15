@@ -25,6 +25,7 @@ import cl.vialapp.app.ui.learning.LearningPathEntry
 import cl.vialapp.app.ui.simulator.SimulatorEntry
 import cl.vialapp.app.ui.games.GamesQuickEntry
 import cl.vialapp.app.ui.library.LibraryEntry
+import kotlinx.coroutines.CancellationException
 
 
 private val PracticeBlue: Color
@@ -49,7 +50,8 @@ fun PracticeScreen(
     onAdaptivePractice: () -> Unit = {},
     onSimulator: () -> Unit = {},
     onGames: () -> Unit = {},
-    onLibrary: () -> Unit = {}
+    onLibrary: () -> Unit = {},
+    onOfflineStudy: () -> Unit = onLibrary
 ) {
 
     val context =
@@ -79,7 +81,8 @@ fun PracticeScreen(
     }
 
 
-    LaunchedEffect(Unit) {
+    var retry by remember { mutableIntStateOf(0) }
+    LaunchedEffect(retry) {
 
         loading = true
         error = ""
@@ -120,7 +123,8 @@ fun PracticeScreen(
             }
 
 
-        } catch (e: Exception) {
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (e: Exception) {
 
             error =
                 "No se pudo conectar con VialApp."
@@ -137,35 +141,22 @@ fun PracticeScreen(
 
     when {
 
-        loading -> {
-
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            PracticeBackground
-                        ),
-
-                contentAlignment =
-                    Alignment.Center
-            ) {
-
-                CircularProgressIndicator(
-                    color =
-                        PracticeBlue
-                )
-            }
-        }
-
-
-        error.isNotEmpty() -> {
+        loading || error.isNotEmpty() -> {
             Column(Modifier.fillMaxSize().background(PracticeBackground).verticalScroll(rememberScrollState()).padding(20.dp),
                 verticalArrangement=Arrangement.spacedBy(14.dp)) {
                 Text("Practicar",fontSize=30.sp,fontWeight=FontWeight.Bold,color=PracticeDark)
                 LibraryEntry(onClick=onLibrary)
-                Text(error,color=PracticeGray,fontSize=14.sp)
-                Text("La biblioteca está disponible sin internet.",color=PracticeGray,fontSize=13.sp)
+                OutlinedButton(onClick=onOfflineStudy,modifier=Modifier.fillMaxWidth()){Text("Repaso sin conexión")}
+                GamesQuickEntry(onClick=onGames)
+                if(loading) {
+                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        CircularProgressIndicator(Modifier.size(20.dp))
+                        Text("Cargando tus estadísticas",color=PracticeGray)
+                    }
+                } else {
+                    Text(error,color=MaterialTheme.colorScheme.error,fontSize=14.sp)
+                    TextButton(onClick={retry++}){Text("Reintentar")}
+                }
             }
         }
 
@@ -177,7 +168,8 @@ fun PracticeScreen(
                 onAdaptivePractice = onAdaptivePractice,
                 onSimulator = onSimulator,
                 onGames = onGames,
-                onLibrary = onLibrary
+                onLibrary = onLibrary,
+                onOfflineStudy = onOfflineStudy
             )
         }
 
@@ -261,6 +253,7 @@ fun PracticeScreen(
 
 
                 item { LibraryEntry(onClick = onLibrary) }
+                item { OutlinedButton(onClick=onOfflineStudy,modifier=Modifier.fillMaxWidth()){Text("Repasar sin conexión")} }
                 item { GamesQuickEntry(onClick = onGames) }
                 item { SimulatorEntry(onClick = onSimulator) }
                 item { AdaptivePracticeEntry(onClick = onAdaptivePractice) }
@@ -698,7 +691,8 @@ private fun EmptyPracticeState(
     onAdaptivePractice: () -> Unit,
     onSimulator: () -> Unit,
     onGames: () -> Unit,
-    onLibrary: () -> Unit
+    onLibrary: () -> Unit,
+    onOfflineStudy: () -> Unit
 ) {
 
     Column(
@@ -722,6 +716,7 @@ private fun EmptyPracticeState(
 
 
         LibraryEntry(onClick = onLibrary)
+        OutlinedButton(onClick=onOfflineStudy,modifier=Modifier.fillMaxWidth()){Text("Repasar sin conexión")}
         Spacer(Modifier.height(14.dp))
         GamesQuickEntry(onClick = onGames)
         Spacer(Modifier.height(20.dp))

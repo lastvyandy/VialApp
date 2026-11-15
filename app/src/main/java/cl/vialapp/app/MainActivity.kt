@@ -53,6 +53,8 @@ import cl.vialapp.app.ui.theme.VialActionBlue
 import androidx.compose.runtime.rememberCoroutineScope
 import cl.vialapp.app.data.api.ApiClient
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import cl.vialapp.app.ui.library.OfflineStudyScreen
 import androidx.compose.runtime.remember
 import cl.vialapp.app.data.api.UserResponse
 import androidx.compose.ui.platform.LocalContext
@@ -106,7 +108,13 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf(true)
                 }
 
-                LaunchedEffect(Unit) {
+                var retrySession by remember { mutableStateOf(0) }
+                var offlineStudy by rememberSaveable { mutableStateOf(false) }
+                var sessionUnavailable by remember { mutableStateOf(false) }
+
+                LaunchedEffect(retrySession) {
+                    checkingSession = true
+                    sessionUnavailable = false
 
                     val token =
                         sessionManager.getAccessToken()
@@ -121,6 +129,7 @@ class MainActivity : ComponentActivity() {
                                 )
 
 
+                            var refreshRejected = false
                             // Access token expirado
                             if (userResponse.code() == 401) {
 
@@ -134,6 +143,12 @@ class MainActivity : ComponentActivity() {
                                             csrfToken
                                         )
 
+                                    refreshRejected = refreshResponse.code() in listOf(401,403)
+                                    if (!refreshResponse.isSuccessful && !refreshRejected) {
+                                        sessionUnavailable = true
+                                        checkingSession = false
+                                        return@LaunchedEffect
+                                    }
                                     if (refreshResponse.isSuccessful) {
 
                                         val newTokens =
@@ -168,15 +183,17 @@ class MainActivity : ComponentActivity() {
                                 currentUser =
                                     userResponse.body()
 
-                            } else {
-
+                            } else if (userResponse.code() in listOf(401,403) || refreshRejected) {
                                 sessionManager.clearSession()
                                 ApiClient.clearCookies()
+                            } else {
+                                // Temporary server failures must not erase valid credentials.
+                                sessionUnavailable = true
                             }
-
-                        } catch (e: Exception) {
-
-                            println(e)
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            sessionUnavailable = true
                         }
                     }
 
@@ -192,19 +209,35 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                if (checkingSession) {
+                if (offlineStudy) {
+                    OfflineStudyScreen(onBack={offlineStudy=false})
+                } else if (checkingSession) {
 
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
 
-                        CircularProgressIndicator()
+                        Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                            CircularProgressIndicator()
+                            Text("Conectando con VialApp")
+                            TextButton(onClick={offlineStudy=true}){Text("Estudiar sin conexión")}
+                        }
                     }
-
+                } else if(sessionUnavailable && currentUser==null) {
+                    Column(Modifier.fillMaxSize().padding(24.dp),verticalArrangement=Arrangement.Center,horizontalAlignment=Alignment.CenterHorizontally) {
+                        Text("No pudimos conectar",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+                        Spacer(Modifier.height(10.dp))
+                        Text("Tu sesión se conserva. Puedes estudiar sin internet o volver a intentar.",textAlign=TextAlign.Center)
+                        Spacer(Modifier.height(18.dp))
+                        Button(onClick={retrySession++},modifier=Modifier.fillMaxWidth()){Text("Reintentar conexión")}
+                        TextButton(onClick={offlineStudy=true}){Text("Estudiar sin conexión")}
+                        TextButton(onClick={sessionManager.clearSession();ApiClient.clearCookies();sessionUnavailable=false}){Text("Cerrar sesión")}
+                    }
                 } else if (currentUser == null) {
 
                     LoginScreen(
+                        onOfflineStudy = { offlineStudy=true },
                         onLoginSuccess = { user ->
                             currentUser = user
                         }
@@ -269,7 +302,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (UserResponse) -> Unit
+    onLoginSuccess: (UserResponse) -> Unit,
+    onOfflineStudy: () -> Unit = {}
 ) {
 
     val context = LocalContext.current
@@ -327,6 +361,7 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
+                TextButton(onClick=onOfflineStudy,modifier=Modifier.align(Alignment.End)){Text("Estudiar sin conexión")}
                 // Logo oficial de VialApp, conservando sus trazos y colores.
                 Image(
                     painter = painterResource(R.drawable.vialapp_brand_logo),

@@ -2,6 +2,7 @@ package cl.vialapp.app.data.api
 
 import android.content.Context
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -32,6 +33,10 @@ object ApiClient {
 
         val okHttpClient =
             OkHttpClient.Builder()
+                .connectTimeout(8, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .writeTimeout(25, TimeUnit.SECONDS)
+                .callTimeout(35, TimeUnit.SECONDS)
                 .cookieJar(
                     persistentCookieJar
                 )

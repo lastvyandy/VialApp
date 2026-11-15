@@ -27,6 +27,7 @@ import cl.vialapp.app.data.games.GameRunResult
 import cl.vialapp.app.data.session.SessionManager
 import java.util.UUID
 import kotlin.math.ceil
+import kotlinx.coroutines.CancellationException
 
 private enum class Phase { INTRO, PLAY, RESULT }
 
@@ -127,9 +128,13 @@ internal fun <S : ArcadeFrame> ArcadeSession(
                 store.recordRunRemote(ApiClient.api, token, gameId, frame.score,
                     ceil(frame.elapsed.toDouble()).toInt().coerceAtLeast(1), fallbackXp = 0, eventId = runId)
             } else {
-                GameRunResult(store.recordRun(gameId, frame.score, 0), 0, frame.score, false)
+                GameRunResult(store.recordLocalHighScore(gameId, frame.score), 0, 0, false)
             }
             record = store.getHighScore(gameId)
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) {
+            reward=GameRunResult(store.recordLocalHighScore(gameId,frame.score),0,0,false)
+            record=store.getHighScore(gameId)
         } finally { saving = false }
     }
 

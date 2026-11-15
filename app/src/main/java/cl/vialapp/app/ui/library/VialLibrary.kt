@@ -114,6 +114,7 @@ internal object VialLibrary {
         b("priority",RULES,"Derecho preferente de paso",84,86,"cruce intersección prioridad ceda pare derecha",
             "Antes de entrar a una intersección, identifica quién tiene preferencia según las señales y la situación.",
             "Si debes ceder el paso, reduce la velocidad con suficiente anticipación para detenerte si corresponde.",
+            "En un paso de cebra, detente y cede el paso a quien se dispone a cruzar. Da prioridad a vehículos de emergencia que usen sus señales luminosas o acústicas.",
             "En áreas rurales, al aproximarte desde una vía secundaria a una principal, cede el paso a quienes circulan por esta."),
         b("following",RULES,"Distancia de seguimiento",87,89,"regla tres segundos distancia seguridad",
             "Mantener espacio permite reaccionar ante una detención o maniobra inesperada.",
@@ -127,7 +128,8 @@ internal object VialLibrary {
         b("speed",RULES,"Velocidad adecuada",96,98,"limites velocidad prudencia campo visual",
             "Una velocidad permitida no siempre es segura para las condiciones del momento.",
             "El aumento de velocidad reduce el campo visual y aumenta la distancia necesaria para detenerse.",
-            "Adapta la marcha al estado de la vía, visibilidad y presencia de usuarios vulnerables."),
+            "Adapta la marcha al estado de la vía, visibilidad y presencia de usuarios vulnerables.",
+            "Según la edición 2024, en las afueras de colegios durante la entrada y salida de clases debes circular a no más de 30 km/h. Respeta las señales y comprueba la normativa vigente."),
         b("overtake",RULES,"Encuentros y adelantamientos",98,103,"adelantar sobrepasar distancia izquierda",
             "Adelantar exige visibilidad, espacio libre y respeto de las señales.",
             "Verifica el tráfico en ambos sentidos y señaliza la maniobra.",
@@ -248,12 +250,13 @@ internal object VialLibrary {
     )
     fun normalize(value:String):String=Normalizer.normalize(value,Normalizer.Form.NFD)
         .replace(Regex("\\p{M}+"),"").lowercase(Locale.ROOT).trim()
+    private val searchIndex by lazy { articles.associate { item -> item.id to normalize(item.title+" "+item.keywords+" "+item.section+" "+item.summary+" "+item.points.joinToString(" ")) } }
     fun search(query:String,manual:Manual?,section:String?,favorites:Set<String>?=null):List<VialArticle>{
         val words=normalize(query).split(Regex("\\s+")).filter{it.isNotBlank()}
         return articles.filter{item->
             (manual==null||item.manual==manual) && (section==null||item.section==section) &&
                 (favorites==null||item.id in favorites) &&
-                words.all{word->normalize(item.title+" "+item.keywords+" "+item.section+" "+item.summary+" "+item.points.joinToString(" ")).contains(word)}
+                words.all{word->searchIndex.getValue(item.id).contains(word)}
         }
     }
 }

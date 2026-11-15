@@ -19,7 +19,17 @@ import androidx.compose.ui.unit.IntSize
 import kotlin.math.roundToInt
 
 /** Render the actual showroom mesh once for each model/paint/kit. Gameplay only draws bitmaps. */
+private data class RoadSpriteKey(val style:String,val argb:Int,val kit:GarageKit)
+private val roadSpriteCache=android.util.LruCache<RoadSpriteKey,ImageBitmap>(16)
+
+@Synchronized
 internal fun rasterizeRoadCar(style:String,color:Color,kit:GarageKit):ImageBitmap {
+    val key=RoadSpriteKey(style,color.toArgb(),kit)
+    roadSpriteCache.get(key)?.let { return it }
+    return renderRoadCar(style,color,kit).also { roadSpriteCache.put(key,it) }
+}
+
+private fun renderRoadCar(style:String,color:Color,kit:GarageKit):ImageBitmap {
     val mesh=buildCarMesh(style,kit)
     val camera=CarCamera(180f,78f)
     val faces=mesh.faces.filter(camera::visible).map{it to it.points.map(camera::project)}

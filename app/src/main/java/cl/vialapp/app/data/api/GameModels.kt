@@ -31,7 +31,9 @@ data class GamificationEventResponse(
     @SerializedName("event_type") val eventType: String = "",
     @SerializedName("xp_awarded") val xpAwarded: Int = 0,
     @SerializedName("points_awarded") val pointsAwarded: Int = 0,
-    @SerializedName("duplicate") val duplicate: Boolean = false
+    @SerializedName("duplicate") val duplicate: Boolean = false,
+    @SerializedName("streak_days") val streakDays: Int? = null,
+    @SerializedName("streak_active_today") val streakActiveToday: Boolean? = null
 )
 
 data class DailyMissionResponse(

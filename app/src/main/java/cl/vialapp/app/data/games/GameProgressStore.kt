@@ -96,14 +96,12 @@ class GameProgressStore(
         token: String
     ): GameProgressSnapshot = withContext(Dispatchers.IO) {
         val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
-        runCatching {
+        try {
             val response = api.getGamificationProgress(authHeader)
-            if (response.isSuccessful) {
-                response.body()?.let { remote ->
-                    applyRemoteProgress(remote)
-                }
-            }
-        }
+            if (response.isSuccessful) response.body()?.let(::applyRemoteProgress)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) { /* Keep last confirmed progress. */ }
         snapshot()
     }
 
@@ -118,7 +116,7 @@ class GameProgressStore(
         gameId: String,
         score: Int,
         durationSeconds: Int,
-        fallbackXp: Int = minOf(25, 5 + (score.coerceAtLeast(0) / 500)),
+        fallbackXp: Int = 0,
         eventId: String = UUID.randomUUID().toString()
     ): GameRunResult = withContext(Dispatchers.IO) {
         val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
@@ -147,11 +145,12 @@ class GameProgressStore(
             // Fallback a registro local si hay error de red
         }
 
-        val newHighScore = recordRun(gameId, score, fallbackXp)
+        // Offline records are personal only; never mint official XP or points.
+        val newHighScore = recordLocalHighScore(gameId, score)
         GameRunResult(
             isNewHighScore = newHighScore,
-            xpAwarded = fallbackXp.coerceAtLeast(0),
-            pointsAwarded = score.coerceAtLeast(0),
+            xpAwarded = 0,
+            pointsAwarded = 0,
             syncedWithBackend = false
         )
     }
@@ -209,6 +208,12 @@ class GameProgressStore(
      * jugar entrega XP y puede avanzar una misión diaria,
      * pero NO mantiene por sí solo la racha de estudio.
      */
+    fun recordLocalHighScore(gameId: String, score: Int): Boolean {
+        val best=score>getHighScore(gameId)
+        if(best)preferences.edit().putInt("${gameId}_high_score",score).apply()
+        return best
+    }
+
     fun recordRun(
         gameId: String,
         score: Int,
