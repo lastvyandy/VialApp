@@ -129,6 +129,18 @@ interface VialApi {
         @Path("testId") testId: Int
     ): Response<StudyTestResponse>
 
+    @GET("learning")
+    suspend fun getLearningPath(@Header("Authorization") authorization: String): Response<LearningPathResponse>
+
+    @GET("learning/{chapterId}")
+    suspend fun getLearningChapter(@Header("Authorization") authorization: String,
+        @Path("chapterId") chapterId: String): Response<LearningChapterResponse>
+
+    @POST("learning/{chapterId}/steps/{stepId}")
+    suspend fun answerLearningStep(@Header("Authorization") authorization: String,
+        @Path("chapterId") chapterId: String, @Path("stepId") stepId: String,
+        @Body request: LearningAnswerRequest): Response<LearningAnswerResponse>
+
     @GET("users/me/gamification/leaderboard/weekly")
     suspend fun getWeeklyLeaderboard(
         @Header("Authorization") authorization: String
