@@ -32,7 +32,7 @@ fun PelaoArenaScreen(userKey:String,onBack:()->Unit){
     ArcadeSession(userKey=userKey,gameId=GameProgressStore.PELAO_ARENA,title="Don Pelao Arena",
         subtitle="Combate y seguridad vial · tres rivales · seis escudos",
         rules="Mantén el mando izquierdo para moverte. Pulsa el puño para atacar, el escudo para bloquear y la flecha para esquivar. El rayo activa el especial al 100%. Cada rival posee dos escudos: responde correctamente para eliminarlos. El cronómetro se detiene durante los desafíos.",
-        duration=ArenaCombatEngine.TIME,create={ArenaCombatEngine()},onBack=onBack,showPlayMessages=false,
+        duration=ArenaCombatEngine.TIME,create={ArenaCombatEngine()},onBack=onBack,showPlayMessages=false,compactCombatHud=true,
         scene={f,m,enabled,act->
             if(f.phase==ArenaPhase.KNOWLEDGE && f.question!=null) ArenaKnowledgePanel(f,m,enabled,act)
             else CombatScene(f,m)

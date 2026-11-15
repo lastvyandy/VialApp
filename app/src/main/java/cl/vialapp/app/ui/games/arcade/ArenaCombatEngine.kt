@@ -31,7 +31,7 @@ internal data class ArenaCombatFrame(
     override val won get()=rival>3&&hp>0
     override val health get()="$hp HP"
     override val detail get()="${(rival-1).coerceIn(0,3)}/3 rivales · $knowledgeCorrect/6 escudos · $knowledgeMissed errores · combo ×$bestCombo"
-    override val lesson get()="La seguridad vial requiere observar, respetar la prioridad y anticipar riesgos. Rompe los escudos aplicando estos conocimientos; el combate es ficticio."
+    override val lesson get()=if(question!=null&&selected>=0)question.explanation else "La seguridad vial requiere observar, respetar la prioridad y anticipar riesgos. Rompe los escudos aplicando estos conocimientos; el combate es ficticio."
     val pose:PelaoPose get()=when{
         won->PelaoPose.VICTORY;finished->PelaoPose.DEFEAT;playerImpact>0f->PelaoPose.HIT
         evade>0f||guard>0f->PelaoPose.BLOCK
@@ -53,7 +53,7 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
     }
     override fun snapshot()=s
     override fun act(action:Int):ArenaCombatFrame{
-        if((s.finished&&s.phase!=ArenaPhase.KNOWLEDGE)||s.phase==ArenaPhase.ROUND_CLEAR)return s
+        if(s.finished||s.phase==ArenaPhase.ROUND_CLEAR)return s
         if(s.phase==ArenaPhase.KNOWLEDGE){
             val q=s.question ?: return s
             if(action in 20..22 && s.selected<0){
