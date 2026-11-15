@@ -884,6 +884,8 @@ fun VialAppNavigation(
 
                 ProgressScreen(
                     userKey = user.id,
+                    licenseClass = user.licenseClass,
+                    onPractice = { navigateTopLevel("practice") },
                     onOpenCollection = { navController.navigate("collection") }
                 )
             }

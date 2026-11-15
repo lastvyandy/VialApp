@@ -42,7 +42,9 @@ private val ProgressBackground: Color
 @Composable
 fun ProgressScreen(
     userKey: String,
-    onOpenCollection: () -> Unit = {}
+    onOpenCollection: () -> Unit = {},
+    licenseClass: String? = null,
+    onPractice: () -> Unit = {}
 ) {
 
     val context =
@@ -72,7 +74,7 @@ fun ProgressScreen(
     }
 
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(userKey, licenseClass) {
 
         loading = true
         error = ""
@@ -151,38 +153,8 @@ fun ProgressScreen(
         }
 
 
-        error.isNotEmpty() -> {
-
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            ProgressBackground
-                        )
-                        .padding(
-                            24.dp
-                        ),
-
-                contentAlignment =
-                    Alignment.Center
-            ) {
-
-                Text(
-                    text =
-                        error,
-
-                    color =
-                        ProgressRed
-                )
-            }
-        }
-
-
-        stats == null ||
-                stats?.summary?.hasData != true -> {
-
-            EmptyProgressState()
+        error.isNotEmpty() || stats == null || stats?.summary?.hasData != true -> {
+            EmptyProgressState(userKey, licenseClass, onPractice, onOpenCollection, error)
         }
 
 
@@ -192,7 +164,9 @@ fun ProgressScreen(
             ProgressContent(
                 stats = stats!!,
                 userKey = userKey,
-                onOpenCollection = onOpenCollection
+                onOpenCollection = onOpenCollection,
+                licenseClass = licenseClass,
+                onPractice = onPractice
             )
         }
     }
@@ -204,7 +178,9 @@ fun ProgressScreen(
 private fun ProgressContent(
     stats: AdvancedStatsResponse,
     userKey: String,
-    onOpenCollection: () -> Unit
+    onOpenCollection: () -> Unit,
+    licenseClass: String?,
+    onPractice: () -> Unit
 ) {
 
     val summary =
@@ -233,6 +209,8 @@ private fun ProgressContent(
             )
     ) {
 
+
+        item { ReadinessCard(userKey, licenseClass, onPractice) }
 
         item {
             CollectionEntryCard(onClick = onOpenCollection)
@@ -1205,80 +1183,36 @@ private fun RecentTestCard(
 
 
 @Composable
-private fun EmptyProgressState() {
-
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(
-                    ProgressBackground
-                )
-                .padding(
-                    28.dp
-                ),
-
-        horizontalAlignment =
-            Alignment.CenterHorizontally,
-
-        verticalArrangement =
-            Arrangement.Center
+private fun EmptyProgressState(
+    userKey: String,
+    licenseClass: String?,
+    onPractice: () -> Unit,
+    onOpenCollection: () -> Unit,
+    error: String
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(ProgressBackground),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 110.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-
-
-        Text(
-            text =
-                "📊",
-
-            fontSize =
-                54.sp
-        )
-
-
-        Spacer(
-            modifier =
-                Modifier.height(
-                    18.dp
-                )
-        )
-
-
-        Text(
-            text =
-                "Todavía no hay progreso que mostrar",
-
-            color =
-                ProgressDark,
-
-            fontSize =
-                22.sp,
-
-            fontWeight =
-                FontWeight.Bold
-        )
-
-
-        Spacer(
-            modifier =
-                Modifier.height(
-                    8.dp
-                )
-        )
-
-
-        Text(
-            text =
-                "Cuando completes tu primer examen, aquí podrás ver tus resultados y evolución.",
-
-            color =
-                ProgressGray,
-
-            fontSize =
-                15.sp,
-
-            lineHeight =
-                22.sp
-        )
+        item { ReadinessCard(userKey, licenseClass, onPractice) }
+        item { CollectionEntryCard(onClick = onOpenCollection) }
+        item { ProgressGamificationSection(userKey = userKey) }
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
+            ) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Historial de exámenes", color = ProgressDark, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                    Text(
+                        if (error.isNotBlank()) error else "Cuando completes tu primer examen, aquí podrás ver tus resultados y evolución.",
+                        color = ProgressGray
+                    )
+                }
+            }
+        }
     }
 }
 

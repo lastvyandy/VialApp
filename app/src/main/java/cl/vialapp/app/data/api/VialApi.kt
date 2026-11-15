@@ -130,6 +130,12 @@ interface VialApi {
         @Header("Authorization") authorization: String
     ): Response<List<CategoryStatResponse>>
 
+    @GET("users/me/stats/readiness")
+    suspend fun getExamReadiness(
+        @Header("Authorization") authorization: String,
+        @Query("clase_licencia") licenseClass: String? = null
+    ): Response<ExamReadinessResponse>
+
     @GET("users/me/stats/avanzadas")
     suspend fun getAdvancedStats(
         @Header("Authorization") authorization: String
