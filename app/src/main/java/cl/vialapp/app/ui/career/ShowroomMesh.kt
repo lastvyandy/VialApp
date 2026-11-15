@@ -31,9 +31,10 @@ private fun mix(a:Float,b:Float,t:Float)=a+(b-a)*t
 private fun face(points:List<V3>,finish:Finish,inside:V3):CarFace? {
     if(points.size<3)return null
     val center=points.reduce{a,b->a+b}*(1f/points.size)
-    var normal=(points[1]-points[0]).cross(points[2]-points[0]).unit()
-    // Some narrow panels have nearly collinear leading vertices.
-    if(normal.dot(normal)<.001f) normal=(points[1]-points[0]).cross(points.last()-points[0]).unit()
+    var sum=V3(0f,0f,0f)
+    // Newell-style area-weighted normal, robust for narrow or non-planar panels.
+    for(i in points.indices) sum=sum+(points[i]-center).cross(points[(i+1)%points.size]-center)
+    val normal=sum.unit()
     if(normal.dot(normal)<.001f)return null
     return CarFace(points,finish,if(normal.dot(center-inside)<0f)normal*(-1f) else normal,center)
 }
@@ -44,7 +45,8 @@ private class MeshBuilder {
         for(i in 0 until rings.lastIndex) {
             for(j in rings[i].indices) {
                 val k=(j+1)%rings[i].size
-                panel(f,inside,rings[i][j],rings[i][k],rings[i+1][k],rings[i+1][j])
+                val localInside=(rings[i]+rings[i+1]).reduce{a,b->a+b}*(1f/(rings[i].size+rings[i+1].size))
+                panel(f,localInside,rings[i][j],rings[i][k],rings[i+1][k],rings[i+1][j])
             }
         }
         face(rings.first(),f,inside)?.let{faces.add(it)}
@@ -58,36 +60,50 @@ private class MeshBuilder {
     }
 }
 
+private const val WHEEL_CLEARANCE=.085f
+internal fun wheelArchY(s:CarSpec,z:Float):Float {
+    val d=min(abs(z-s.wheelZ),abs(z+s.wheelZ))
+    val r=s.tire+WHEEL_CLEARANCE
+    return when{
+        d<=r -> max(.27f,s.tire+sqrt((r*r-d*d).coerceAtLeast(0f)))
+        d<r+.06f -> mix(s.tire,.27f,(d-r)/.06f)
+        else -> .27f
+    }
+}
 internal fun buildCarMesh(style:String, kit: GarageKit = GarageKit()):CarMesh {
     val s=carSpec(style)
     val b=MeshBuilder()
     val inside=V3(0f,s.belt*.66f,0f)
     val front=s.length
     val rear=-s.length
-    // Rounded cross-section rings. Four intermediate rings outline each wheel opening,
-    // rather than hiding the wheels underneath a rectangular flat body.
-    val zValues=mutableListOf(rear,rear+.14f,rear+.32f,-s.wheelZ-.55f,-s.wheelZ-.32f,
-        -s.wheelZ,-s.wheelZ+.32f,-s.wheelZ+.55f,s.cabinRear,0f,s.cabinFront,
-        s.wheelZ-.55f,s.wheelZ-.32f,s.wheelZ,s.wheelZ+.32f,s.wheelZ+.55f,front-.32f,front-.14f,front)
-        .map{it.coerceIn(rear,front)}.distinct().sorted()
-    fun top(z:Float):Float=when {
+    // The outer shell has actual open wheel arches. The central underbody is
+    // narrower than the inner tire face, so no wheel intersects a solid body slab.
+    val zValues=buildList<Float>{
+        addAll(listOf(rear,rear+.12f,rear+.30f,s.cabinRear,0f,s.cabinFront,front-.30f,front-.12f,front))
+        for(axle in listOf(-s.wheelZ,s.wheelZ)){
+            val radius=s.tire+WHEEL_CLEARANCE
+            add(axle-radius-.06f);add(axle+radius+.06f)
+            for(i in 0..18) add(axle+radius*cos(i*PI/18).toFloat())
+        }
+    }.map{it.coerceIn(rear,front)}.distinct().sorted()
+    fun baseTop(z:Float):Float=when {
         z < s.cabinRear -> mix(s.tail-.09f,s.belt,(z-rear)/(s.cabinRear-rear).coerceAtLeast(.1f))
         z > s.cabinFront -> mix(s.belt,s.hood-.10f,(z-s.cabinFront)/(front-s.cabinFront))
         else -> s.belt
     }
+    fun top(z:Float)=max(baseTop(z),wheelArchY(s,z)+.105f)
     fun ring(z:Float):List<V3>{
-        val end=(abs(z)-(s.length-.33f)).coerceAtLeast(0f)/.33f
+        val end=((abs(z)-(s.length-.33f)).coerceAtLeast(0f)/.33f).coerceAtMost(1f)
         val w=s.width*(1f-.13f*end)
-        val arcDistance=min(abs(z-s.wheelZ),abs(z+s.wheelZ))
-        val arcRadius=s.tire+.055f
-        val lower=if(arcDistance<arcRadius) max(.27f,s.tire+sqrt(arcRadius*arcRadius-arcDistance*arcDistance)) else .27f
+        val arch=wheelArchY(s,z)
         val y=top(z)
-        // Arch top never protrudes through hood; outer sculpted shoulder remains visible.
-        val arch=lower.coerceAtMost(y-.065f)
-        return listOf(V3(-w*.86f,arch,z),V3(-w, max(arch,y-.20f),z),
-            V3(-w*.94f,y-.045f,z),V3(-w*.76f,y,z),V3(w*.76f,y,z),
-            V3(w*.94f,y-.045f,z),V3(w,max(arch,y-.20f),z),V3(w*.86f,arch,z))
+        // Fender crowns rise above the tire; do not clamp the hole into the tire.
+        // A flatter, broad hood and sculpted shoulders give a cleaner silhouette.
+        return listOf(V3(-w*.86f,arch,z),V3(-w,max(arch+.027f,y-.20f),z),
+            V3(-w*.965f,y-.038f,z),V3(-w*.74f,y,z),V3(w*.74f,y,z),
+            V3(w*.965f,y-.038f,z),V3(w,max(arch+.027f,y-.20f),z),V3(w*.86f,arch,z))
     }
+    b.box(0f,.30f,0f,s.width*.57f,.145f,s.length-.16f,Finish.TRIM)
     b.ringBody(zValues.map(::ring),inside,Finish.PAINT)
 
     // Glasshouse: a broad roof, raked windshield and distinct rear hatch/sedan profile.
@@ -127,20 +143,32 @@ internal fun buildCarMesh(style:String, kit: GarageKit = GarageKit()):CarMesh {
             b.box(side*(s.width+.006f),bottom-.12f,-.86f,.014f,.025f,.13f,Finish.CHROME)
     }
 
-    // Front fascia sits directly on the nose: grille, air intakes and LED lamp lenses.
-    // A recessed dark base avoids the flat toy-like all-painted bumper.
+    // Separate recessed fascia and two matching lens assemblies. Each visible
+    // lens is a single bevelled polygon with positive distance from the body.
+    // Never place coplanar light polygons on the bumper or across each other.
     val noseW=s.width*.82f
     val grilleY=if(style=="suv").50f else .43f
-    b.box(0f,grilleY,front+.016f,noseW*.44f,.12f,.022f,Finish.GRILLE)
-    for(i in 0..2) b.box(0f,grilleY-.07f+i*.07f,front+.044f,noseW*.36f,.008f,.008f,Finish.CHROME)
+    b.box(0f,grilleY,front+.020f,noseW*.42f,.105f,.020f,Finish.GRILLE)
+    for(i in 0..2) b.box(0f,grilleY-.06f+i*.06f,front+.048f,noseW*.35f,.006f,.005f,Finish.CHROME)
+    fun lens(x:Float,y:Float,end:Float,finish:Finish){
+        val direction=if(end>0f)1f else -1f
+        fun panelAt(depth:Float,hw:Float,hh:Float,f:Finish){
+            val zz=end+direction*depth
+            val d=hw*.22f
+            b.panel(f,inside,V3(x-hw+d,y+hh,zz),V3(x+hw-d,y+hh,zz),
+                V3(x+hw,y+hh*.36f,zz),V3(x+hw-d,y-hh,zz),
+                V3(x-hw+d,y-hh,zz),V3(x-hw,y-hh*.36f,zz))
+        }
+        panelAt(.030f,noseW*.248f,.080f,Finish.GRILLE)
+        panelAt(.046f,noseW*.213f,.057f,finish)
+    }
     for(side in listOf(-1f,1f)){
         val x=side*noseW*.69f
-        val y=top(front)-.12f
-        b.box(x,y,front+.022f,noseW*.23f,.062f,.026f,Finish.HEADLAMP)
-        b.box(x,.35f,front+.02f,noseW*.16f,.042f,.016f,Finish.GRILLE)
-        b.box(x,top(rear)-.12f,rear-.026f,noseW*.23f,.064f,.026f,Finish.TAILLAMP)
+        lens(x,top(front)-.12f,front,Finish.HEADLAMP)
+        lens(x,top(rear)-.12f,rear,Finish.TAILLAMP)
+        b.box(x,.35f,front+.016f,noseW*.145f,.032f,.017f,Finish.GRILLE)
     }
-    b.box(0f,.44f,rear-.018f,noseW*.34f,.08f,.018f,Finish.TRIM)
+    b.box(0f,.44f,rear-.018f,noseW*.31f,.065f,.018f,Finish.TRIM)
     if(style=="sport" && kit.wing=="wing_stock"){
         for(side in listOf(-1f,1f)) b.box(side*.61f,s.tail+.07f,rear+.23f,.045f,.12f,.065f,Finish.TRIM)
         b.box(0f,s.tail+.19f,rear+.23f,s.width*.94f,.045f,.17f,Finish.PAINT)
@@ -159,8 +187,9 @@ internal fun buildCarMesh(style:String, kit: GarageKit = GarageKit()):CarMesh {
         val stripes=if(kit.decal=="decal_rally")listOf(-.16f to .11f,.16f to .11f) else listOf(0f to .22f)
         for((x,w) in stripes){
             val roofZ1=s.roofRear+.035f; val roofZ2=s.roofFront-.035f
-            b.panel(finish,cabin,V3(x-w,s.roof-.009f,roofZ1),V3(x+w,s.roof-.009f,roofZ1),
-                V3(x+w,s.roof+.009f,roofZ2),V3(x-w,s.roof+.009f,roofZ2))
+            fun roofY(z:Float)=mix(s.roof-.015f,s.roof,(z-s.roofRear)/(s.roofFront-s.roofRear))+.012f
+            b.panel(finish,cabin,V3(x-w,roofY(roofZ1),roofZ1),V3(x+w,roofY(roofZ1),roofZ1),
+                V3(x+w,roofY(roofZ2),roofZ2),V3(x-w,roofY(roofZ2),roofZ2))
             for(i in 0 until zValues.lastIndex){
                 val a=zValues[i];val z=zValues[i+1]
                 if(a>=s.cabinFront || z<=s.cabinRear){
@@ -176,9 +205,9 @@ internal fun buildCarMesh(style:String, kit: GarageKit = GarageKit()):CarMesh {
     val rim=when(kit.wheels){"wheels_black"->Finish.RIM_BLACK;"wheels_gold"->Finish.RIM_GOLD;else->Finish.RIM}
     // Four tires, machined rims and radial spokes, all in the same 3D depth pass.
     for(side in listOf(-1f,1f))for(z in listOf(-s.wheelZ,s.wheelZ)){
-        val center=V3(side*(s.width-.065f),s.tire,z)
-        val innerX=center.x-side*.12f
-        val outerX=center.x+side*.15f
+        val innerX=side*s.width*.65f
+        val outerX=side*s.width*.965f
+        val center=V3((innerX+outerX)*.5f,s.tire,z)
         val radius=s.tire
         fun wheelPoint(x:Float,r:Float,i:Int):V3 {
             val a=i*2.0*PI/24.0

@@ -1,5 +1,9 @@
 package cl.vialapp.app.ui.career
 
+import android.graphics.Bitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -30,6 +34,7 @@ private val studioBlue=Color(0xFF93C5FD)
 @Composable
 internal fun ShowroomView(style:String,paint:Color,angle:Float,onRotate:(Float)->Unit,modifier:Modifier=Modifier,kit:GarageKit=GarageKit()) {
     val mesh=remember(style,kit){buildCarMesh(style,kit)}
+    val renderer=remember{ShowroomRaster(512,358)}
     val bodyColor by animateColorAsState(paint,animationSpec=tween(260),label="paint")
     val currentRotate by rememberUpdatedState(onRotate)
     Canvas(modifier.aspectRatio(1.43f)
@@ -44,7 +49,7 @@ internal fun ShowroomView(style:String,paint:Color,angle:Float,onRotate:(Float)-
         scale(u,u,pivot=Offset.Zero){
             studio()
             neonUnderCar(kit,Offset(320f,321f),230f,82f)
-            drawModel(mesh,bodyColor,angle,Offset(320f,218f),112f)
+            renderer.draw(this,mesh,bodyColor,angle,640,448,320f,218f,112f)
         }
     }
 }
@@ -52,12 +57,13 @@ internal fun ShowroomView(style:String,paint:Color,angle:Float,onRotate:(Float)-
 @Composable
 internal fun ShowroomThumbnail(style:String,paint:Color,modifier:Modifier=Modifier,kit:GarageKit=GarageKit()) {
     val mesh=remember(style,kit){buildCarMesh(style,kit)}
+    val renderer=remember{ShowroomRaster(200,138)}
     Canvas(modifier.aspectRatio(1.45f)) {
         val u=minOf(size.width/200f,size.height/138f)
         scale(u,u,pivot=Offset.Zero){
             drawOval(Color(0x5510192A),Offset(20f,87f),Size(160f,32f))
             neonUnderCar(kit,Offset(100f,101f),76f,29f)
-            drawModel(mesh,paint,38f,Offset(100f,64f),36f)
+            renderer.draw(this,mesh,paint,38f,200,138,100f,64f,36f)
         }
     }
 }
@@ -119,27 +125,23 @@ internal fun surfaceColor(face:CarFace,base:Color):Color{
         Finish.CHROME -> lerp(Color(0xFF8FA7BA),Color(0xFFF8FAFC),.40f+key*.48f)
     }
 }
-private data class PaintedFace(val face:CarFace,val points:List<ScreenPoint>,val depth:Float)
-private fun DrawScope.drawModel(mesh:CarMesh,paint:Color,angle:Float,origin:Offset,unit:Float){
-    val camera=CarCamera(angle)
-    val visible=mesh.faces.asSequence().filter(camera::visible).map{face ->
-        val points=face.points.map(camera::project)
-        PaintedFace(face,points,points.map{it.depth}.average().toFloat())
-    }.sortedBy{it.depth}.toList()
-    for(panel in visible) {
-        val face=panel.face
-        val points=panel.points.map{origin+Offset(it.x*unit,it.y*unit)}
-        val path=Path().apply{moveTo(points.first().x,points.first().y);points.drop(1).forEach{lineTo(it.x,it.y)};close()}
-        val color=surfaceColor(face,paint)
-        val minY=points.minOf{it.y}; val maxY=points.maxOf{it.y}
-        // Gentle metallic reflection following surface normals; no hard outlines around every polygon.
-        if((face.finish==Finish.PAINT||face.finish==Finish.GLASS)&&abs(maxY-minY)>2f) {
-            drawPath(path,Brush.verticalGradient(listOf(lerp(color,Color.White,.07f),
-                color,lerp(color,Color(0xFF0A1420),.10f)),startY=minY,endY=maxY))
-        }else drawPath(path,color)
-        if(face.finish==Finish.GLASS){
-            drawPath(path,Color(0xFF0C1926).copy(alpha=.85f),style=Stroke(if(unit>65f)1.05f else .35f))
+/** Reuse the pixel/depth buffers and one bitmap. Redraw only on angle, paint or mesh change. */
+private class ShowroomRaster(private val width:Int,private val height:Int){
+    private val raster=CarDepthRaster(width,height)
+    private val bitmap=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
+    private val image=bitmap.asImageBitmap()
+    private var previousMesh:CarMesh?=null
+    private var previousPaint:Color?=null
+    private var previousAngle=Float.NaN
+    fun draw(scope:DrawScope,mesh:CarMesh,paint:Color,angle:Float,w:Int,h:Int,x:Float,y:Float,unit:Float){
+        if(previousMesh!==mesh||previousPaint!=paint||previousAngle!=angle){
+            val sx=width.toFloat()/w
+            val sy=height.toFloat()/h
+            raster.render(mesh,CarCamera(angle),x*sx,y*sy,unit*sx,unit*sy){surfaceColor(it,paint).toArgb()}
+            bitmap.setPixels(raster.pixels,0,width,0,0,width,height)
+            previousMesh=mesh;previousPaint=paint;previousAngle=angle
         }
+        with(scope){drawImage(image,dstSize=IntSize(w,h))}
     }
 }
 
