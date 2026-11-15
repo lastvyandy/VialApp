@@ -2,12 +2,12 @@ package cl.vialapp.app.ui.games.baldchallenge
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -778,18 +778,6 @@ fun BaldChallengeScreen(
     )
 
 
-    val timerColor by animateColorAsState(
-        targetValue =
-            when {
-                speedBonusExpired -> GameGray
-                secondsLeft <= 3 -> GameRed
-                secondsLeft <= 6 -> GameOrange
-                else -> GameGreen
-            },
-        label = "timerColor"
-    )
-
-
     val coachTitle =
         when {
             answered && answerWasCorrect && powerModeArmed ->
@@ -1433,6 +1421,20 @@ fun BaldChallengeScreen(
                 Spacer(
                     modifier = Modifier.height(17.dp)
                 )
+
+                if(answerWasCorrect){
+                    key(runId,currentIndex){
+                        ClassicPrecisionBonus(boss=isBossRound,onAward={points->
+                            if(!finished && answered && answerWasCorrect){
+                                score+=points
+                                earnedPoints+=points
+                                showPointsBurst=true
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
+                        })
+                    }
+                    Spacer(Modifier.height(12.dp))
+                }
 
                 Button(
                     onClick = {
@@ -2134,7 +2136,7 @@ private fun ClassicStage(round:Int,total:Int,correct:Int,answered:Boolean,right:
             repeat(total){index->
                 val active=index==round-1
                 val done=index<round-1 || active&&answered
-                Surface(Modifier.weight(1f).height(26.dp),color=if(active)accent else if(done)Color(0xFF2D7866)else Color(0xFF354763),
+                Surface(Modifier.weight(1f).height(26.dp),color=if(active)accent else if(done)Color(0xFF50627B)else Color(0xFF354763),
                     shape=RoundedCornerShape(8.dp)){
                     Box(contentAlignment=Alignment.Center){Text(if(index==total-1)"JEFE" else (index+1).toString(),
                         color=if(active)Color(0xFF172033)else Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold)}
@@ -2169,6 +2171,58 @@ private fun ClassicStage(round:Int,total:Int,correct:Int,answered:Boolean,right:
             Text("BONUS "+seconds+"s",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold)
             LinearProgressIndicator(progress={(seconds/10f).coerceIn(0f,1f)},modifier=Modifier.weight(1f).height(6.dp),color=accent,trackColor=Color(0xFF354763))
             Text(correct.toString()+"/"+total+" aciertos",color=Color.White,fontSize=10.sp)
+        }
+    }
+}
+
+
+/** Optional one-shot timing bonus; never blocks continuing. */
+@Composable
+private fun ClassicPrecisionBonus(boss:Boolean,onAward:(Int)->Unit){
+    val marker=remember{Animatable(0f)}
+    var status by remember{mutableIntStateOf(0)}
+    val bonus=if(boss)80 else 40
+    val low=if(boss).48f else .42f
+    val high=if(boss).62f else .68f
+    val started=status==1
+    LaunchedEffect(started){
+        if(started){
+            marker.snapTo(0f)
+            marker.animateTo(1f,tween(if(boss)1050 else 1500,easing=LinearEasing))
+            if(status==1)status=3
+        }
+    }
+    Surface(shape=RoundedCornerShape(16.dp),color=Color(0xFF203550),modifier=Modifier.fillMaxWidth()){
+        Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+            Text(if(boss)"GOLPE DE PRECISIÓN FINAL" else "BONUS DE REFLEJOS",color=Color(0xFFBFDBFE),
+                fontSize=11.sp,fontWeight=FontWeight.ExtraBold)
+            Text(when(status){
+                2->"¡Golpe perfecto! +"+bonus+" puntos"
+                3->"Se escapó el bonus. Sigue con la próxima ronda."
+                else->"Atrapa el marcador dentro de la zona verde · +"+bonus+" pts"
+            },color=if(status==2)Color(0xFF86EFAC)else Color.White,fontSize=13.sp)
+            if(status<2){
+                Canvas(Modifier.fillMaxWidth().height(24.dp)){
+                    drawRoundRect(Color(0xFF101D30),cornerRadius=CornerRadius(8.dp.toPx()))
+                    val span=(size.width-8.dp.toPx()).coerceAtLeast(0f)
+                    val start=4.dp.toPx()
+                    drawRoundRect(Color(0xFF3FAE77),Offset(start+span*low,0f),
+                        Size(span*(high-low),size.height),CornerRadius(5.dp.toPx()))
+                    val x=span*marker.value+start
+                    drawRoundRect(Color(0xFFFDE68A),Offset(x-3.dp.toPx(),2.dp.toPx()),
+                        Size(6.dp.toPx(),size.height-4.dp.toPx()),CornerRadius(3.dp.toPx()))
+                }
+                Button(onClick={
+                    if(status==0)status=1
+                    else if(status==1){
+                        val success=marker.value in low..high
+                        status=if(success)2 else 3
+                        if(success)onAward(bonus)
+                    }
+                },modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF356CC4),contentColor=Color.White)){
+                    Text(if(status==0)"Intentar bonus" else "¡GOLPEAR!",fontWeight=FontWeight.Bold)
+                }
+            }
         }
     }
 }

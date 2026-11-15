@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.text.font.FontWeight
@@ -86,7 +87,8 @@ private fun FightScene(frame: FightFrame, modifier: Modifier) {
                     fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
                 )
                 Text(if (opening) "VENTANA DE ATAQUE" else if(counter) "CONTRAATAQUE" else if (frame.phase == FightPhase.TELEGRAPH) "ELIGE UNA DECISIÓN SEGURA" else "PREPARACIÓN", color = Color(0xFFDBEAFE), fontSize = 10.sp)
-                LinearProgressIndicator(progress = { (frame.remaining / (if(counter) 1.4f else if (opening) 3.2f else 6f)).coerceIn(0f, 1f) },
+                if(opening)Text(frame.hazard.advice,color=Color(0xFFDBEAFE),fontSize=10.sp,textAlign=TextAlign.Center,maxLines=2)
+                LinearProgressIndicator(progress = { (frame.remaining / (if(counter) (if(frame.boss==2)1.4f else 1f) else if (opening) 3.2f else 6f)).coerceIn(0f, 1f) },
                     Modifier.fillMaxWidth().height(4.dp), color = if (opening) Color(0xFF86EFAC) else Color(0xFFFBBF24), trackColor = Color(0xFF172033))
             }
         }
@@ -142,7 +144,13 @@ private fun FightScene(frame: FightFrame, modifier: Modifier) {
                     .width(maxWidth * .53f)
                     .height(maxHeight * .85f)
             ) {
-                PelaoSprite(pose, Modifier.fillMaxSize())
+                PelaoSprite(pose, Modifier.fillMaxSize().graphicsLayer {
+                        val t=(frame.poseTime/.55f).coerceIn(0f,1f)
+                        translationX=when{attacking->18.dp.toPx()*t; takingDamage->-10.dp.toPx()*t; pose==PelaoPose.BLOCK && frame.dodges>0->-12.dp.toPx()*t;else->0f}
+                        rotationZ=when{attacking->-7f*t;takingDamage->9f*t;else->0f}
+                        scaleX=if(attacking)1f+.06f*t else 1f
+                        scaleY=scaleX
+                    })
             }
             if (takingDamage && frame.impact > 0f) {
                 Box(Modifier.matchParentSize().background(Color(0xFFEF4444).copy(alpha = .16f)))

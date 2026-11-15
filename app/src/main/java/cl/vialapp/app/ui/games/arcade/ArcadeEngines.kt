@@ -234,7 +234,7 @@ internal data class FightFrame(
         else -> PelaoPose.IDLE
     }
     override val health get() = "$hp HP"
-    override val detail get() = "${(boss - 1).coerceAtMost(3)}/3 rivales · $correctDecisions decisiones correctas"
+    override val detail get() = "${(boss - 1).coerceAtMost(3)}/3 rivales · $correctDecisions decisiones · $dodges esquivas"
     override val lesson get() = "Detente ante PARE, luz roja y peatones que cruzan delante de ti. Reduce la velocidad si hay poca visibilidad y conserva la distancia de seguridad."
 }
 
@@ -280,7 +280,7 @@ internal class FightEngine(seed: Int = Random.nextInt()) : ArcadeEngine<FightFra
                     else hit.copy(boss=s.boss+1,bossHp=100+s.boss*20,phase=FightPhase.RECOVERY,
                         remaining=1.2f,score=hit.score+250,hp=(hit.hp+15).coerceAtMost(100),combo=0,
                         message="¡Rival derrotado! Recuperas 15 HP.")
-                }else if(s.boss>=2 && hit.openingHits>=if(s.boss==2)3 else 2){
+                }else if(s.boss>=2 && hit.openingHits >= (if(s.boss==2)3 else 2)){
                     hit.copy(phase=FightPhase.COUNTER,remaining=if(s.boss==2)1.4f else 1.0f,
                         message="¡Contraataque! Esquiva ahora.")
                 }else hit
