@@ -1,5 +1,6 @@
 package cl.vialapp.app.ui.games.arcade
 
+import cl.vialapp.app.ui.rewards.LocalRewards
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -59,6 +60,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
     var saving by remember { mutableStateOf(false) }
     var record by remember(userKey, gameId) { mutableIntStateOf(store.getHighScore(gameId)) }
     val c = MaterialTheme.colorScheme
+    val rewards=LocalRewards.current
     val haptic = LocalHapticFeedback.current
 
     fun start() {
@@ -130,6 +132,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
             } else {
                 GameRunResult(store.recordLocalHighScore(gameId, frame.score), 0, 0, false)
             }
+            reward?.takeIf{it.syncedWithBackend}?.let{rewards.show("Partida guardada",it.coinsAwarded,it.xpAwarded)}
             record = store.getHighScore(gameId)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) {
@@ -242,7 +245,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
             if (reward?.isNewHighScore == true) Text("¡Nuevo récord!", color = c.primary, fontWeight = FontWeight.Bold)
             if (saving) CircularProgressIndicator(Modifier.size(24.dp))
             else reward?.let {
-                Text(if (it.syncedWithBackend) "+${it.xpAwarded} XP" else "Récord local · XP no confirmado", color = c.primary)
+                Text(if (it.syncedWithBackend) "+${it.xpAwarded} XP"+(if(it.coinsAwarded>0)" · +${it.coinsAwarded} monedas" else "") else "Récord local · XP no confirmado", color = c.primary)
             }
             Button(onClick = ::start, enabled = !saving, modifier = Modifier.fillMaxWidth().height(54.dp)) { Text("Jugar otra vez") }
             OutlinedButton(onClick = onBack, enabled = !saving, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Volver a minijuegos") }

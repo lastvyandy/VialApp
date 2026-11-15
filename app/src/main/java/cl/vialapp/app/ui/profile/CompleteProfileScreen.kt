@@ -1,5 +1,9 @@
 package cl.vialapp.app.ui.profile
 
+import cl.vialapp.app.ui.auth.AuthAction
+import cl.vialapp.app.ui.auth.authResponseError
+import cl.vialapp.app.ui.auth.authNetworkError
+import kotlinx.coroutines.CancellationException
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -280,15 +284,12 @@ fun CompleteProfileScreen(
                         } else {
 
                             errorMessage =
-                                "No se pudo completar tu perfil"
+                                authResponseError(response,AuthAction.PROFILE)
                         }
 
-                    } catch (e: Exception) {
-
-                        errorMessage =
-                            "Error de conexión con VialApp"
-
-                        println(e)
+                    } catch (e: CancellationException) { throw e }
+                    catch (e: Exception) {
+                        errorMessage = authNetworkError(e)
 
                     } finally {
 

@@ -1,5 +1,6 @@
 package cl.vialapp.app.ui.gamification
 
+import cl.vialapp.app.ui.rewards.LocalRewards
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -90,6 +91,7 @@ fun HomeXpCard(
     }
 
 
+    val rewards=LocalRewards.current
     // Estado fuera del key de refresco: no se pierde al recargar la misión.
     var claimedReward by remember(userKey) {
         mutableStateOf<GamificationEventResponse?>(null)
@@ -116,6 +118,11 @@ fun HomeXpCard(
                         levelReached = reachedLevel,
                         embedded = true
                     )
+                    val coins=cl.vialapp.app.ui.rewards.coinsFromAward(reward.totalXp,reward.xpAwarded)
+                    if(coins>0) Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
+                        cl.vialapp.app.ui.rewards.RewardCoinArt(Modifier.size(58.dp))
+                        Text("+$coins monedas",color=GamificationOrange,fontWeight=FontWeight.Bold,fontSize=21.sp)
+                    }
                     Text(
                         text = "+${reward.xpAwarded} XP",
                         color = GamificationGreen,
@@ -191,7 +198,8 @@ fun HomeXpCard(
                 store = store,
                 onXpUpdated = { reward ->
                     if (!reward.duplicate && reward.xpAwarded > 0) {
-                        claimedReward = reward
+                        if(MascotReactions.isSupported(mascotId)) claimedReward = reward
+                        rewards.xp("Misión completada",reward.totalXp,reward.xpAwarded)
                     }
                     refreshKey++
                 }
@@ -327,7 +335,8 @@ private fun RemoteDailyMissionSection(
                                                     gamesPlayed = reward.gamesPlayed,
                                                     level = reward.level,
                                                     xpInLevel = reward.xpInLevel,
-                                                    xpToNextLevel = reward.xpToNextLevel
+                                                    xpToNextLevel = reward.xpToNextLevel,
+                                                    streakDays=reward.streakDays,streakActiveToday=reward.streakActiveToday
                                                 )
                                             )
 
@@ -343,7 +352,8 @@ private fun RemoteDailyMissionSection(
                                         }
                                     }
                                 }
-                            } catch (e: Exception) {
+                            } catch (cancelled:kotlinx.coroutines.CancellationException){throw cancelled}
+                            catch (e: Exception) {
                                 error = "Error de conexión al reclamar la misión."
                             } finally {
                                 claiming = false

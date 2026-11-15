@@ -1,5 +1,6 @@
 package cl.vialapp.app.ui.learning
 
+import cl.vialapp.app.ui.rewards.LocalRewards
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -32,6 +33,7 @@ internal fun LearningActivityScreen(
     mascotId: String?, onUpdate: (LearningProgress) -> Unit, onBack: () -> Unit
 ) {
     val c = MaterialTheme.colorScheme
+    val rewards=LocalRewards.current
     val context = LocalContext.current
     val session = remember(context) { SessionManager(context) }
     val store = remember(context, userKey) { GameProgressStore(context, userKey) }
@@ -73,6 +75,7 @@ internal fun LearningActivityScreen(
                         store.applyRemoteProgress(body.gamification)
                         onUpdate(body.progress)
                         xp += body.xpAwarded
+                        rewards.xp("Actividad completada",body.gamification.totalXp,body.xpAwarded)
                         if (body.correct) correct++
                         feedback = body
                     } else error = if (response.code() == 409) "Completa primero las actividades anteriores. Vuelve a la etapa y actualiza."

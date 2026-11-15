@@ -49,7 +49,8 @@ data class GameRunResult(
     val isNewHighScore: Boolean,
     val xpAwarded: Int,
     val pointsAwarded: Int,
-    val syncedWithBackend: Boolean
+    val syncedWithBackend: Boolean,
+    val coinsAwarded:Int=0
 )
 
 
@@ -134,9 +135,10 @@ class GameProgressStore(
                 val newHighScore = applyRemoteGameEvent(gameId, score, event)
                 return@withContext GameRunResult(
                     isNewHighScore = newHighScore,
-                    xpAwarded = event.xpAwarded,
-                    pointsAwarded = event.pointsAwarded,
-                    syncedWithBackend = true
+                    xpAwarded = if(event.duplicate)0 else event.xpAwarded,
+                    pointsAwarded = if(event.duplicate)0 else event.pointsAwarded,
+                    syncedWithBackend = true,
+                    coinsAwarded=if(event.duplicate)0 else cl.vialapp.app.ui.rewards.coinsFromAward(event.totalXp,event.xpAwarded)
                 )
             }
         } catch (cancelled: CancellationException) {

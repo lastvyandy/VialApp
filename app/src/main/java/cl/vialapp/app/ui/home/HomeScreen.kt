@@ -1,5 +1,6 @@
 package cl.vialapp.app.ui.home
 
+import cl.vialapp.app.ui.rewards.LocalRewards
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -92,6 +93,16 @@ fun HomeScreen(
         mutableStateOf<ExamAttemptResponse?>(null)
     }
 
+    val rewards=LocalRewards.current
+    var wallet by remember(user.id){mutableStateOf<Int?>(null)}
+    LaunchedEffect(user.id,rewards.serial){
+        try {
+            val response=AuthenticatedRead.get(sessionManager,"wallet"){ApiClient.api.getCareer(it)}
+            if(response.isSuccessful)wallet=response.body()?.coins
+            else response.errorBody()?.close()
+        }catch(cancelled:CancellationException){throw cancelled}
+        catch(_:Exception){}
+    }
     var journey by remember(user.id) { mutableStateOf<List<LearningChapterSummary>?>(null) }
     var journeyLoading by remember(user.id) { mutableStateOf(true) }
     var journeyError by remember(user.id) { mutableStateOf<String?>(null) }
@@ -357,6 +368,26 @@ fun HomeScreen(
             }
         }
 
+
+        item(key="wallet_shortcut"){
+            val amount=wallet
+            val dark=LocalVialAppearance.current.dark
+            val gold=if(dark)Color(0xFFFFD77C)else Color(0xFF80520A)
+            Card(onClick=onGarage,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(19.dp),
+                colors=CardDefaults.cardColors(containerColor=if(dark)Color(0xFF3E331C)else Color(0xFFFFF2D6))){
+                Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
+                    Icon(painterResource(R.drawable.ic_vial_coin),null,tint=gold,modifier=Modifier.size(32.dp))
+                    Column(Modifier.weight(1f)){
+                        if(amount!=null){
+                            val shown by androidx.compose.animation.core.animateIntAsState(amount,label="homeWallet")
+                            Text("$shown monedas",color=gold,fontWeight=FontWeight.ExtraBold,fontSize=19.sp)
+                        }else Text("Mis monedas",color=gold,fontWeight=FontWeight.Bold,fontSize=17.sp)
+                        Text("Personaliza tu vehículo en el garaje",color=gold,fontSize=12.sp)
+                    }
+                    Text("›",color=gold,fontSize=26.sp)
+                }
+            }
+        }
 
         // Recomendación de refuerzo
         item {

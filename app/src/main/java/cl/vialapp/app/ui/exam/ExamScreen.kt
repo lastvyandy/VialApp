@@ -1,5 +1,6 @@
 package cl.vialapp.app.ui.exam
 
+import cl.vialapp.app.ui.rewards.LocalRewards
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -64,6 +65,7 @@ fun ExamScreen(
     mascotId: String? = null
 ) {
 
+    val rewards=LocalRewards.current
     val context =
         LocalContext.current
 
@@ -331,6 +333,7 @@ fun ExamScreen(
                                 attemptId = currentAttempt.attemptId,
                                 reward = confirmedReward
                             )
+                        rewards.xp("Examen completado",confirmedReward.totalXp,examXpEarned)
 
                     } else {
 
