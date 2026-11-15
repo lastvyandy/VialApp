@@ -24,6 +24,8 @@ import cl.vialapp.app.R
 import cl.vialapp.app.data.api.*
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
+import cl.vialapp.app.data.session.AuthenticatedRead
+import cl.vialapp.app.data.session.readError
 import kotlinx.coroutines.CancellationException
 
 internal data class StudyStep(val id: String, val title: String, val blocks: List<com.google.gson.JsonElement>, val question: LearningQuestion)
@@ -64,7 +66,7 @@ fun LearningChapterScreen(userKey: String, chapterId: String, mascotId: String?,
             val token = session.getAccessToken()
             if (token.isNullOrBlank()) error = "Inicia sesión para estudiar."
             else {
-                val response = ApiClient.api.getLearningChapter("Bearer $token", chapterId)
+                val response = AuthenticatedRead.get(session,"learning chapter"){ApiClient.api.getLearningChapter(it,chapterId)}
                 val body = response.body()
                 if (response.isSuccessful && body != null) {
                     chapter = body.chapter
@@ -74,10 +76,10 @@ fun LearningChapterScreen(userKey: String, chapterId: String, mascotId: String?,
                         autoResumed=true
                         activity=pendingLearningActivity(body.chapter,body.progress)
                     }
-                } else error = "No se pudo abrir esta etapa."
+                } else {error = if(response.isSuccessful)"Respuesta de etapa vacía." else readError(response.code());response.errorBody()?.close()}
             }
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { error = "No se pudo conectar con VialApp." }
+        catch (e: Exception) { error = readError(e) }
         finally { loading = false }
     }
 

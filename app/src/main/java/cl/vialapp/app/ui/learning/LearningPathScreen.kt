@@ -29,6 +29,8 @@ import cl.vialapp.app.data.api.ApiClient
 import cl.vialapp.app.data.api.LearningChapterSummary
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
+import cl.vialapp.app.data.session.AuthenticatedRead
+import cl.vialapp.app.data.session.readError
 import cl.vialapp.app.ui.simulator.SimulatorEntry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -75,9 +77,9 @@ fun LearningPathScreen(
             val token=session.getAccessToken()
             if(token.isNullOrBlank())error="Inicia sesión para continuar tu ruta."
             else{
-                val response=ApiClient.api.getLearningPath("Bearer "+token)
+                val response=AuthenticatedRead.get(session,"learning"){ApiClient.api.getLearningPath(it)}
                 val body=response.body()
-                if(!response.isSuccessful||body==null)error="No se pudo consultar la ruta."
+                if(!response.isSuccessful||body==null){error=if(response.isSuccessful)"No se pudo consultar la ruta: respuesta vacía." else readError(response.code());response.errorBody()?.close()}
                 else{
                     chapters=body.chapters.sortedBy{it.order}
                     streak=body.gamification.streakDays?:0
@@ -85,7 +87,7 @@ fun LearningPathScreen(
                 }
             }
         }catch(cancelled:CancellationException){throw cancelled}
-        catch(_:Exception){error="No se pudo conectar con VialApp."}
+        catch(e:Exception){error=readError(e)}
         finally{loading=false}
     }
     val next=nextChapterIndex(chapters)

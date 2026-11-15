@@ -45,7 +45,7 @@ internal fun HomeJourneyCard(
     userKey:String, licenseText:String, licenseClass:String?,
     chapters:List<LearningChapterSummary>?, loading:Boolean,
     onPath:()->Unit, onContinue:(String)->Unit, onExam:()->Unit,
-    onPractice:()->Unit
+    onPractice:()->Unit,error:String?=null,onRetry:()->Unit={}
 ) {
     val vehicle=rememberJourneyVehicle(userKey)
     val next=chapters?.let{it.getOrNull(nextChapterIndex(it))}
@@ -81,6 +81,10 @@ internal fun HomeJourneyCard(
                 Text("Consultando tu avance…",color=fg,fontSize=13.sp)
             }
             else -> Text("Abre el recorrido para consultar tus etapas. El avance se sincroniza con tu cuenta.",color=fg,fontSize=13.sp)
+        }
+        if(error!=null){
+            Text(if(count>0) "Último avance consultado · "+error else error,color=fg,fontSize=12.sp)
+            TextButton(onClick=onRetry,colors=ButtonDefaults.textButtonColors(contentColor=Color.White)){Text("Reintentar conexión")}
         }
         Button(onClick={if(next!=null)onContinue(next.id) else onPath()},
             modifier=Modifier.fillMaxWidth().heightIn(min=50.dp),shape=RoundedCornerShape(15.dp),

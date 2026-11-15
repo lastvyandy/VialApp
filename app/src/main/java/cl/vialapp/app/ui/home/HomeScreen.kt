@@ -26,6 +26,8 @@ import cl.vialapp.app.data.api.LearningChapterSummary
 import cl.vialapp.app.ui.learning.HomeJourneyCard
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
+import cl.vialapp.app.data.session.AuthenticatedRead
+import cl.vialapp.app.data.session.readError
 import cl.vialapp.app.ui.gamification.HomeXpCard
 import cl.vialapp.app.ui.games.GamesQuickEntry
 import cl.vialapp.app.ui.career.CareerShortcuts
@@ -92,14 +94,20 @@ fun HomeScreen(
 
     var journey by remember(user.id) { mutableStateOf<List<LearningChapterSummary>?>(null) }
     var journeyLoading by remember(user.id) { mutableStateOf(true) }
-    LaunchedEffect(user.id, user.licenseClass) {
+    var journeyError by remember(user.id) { mutableStateOf<String?>(null) }
+    var xpError by remember(user.id) { mutableStateOf<String?>(null) }
+    var retrySync by remember(user.id) { mutableIntStateOf(0) }
+    LaunchedEffect(user.id, user.licenseClass,retrySync) {
         journeyLoading = true
+        journeyError = null
         try {
-            val token=sessionManager.getAccessToken()
-            val response=token?.let{ApiClient.api.getLearningPath("Bearer "+it)}
-            journey=response?.takeIf{it.isSuccessful}?.body()?.chapters?.sortedBy{it.order}
+            val response=AuthenticatedRead.get(sessionManager,"learning"){ApiClient.api.getLearningPath(it)}
+            val body=response.body()?.takeIf{response.isSuccessful}
+            if(body!=null) journey=body.chapters.sortedBy{it.order}
+            else journeyError=if(response.isSuccessful)"La respuesta del recorrido está vacía." else readError(response.code())
+            response.errorBody()?.close()
         } catch(cancelled:CancellationException){throw cancelled}
-        catch(_:Exception){journey=null}
+        catch(e:Exception){journeyError=readError(e)}
         finally{journeyLoading=false}
     }
 
@@ -117,17 +125,19 @@ fun HomeScreen(
 
 
 
-    LaunchedEffect(user.id, user.licenseClass) {
+    LaunchedEffect(user.id, user.licenseClass,retrySync) {
 
         dashboardLoading = true
 
         xpLoaded = false
         xpLoadFailed = false
+        xpError = null
 
         val token = sessionManager.getAccessToken()
 
         if (token == null) {
             xpLoadFailed = true
+            xpError = "Inicia sesión para continuar."
             dashboardLoading = false
             return@LaunchedEffect
         }
@@ -137,23 +147,24 @@ fun HomeScreen(
         coroutineScope {
             launch {
                 try {
-                    val response=ApiClient.api.getGamificationProgress("Bearer $token")
+                    val response=AuthenticatedRead.get(sessionManager,"gamification"){ApiClient.api.getGamificationProgress(it)}
                     val remote=response.body()?.takeIf { response.isSuccessful }
                     if(remote!=null){progressStore.applyRemoteProgress(remote);xpLoaded=true}
-                    else xpLoadFailed=true
+                    else {xpLoadFailed=true;xpError=if(response.isSuccessful)"Respuesta de experiencia vacía." else readError(response.code())}
+                    response.errorBody()?.close()
                 } catch(e:CancellationException){throw e}
-                catch(_:Exception){xpLoadFailed=true}
+                catch(e:Exception){xpLoadFailed=true;xpError=readError(e)}
             }
             launch {
                 try {
-                    val response=ApiClient.api.getAdvancedStats("Bearer $token")
+                    val response=AuthenticatedRead.get(sessionManager,"stats"){ApiClient.api.getAdvancedStats(it)}
                     if(response.isSuccessful)stats=response.body()
                 } catch(e:CancellationException){throw e}
                 catch(_:Exception){}
             }
             launch {
                 try {
-                    val response=ApiClient.api.getActiveAttempt("Bearer $token")
+                    val response=AuthenticatedRead.get(sessionManager,"active exam"){ApiClient.api.getActiveAttempt(it)}
                     if(response.isSuccessful)activeAttempt=response.body()?.takeIf{it.status=="active"}
                 } catch(e:CancellationException){throw e}
                 catch(_:Exception){}
@@ -300,7 +311,8 @@ fun HomeScreen(
 
         item(key="home_journey") {
             HomeJourneyCard(user.id,licenseText,user.licenseClass,journey,journeyLoading,
-                onPath=onLearningPath,onContinue=onContinueChapter,onExam=onExam,onPractice=onPractice)
+                onPath=onLearningPath,onContinue=onContinueChapter,onExam=onExam,onPractice=onPractice,
+                error=journeyError,onRetry={retrySync++})
         }
 
         item {
@@ -314,10 +326,13 @@ fun HomeScreen(
                 }
 
                 xpLoadFailed -> {
-                    Text(
-                        text = "No se pudo sincronizar tu experiencia.",
-                        color = HomeRed
-                    )
+                    Surface(shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.surface){
+                        Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+                            Text("No se pudo sincronizar tu experiencia.",fontWeight=FontWeight.Bold,color=HomeDark)
+                            Text(xpError?:"Comprueba tu conexión.",fontSize=13.sp,color=HomeGray)
+                            TextButton(onClick={retrySync++}){Text("Reintentar sincronización")}
+                        }
+                    }
                 }
 
                 else -> {

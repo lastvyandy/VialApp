@@ -31,6 +31,8 @@ import cl.vialapp.app.ui.mascot.MascotReactionCard
 import cl.vialapp.app.ui.mascot.MascotReactions
 import cl.vialapp.app.ui.mascot.MascotReaction
 import cl.vialapp.app.data.session.SessionManager
+import cl.vialapp.app.data.session.AuthenticatedRead
+import cl.vialapp.app.data.session.readError
 import kotlinx.coroutines.launch
 import cl.vialapp.app.data.games.DailyMissionSnapshot
 import cl.vialapp.app.data.games.GameProgressSnapshot
@@ -236,9 +238,7 @@ private fun RemoteDailyMissionSection(
             if (token.isNullOrBlank()) {
                 error = "No hay una sesión activa."
             } else {
-                val response = ApiClient.api.getTodayMission(
-                    authorization = "Bearer $token"
-                )
+                val response = AuthenticatedRead.get(sessionManager,"daily mission"){ApiClient.api.getTodayMission(it)}
 
                 if (response.isSuccessful) {
                     mission = response.body()
@@ -247,11 +247,12 @@ private fun RemoteDailyMissionSection(
                         error = "La misión no está disponible."
                     }
                 } else {
-                    error = "Error al cargar la misión (HTTP ${response.code()})."
+                    error = readError(response.code());response.errorBody()?.close()
                 }
             }
-        } catch (e: Exception) {
-            error = "No se pudo conectar con el servidor."
+        } catch (cancelled:kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (e: Exception) {
+            error = readError(e)
         } finally {
             loading = false
         }
