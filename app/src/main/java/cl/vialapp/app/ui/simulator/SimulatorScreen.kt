@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,7 +27,7 @@ import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.mascot.MascotReactionCard
 import cl.vialapp.app.ui.mascot.MascotReaction
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
 fun SimulatorEntry(onClick: () -> Unit) {
@@ -112,21 +114,37 @@ fun SimulatorScreen(userKey: String, mascotId: String?, onBack: () -> Unit) {
 private fun ScenarioPlay(scenario:DrivingScenario,mascotId:String?,manager:SessionManager,store:GameProgressStore,
                          onExit:()->Unit,onSaved:()->Unit) {
     val c=MaterialTheme.colorScheme
-    val scope=rememberCoroutineScope()
-    var stage by remember { mutableIntStateOf(0) }
-    var attempts by remember { mutableStateOf(List(scenario.steps.size) { emptyList<Int>() }) }
-    var warning by remember { mutableStateOf(false) }
-    var moving by remember { mutableStateOf(false) }
+    var play by remember { mutableStateOf(ScenarioDecisionState.start(scenario.steps.size)) }
+    val stage=play.stage
+    val attempts=play.attempts
+    val moving=play.transitioning
+    val finished=play.finished
+    val step=scenario.steps.getOrNull(stage)
+    val rejected=attempts.getOrNull(stage).orEmpty()
+    val warning=step!=null && rejected.isNotEmpty() && !moving
     var exitDialog by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
     var result by remember { mutableStateOf<SimulatorCompletionResponse?>(null) }
     var saveError by remember { mutableStateOf(false) }
     val motion=remember { Animatable(0f) }
-    val finished=stage>=scenario.steps.size
     val errors=attempts.mapIndexed { i, a -> a.count { it!=scenario.steps[i].correct } }.sum()
+
+    // The state owns the transition, not a reused answer button. Even if the
+    // animation is interrupted, the next decision cannot inherit its lock.
+    LaunchedEffect(stage,moving) {
+        if (!moving) return@LaunchedEffect
+        try {
+            withTimeoutOrNull(2500L) {
+                motion.animateTo((stage+1).toFloat(),tween(durationMillis=if(stage==1) 1450 else 850))
+            }
+            motion.snapTo((stage+1).toFloat())
+        } finally {
+            play=play.advance(stage)
+        }
+    }
     fun leave() {
-        if (moving || saving) return
+        if (saving) return
         if (result!=null || attempts.all { it.isEmpty() }) onExit() else exitDialog=true
     }
     BackHandler { leave() }
@@ -151,71 +169,55 @@ private fun ScenarioPlay(scenario:DrivingScenario,mascotId:String?,manager:Sessi
         catch (_:Exception) { saveError=true }
         finally { saving=false }
     }
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal=18.dp,vertical=12.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item {
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                TextButton(onClick=::leave,enabled=!moving&&!saving){Text("‹ Escenarios")}
-                Spacer(Modifier.weight(1f))
-                Text(stage.coerceAtMost(scenario.steps.size).toString()+"/"+scenario.steps.size,color=c.primary,fontWeight=FontWeight.Bold)
-            }
-            Text(scenario.title,fontSize=24.sp,fontWeight=FontWeight.ExtraBold,color=c.onSurface)
-            LinearProgressIndicator(progress={stage.toFloat()/scenario.steps.size.coerceAtLeast(1)},
-                modifier=Modifier.fillMaxWidth().height(6.dp))
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+            TextButton(onClick=::leave,enabled=!saving){Text("‹ Escenarios")}
+            Spacer(Modifier.weight(1f))
+            Text(stage.coerceAtMost(scenario.steps.size).toString()+"/"+scenario.steps.size,color=c.primary,fontWeight=FontWeight.Bold)
         }
-        item {
-            SimulatorBoard(scenario.scene,motion.value,warning=warning)
-            Text("Vehículo azul · Tu auto",color=c.onSurfaceVariant,fontSize=12.sp)
+        Text(scenario.title,fontSize=24.sp,fontWeight=FontWeight.ExtraBold,color=c.onSurface)
+        LinearProgressIndicator(progress={stage.toFloat()/scenario.steps.size.coerceAtLeast(1)},
+            modifier=Modifier.fillMaxWidth().height(6.dp))
+        Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
+            SimulatorBoard(scenario.scene,motion.value,modifier=Modifier.widthIn(max=270.dp),warning=warning)
         }
+        Text("Vehículo azul · Tu auto",color=c.onSurfaceVariant,fontSize=12.sp)
         if (finished) {
-            item {
-                Text("¡Escenario completado!",color=c.primary,fontSize=23.sp,fontWeight=FontWeight.Bold)
-                Text("Decisiones sin error: "+attempts.count { it.size==1 }+" de "+scenario.steps.size+" · Errores: "+errors,color=c.onSurface)
-                if (mascotId!=null) MascotReactionCard(mascotId,
-                    if (errors==0) MascotReaction.PERFECT else MascotReaction.KEEP_GOING)
-                when {
-                    saving -> CircularProgressIndicator(Modifier.size(24.dp))
-                    result!=null -> Text(if (result?.duplicate==true) "Ya recibiste la recompensa de este escenario." else "+"+(result?.xpAwarded ?: 0)+" XP confirmados",
-                        fontWeight=FontWeight.Bold,color=c.primary)
-                    saveError -> {
-                        Text("No se guardó todavía. Puedes volver a intentar.",color=c.error)
-                        Button(onClick={retry++},modifier=Modifier.fillMaxWidth()){Text("Reintentar guardado")}
-                    }
+            Text("¡Escenario completado!",color=c.primary,fontSize=23.sp,fontWeight=FontWeight.Bold)
+            Text("Decisiones sin error: "+attempts.count { it.size==1 }+" de "+scenario.steps.size+" · Errores: "+errors,color=c.onSurface)
+            if (mascotId!=null) MascotReactionCard(mascotId,
+                if (errors==0) MascotReaction.PERFECT else MascotReaction.KEEP_GOING)
+            when {
+                saving -> CircularProgressIndicator(Modifier.size(24.dp))
+                result!=null -> Text(if (result?.duplicate==true) "Ya recibiste la recompensa de este escenario." else "+"+(result?.xpAwarded ?: 0)+" XP confirmados",
+                    fontWeight=FontWeight.Bold,color=c.primary)
+                saveError -> {
+                    Text("No se guardó todavía. Puedes volver a intentar.",color=c.error)
+                    Button(onClick={retry++},modifier=Modifier.fillMaxWidth()){Text("Reintentar guardado")}
                 }
-                OutlinedButton(onClick=::leave,enabled=!saving,modifier=Modifier.fillMaxWidth()){Text("Ver más escenarios")}
             }
-        } else {
-            val step=scenario.steps[stage]
-            item {
+            OutlinedButton(onClick=::leave,enabled=!saving,modifier=Modifier.fillMaxWidth()){Text("Ver más escenarios")}
+        } else if(step!=null) {
+            // Give every question its own composition identity and immutable
+            // stage number. Do not reuse a LazyColumn item's old callback.
+            key(stage) {
                 Text(step.prompt,color=c.onSurface,fontSize=20.sp,fontWeight=FontWeight.Bold)
                 Text("Errores: "+errors,color=c.onSurfaceVariant,fontSize=12.sp)
-            }
-            items(step.options.size) { index ->
-                val rejected=index in attempts[stage] && index!=step.correct
-                OutlinedButton(onClick={
-                    if (!moving && index !in attempts[stage]) {
-                        attempts=attempts.mapIndexed { i,a -> if(i==stage) a+index else a }
-                        warning=index!=step.correct
-                        if (!warning) {
-                            moving=true
-                            scope.launch {
-                                motion.animateTo((stage+1).toFloat(),tween(durationMillis=if(stage==1) 1450 else 850))
-                                stage++
-                                moving=false
-                            }
+                if (warning || moving) {
+                    Surface(color=if(warning)c.errorContainer else c.primaryContainer,shape=RoundedCornerShape(16.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                            Text(if(warning)"Decisión insegura: prueba otra opción" else "¡Correcto! Preparando la siguiente decisión…",
+                                fontWeight=FontWeight.Bold,color=if(warning)c.onErrorContainer else c.onPrimaryContainer)
+                            Text(step.explanation,color=if(warning)c.onErrorContainer else c.onPrimaryContainer,fontSize=14.sp)
                         }
                     }
-                },enabled=!moving&&!rejected,modifier=Modifier.fillMaxWidth(),
-                    shape=RoundedCornerShape(14.dp),contentPadding=PaddingValues(14.dp)) {
-                    Text(step.options[index],modifier=Modifier.fillMaxWidth(),fontSize=15.sp)
                 }
-            }
-            if (warning || moving) item {
-                Surface(color=if(warning)c.errorContainer else c.primaryContainer,shape=RoundedCornerShape(16.dp)) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                        Text(if(warning)"Decisión insegura: prueba otra opción" else "¡Correcto!",fontWeight=FontWeight.Bold,
-                            color=if(warning)c.onErrorContainer else c.onPrimaryContainer)
-                        Text(step.explanation,color=if(warning)c.onErrorContainer else c.onPrimaryContainer,fontSize=14.sp)
+                step.options.forEachIndexed { index, option ->
+                    OutlinedButton(onClick={ play=play.choose(stage,index,step.correct) },
+                        enabled=!moving && index !in rejected,modifier=Modifier.fillMaxWidth(),
+                        shape=RoundedCornerShape(14.dp),contentPadding=PaddingValues(14.dp)) {
+                        Text(option,modifier=Modifier.fillMaxWidth(),fontSize=15.sp)
                     }
                 }
             }
