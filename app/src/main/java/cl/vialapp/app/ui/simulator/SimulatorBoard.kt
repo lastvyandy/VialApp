@@ -52,12 +52,19 @@ internal fun SimulatorBoard(scene: String, progress: Float, modifier: Modifier =
     val description = when(scene) {
         "stop" -> "Señal PARE"
         "signal" -> if (pose.green) "Semáforo verde" else "Semáforo rojo"
+        "rain" -> "Calzada mojada y vehículo delantero"
+        "cyclist" -> "Ciclista delante y tránsito en sentido contrario"
+        "roundabout" -> "Rotonda con señal Ceda el paso"
         else -> "Paso peatonal"
     }
     Canvas(modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(22.dp))
         .semantics { contentDescription = "Escena vial. Vehículo azul. " + description }) {
         val factor = size.width / 360f
         scale(factor, factor, pivot = Offset.Zero) {
+            if (scene == "rain" || scene == "cyclist" || scene == "roundabout") {
+                drawExtendedScene(scene, progress, warning)
+                return@scale
+            }
             val asphalt = Color(0xFF505B67)
             val walk = Color(0xFFD9D8CB)
             drawRect(Color(0xFF9DBA86), Offset.Zero, Size(360f,360f))
@@ -126,7 +133,7 @@ internal fun SimulatorBoard(scene: String, progress: Float, modifier: Modifier =
     }
 }
 
-private fun DrawScope.car(at: Offset, body: Color, heading: Float, braking: Boolean) {
+internal fun DrawScope.car(at: Offset, body: Color, heading: Float, braking: Boolean) {
     rotate(heading,at) {
         drawRoundRect(Color(0x44202932),at-Offset(15f,27f)+Offset(3f,5f),Size(32f,58f),CornerRadius(9f))
         for(y in listOf(-19f,13f)) {

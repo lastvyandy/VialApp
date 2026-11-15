@@ -90,17 +90,29 @@ fun SimulatorScreen(userKey: String, mascotId: String?, onBack: () -> Unit) {
                     OutlinedButton(onClick={refresh++}) { Text("Reintentar") }
                 }
             } else {
-                item { Text(data.completedIds.size.toString()+" de "+data.scenarios.size+" escenarios completados",color=c.primary,fontWeight=FontWeight.Bold) }
+                item {
+                    Surface(color=c.primaryContainer,shape=RoundedCornerShape(20.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                            Text("Tu recorrido",color=c.onPrimaryContainer,fontWeight=FontWeight.Bold,fontSize=18.sp)
+                            Text(data.scenarios.count { it.id in data.completedIds }.toString()+" de "+data.scenarios.size+" escenarios completados",color=c.onPrimaryContainer)
+                            LinearProgressIndicator(progress={data.scenarios.count { it.id in data.completedIds }.toFloat()/data.scenarios.size.coerceAtLeast(1)},
+                                modifier=Modifier.fillMaxWidth().height(7.dp))
+                        }
+                    }
+                }
                 items(data.scenarios,key={it.id}) { item ->
                     Card(onClick={scenario=item},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(22.dp),
                         border=BorderStroke(1.dp,c.outlineVariant)) {
-                        Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                            SimulatorBoard(item.scene,0f)
-                            Text(item.category.uppercase(),color=c.primary,fontSize=11.sp,fontWeight=FontWeight.Bold)
-                            Text(item.title,color=c.onSurface,fontSize=20.sp,fontWeight=FontWeight.Bold)
-                            Text(item.description,color=c.onSurfaceVariant,fontSize=14.sp)
-                            Text(if (item.id in data.completedIds) "Completado · Volver a practicar" else "Comenzar · Hasta 20 XP",
-                                color=c.primary,fontWeight=FontWeight.SemiBold,fontSize=13.sp)
+                        Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically,
+                            horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                            SimulatorBoard(item.scene,0f,modifier=Modifier.width(110.dp))
+                            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                                Text(item.category.uppercase(),color=c.primary,fontSize=10.sp,fontWeight=FontWeight.Bold)
+                                Text(item.title,color=c.onSurface,fontSize=17.sp,fontWeight=FontWeight.Bold)
+                                Text(item.description,color=c.onSurfaceVariant,fontSize=12.sp)
+                                Text(if (item.id in data.completedIds) "Completado · Repetir" else "Comenzar · Hasta 20 XP",
+                                    color=c.primary,fontWeight=FontWeight.SemiBold,fontSize=12.sp)
+                            }
                         }
                     }
                 }
@@ -113,6 +125,15 @@ fun SimulatorScreen(userKey: String, mascotId: String?, onBack: () -> Unit) {
 @Composable
 private fun ScenarioPlay(scenario:DrivingScenario,mascotId:String?,manager:SessionManager,store:GameProgressStore,
                          onExit:()->Unit,onSaved:()->Unit) {
+    var round by remember { mutableIntStateOf(0) }
+    key(round) {
+        ScenarioRound(scenario,mascotId,manager,store,onExit,onSaved,onReplay={round++})
+    }
+}
+
+@Composable
+private fun ScenarioRound(scenario:DrivingScenario,mascotId:String?,manager:SessionManager,store:GameProgressStore,
+                         onExit:()->Unit,onSaved:()->Unit,onReplay:()->Unit) {
     val c=MaterialTheme.colorScheme
     var play by remember { mutableStateOf(ScenarioDecisionState.start(scenario.steps.size)) }
     val stage=play.stage
@@ -182,7 +203,7 @@ private fun ScenarioPlay(scenario:DrivingScenario,mascotId:String?,manager:Sessi
         Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
             SimulatorBoard(scenario.scene,motion.value,modifier=Modifier.widthIn(max=270.dp),warning=warning)
         }
-        Text("Vehículo azul · Tu auto",color=c.onSurfaceVariant,fontSize=12.sp)
+        Text(if (scenario.scene=="rain") "Vehículo azul · Conserva la distancia" else "Vehículo azul · Tu auto",color=c.onSurfaceVariant,fontSize=12.sp)
         if (finished) {
             Text("¡Escenario completado!",color=c.primary,fontSize=23.sp,fontWeight=FontWeight.Bold)
             Text("Decisiones sin error: "+attempts.count { it.size==1 }+" de "+scenario.steps.size+" · Errores: "+errors,color=c.onSurface)
@@ -197,6 +218,19 @@ private fun ScenarioPlay(scenario:DrivingScenario,mascotId:String?,manager:Sessi
                     Button(onClick={retry++},modifier=Modifier.fillMaxWidth()){Text("Reintentar guardado")}
                 }
             }
+            Text("Repasa tus decisiones",color=c.onSurface,fontSize=18.sp,fontWeight=FontWeight.Bold)
+            scenario.steps.forEachIndexed { i, decision ->
+                Surface(color=if(attempts[i].size==1)c.surfaceVariant else c.errorContainer,
+                    shape=RoundedCornerShape(14.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(13.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text((i+1).toString()+". "+(if(attempts[i].size==1) "Correcta al primer intento" else "Por reforzar"),
+                            color=if(attempts[i].size==1)c.onSurfaceVariant else c.onErrorContainer,fontWeight=FontWeight.Bold,fontSize=13.sp)
+                        Text(decision.options[decision.correct],color=if(attempts[i].size==1)c.onSurface else c.onErrorContainer,fontWeight=FontWeight.SemiBold)
+                        Text(decision.explanation,color=if(attempts[i].size==1)c.onSurfaceVariant else c.onErrorContainer,fontSize=13.sp)
+                    }
+                }
+            }
+            if(result!=null) Button(onClick=onReplay,modifier=Modifier.fillMaxWidth()){Text("Repetir escenario")}
             OutlinedButton(onClick=::leave,enabled=!saving,modifier=Modifier.fillMaxWidth()){Text("Ver más escenarios")}
         } else if(step!=null) {
             // Give every question its own composition identity and immutable
@@ -213,11 +247,14 @@ private fun ScenarioPlay(scenario:DrivingScenario,mascotId:String?,manager:Sessi
                         }
                     }
                 }
+                if(stage>0 && !moving && !warning) {
+                    Text("Anterior: "+scenario.steps[stage-1].explanation,color=c.onSurfaceVariant,fontSize=12.sp)
+                }
                 step.options.forEachIndexed { index, option ->
                     OutlinedButton(onClick={ play=play.choose(stage,index,step.correct) },
                         enabled=!moving && index !in rejected,modifier=Modifier.fillMaxWidth(),
                         shape=RoundedCornerShape(14.dp),contentPadding=PaddingValues(14.dp)) {
-                        Text(option,modifier=Modifier.fillMaxWidth(),fontSize=15.sp)
+                        Text(if(index in rejected && index!=step.correct) "No · "+option else option,modifier=Modifier.fillMaxWidth(),fontSize=15.sp)
                     }
                 }
             }
