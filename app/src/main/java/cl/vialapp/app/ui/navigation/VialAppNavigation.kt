@@ -72,6 +72,7 @@ import cl.vialapp.app.ui.simulator.SimulatorScreen
 import cl.vialapp.app.ui.progress.ProgressScreen
 import cl.vialapp.app.ui.settings.StudySettingsScreen
 import cl.vialapp.app.ui.settings.StudySetupScreen
+import cl.vialapp.app.ui.settings.WidgetWelcomePrompt
 import cl.vialapp.app.ui.theme.VialAppearanceSetting
 import cl.vialapp.app.ui.theme.vialColor
 import kotlinx.coroutines.launch
@@ -165,6 +166,11 @@ fun VialAppNavigation(
             if(currentRoute!="practice") navController.navigate("practice") { launchSingleTop=true }
             onPracticeRequestHandled()
         }
+    }
+
+    // Offer the launcher widget once, after account and mascot setup are complete.
+    if(currentRoute=="home" && !openPracticeRequested && studyPreferencesStore.isConfigured() && user.mascotId!=null) {
+        WidgetWelcomePrompt(mascotId=user.mascotId)
     }
 
     /*
