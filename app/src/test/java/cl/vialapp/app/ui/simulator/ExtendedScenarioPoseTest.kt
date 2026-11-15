@@ -22,7 +22,7 @@ class ExtendedScenarioPoseTest {
         val waiting=extendedPose("roundabout",1f)
         val inside=extendedPose("roundabout",2f)
         val end=extendedPose("roundabout",3f)
-        assertTrue(waiting.driverY>290f)
+        assertTrue(waiting.driverY-29f>291f)
         assertTrue(inside.driverY<waiting.driverY)
         assertTrue(end.driverX>inside.driverX)
     }

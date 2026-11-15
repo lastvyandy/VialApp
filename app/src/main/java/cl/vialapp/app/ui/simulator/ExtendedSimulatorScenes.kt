@@ -3,7 +3,6 @@ package cl.vialapp.app.ui.simulator
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -42,9 +41,9 @@ internal fun extendedPose(scene: String, progress: Float): ExtendedPose {
             val other=circlePoint(otherAngle)
             val entry=circlePoint(65f)
             val at=when {
-                p<1f -> Offset(215f,interpolate(333f,299f,p))
+                p<1f -> Offset(215f,interpolate(330f,323f,p))
                 p<1.45f -> Offset(interpolate(215f,entry.x,(p-1f)/.45f),
-                    interpolate(299f,entry.y,(p-1f)/.45f))
+                    interpolate(323f,entry.y,(p-1f)/.45f))
                 p<2f -> circlePoint(interpolate(65f,23f,(p-1.45f)/.55f))
                 else -> {
                     val exit=circlePoint(23f)
