@@ -62,6 +62,8 @@ import cl.vialapp.app.ui.mascot.MascotPortrait
 import cl.vialapp.app.ui.profile.LicenseClassPickerDialog
 import cl.vialapp.app.ui.profile.ProfilePhotoSection
 import cl.vialapp.app.ui.achievements.CollectionScreen
+import cl.vialapp.app.ui.learning.LearningPathScreen
+import cl.vialapp.app.ui.learning.LearningChapterScreen
 import cl.vialapp.app.ui.achievements.CollectionEntryCard
 import cl.vialapp.app.ui.practice.PracticeScreen
 import cl.vialapp.app.ui.progress.ProgressScreen
@@ -259,7 +261,9 @@ fun VialAppNavigation(
                 currentRoute != "games/carvier" &&
                 currentRoute != "games/arena" &&
                 currentRoute != "games/workshop" &&
-                currentRoute != "collection"
+                currentRoute != "collection" &&
+                currentRoute != "learning" &&
+                currentRoute != "learning/{chapterId}"
 
 
     Scaffold(
@@ -510,6 +514,7 @@ fun VialAppNavigation(
                         )
                     },
 
+                    onLearningPath = { navController.navigate("learning") },
                     onResumeExam = { testId ->
 
                         navController.navigate(
@@ -908,6 +913,25 @@ fun VialAppNavigation(
              * PERFIL
              * ------------------------------------------------
              */
+            composable("learning") {
+                LearningPathScreen(
+                    userKey = user.id, mascotId = user.mascotId, licenseClass = user.licenseClass,
+                    onBack = { navController.popBackStack() },
+                    onChapter = { id -> navController.navigate("learning/${Uri.encode(id)}") },
+                    onExam = { navController.navigate("exams") }
+                )
+            }
+            composable("learning/{chapterId}", arguments = listOf(navArgument("chapterId") { type = NavType.StringType })) { entry ->
+                val chapterId = entry.arguments?.getString("chapterId")
+                if (chapterId.isNullOrBlank()) {
+                    PlaceholderScreen("Etapa no encontrada")
+                } else {
+                    LearningChapterScreen(user.id, chapterId, user.mascotId,
+                        onBack = { navController.popBackStack() },
+                        onGame = { route -> navController.navigate(route) })
+                }
+            }
+
             composable("collection") {
                 CollectionScreen(user.id, onBack = { navController.popBackStack() })
             }

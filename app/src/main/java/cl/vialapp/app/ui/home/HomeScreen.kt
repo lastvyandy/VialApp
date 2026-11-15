@@ -25,6 +25,7 @@ import cl.vialapp.app.data.api.UserResponse
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.gamification.HomeXpCard
+import cl.vialapp.app.ui.learning.LearningPathEntry
 import cl.vialapp.app.ui.profile.ProfileAvatar
 import cl.vialapp.app.ui.theme.vialColor
 import cl.vialapp.app.ui.theme.VialActionBlue
@@ -55,7 +56,8 @@ fun HomeScreen(
     onProgress: () -> Unit,
     onGames: () -> Unit,
     onResumeExam: (Int) -> Unit,
-    avatarKey: String? = null
+    avatarKey: String? = null,
+    onLearningPath: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -389,6 +391,10 @@ fun HomeScreen(
             }
         }
 
+
+        item {
+            LearningPathEntry(onClick = onLearningPath)
+        }
 
         // Tu ruta de hoy
         item {
