@@ -1,6 +1,7 @@
 package cl.vialapp.app.ui.gamification
 
 import cl.vialapp.app.ui.rewards.LocalRewards
+import cl.vialapp.app.ui.games.GameRecordThumbnail
 import cl.vialapp.app.ui.rewards.RewardXpLine
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
@@ -1641,61 +1642,16 @@ fun ProgressGamificationSection(
         )
 
 
-        GameRecordRow(
-            emoji =
-                "👨‍🦲💪",
-            title =
-                "Reto del Pelao",
-            score =
-                baldHighScore
-        )
+        Column(verticalArrangement=Arrangement.spacedBy(9.dp)){
+            GameRecordRow(GameProgressStore.CARVIER_DRIVE,"Carvier al volante",store.getHighScore(GameProgressStore.CARVIER_DRIVE))
+            GameRecordRow(GameProgressStore.PELAO_ARENA,"Don Pelao Arena",store.getHighScore(GameProgressStore.PELAO_ARENA))
+            GameRecordRow(GameProgressStore.AUTO_WORKSHOP,"Taller del Auto",store.getHighScore(GameProgressStore.AUTO_WORKSHOP))
+            GameRecordRow(GameProgressStore.BALD_CHALLENGE,"Reto del Pelao · clásico",baldHighScore)
+            GameRecordRow(GameProgressStore.CROSSROADS_ARCADE,"Cruce Caótico",crossroadsHighScore)
+            GameRecordRow(GameProgressStore.SIGN_HUNT_ARCADE,"Caza la Señal",store.getHighScore(GameProgressStore.SIGN_HUNT_ARCADE))
+        }
 
-
-        Spacer(
-            modifier =
-                Modifier.height(
-                    9.dp
-                )
-        )
-
-
-        GameRecordRow(
-            emoji =
-                "🚦💥",
-            title =
-                "Cruce Caótico",
-            score =
-                crossroadsHighScore
-        )
-
-        GameRecordRow(
-            emoji = "🏎️",
-            title = "Carvier al volante",
-            score = store.getHighScore(GameProgressStore.CARVIER_DRIVE)
-        )
-        GameRecordRow(
-            emoji = "🥊",
-            title = "Don Pelao Arena",
-            score = store.getHighScore(GameProgressStore.PELAO_ARENA)
-        )
-        GameRecordRow(
-            emoji = "🔧",
-            title = "Taller del Auto",
-            score = store.getHighScore(GameProgressStore.AUTO_WORKSHOP)
-        )
-        GameRecordRow(
-            emoji = "🛑", title = "Caza la Señal", score = store.getHighScore(GameProgressStore.SIGN_HUNT_ARCADE)
-        )
-
-
-
-        Spacer(
-            modifier =
-                Modifier.height(
-                    16.dp
-                )
-        )
-
+        Spacer(Modifier.height(16.dp))
 
         MilestoneCard(
             progress =
@@ -1781,7 +1737,7 @@ private fun ProgressMetric(
 
 @Composable
 private fun GameRecordRow(
-    emoji: String,
+    gameId: String,
     title: String,
     score: Int
 ) {
@@ -1805,12 +1761,7 @@ private fun GameRecordRow(
                 Alignment.CenterVertically
         ) {
 
-            Text(
-                text =
-                    emoji,
-                fontSize =
-                    26.sp
-            )
+            GameRecordThumbnail(gameId, Modifier.size(60.dp))
 
 
             Spacer(

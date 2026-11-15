@@ -94,6 +94,12 @@ interface VialApi {
         @Path("testId") testId: Int
     ): Response<StartExamResponse>
 
+    @POST("tests/attempts/{attemptId}/cancel")
+    suspend fun cancelExamAttempt(
+        @Header("Authorization") authorization: String,
+        @Path("attemptId") attemptId: Int
+    ): Response<ExamAttemptResponse>
+
     @PATCH("tests/attempts/{attemptId}/answers")
     suspend fun saveExamAnswers(
         @Header("Authorization") authorization: String,

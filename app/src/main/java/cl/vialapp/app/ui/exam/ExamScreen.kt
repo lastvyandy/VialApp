@@ -225,6 +225,43 @@ fun ExamScreen(
 
 
 
+    // Discarding an attempt must never call the submit endpoint.
+    suspend fun cancelCurrentExam() {
+        if (submitting || saving) return
+        val currentAttempt = attempt ?: return
+        submitting = true
+        actionError = ""
+        try {
+            val token = sessionManager.getAccessToken()
+            if (token.isNullOrBlank()) {
+                actionError = "No se encontró una sesión válida."
+                return
+            }
+            val response = saveMutex.withLock {
+                ApiClient.api.cancelExamAttempt("Bearer " + token, currentAttempt.attemptId)
+            }
+            if (response.isSuccessful && response.body()?.status == "cancelled") {
+                examXpEarned = 0
+                attempt = null
+                showExitDialog = false
+                onBack()
+            } else {
+                actionError = when(response.code()) {
+                    409 -> "El examen ya terminó. Vuelve a consultar su estado."
+                    401 -> "Tu sesión venció. Vuelve a iniciar sesión."
+                    else -> "No se pudo cancelar el examen (HTTP " + response.code() + "). Reintenta."
+                }
+                response.errorBody()?.close()
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            actionError = "No pudimos cancelar el examen. Revisa tu conexión y reintenta."
+        } finally {
+            submitting = false
+        }
+    }
+
     /*
      * ENVÍO FINAL DEL EXAMEN.
      */
@@ -734,10 +771,9 @@ fun ExamScreen(
      */
     BackHandler {
 
-        if (!submitting) {
-
-            showExitDialog =
-                true
+        if (!submitting && !saving) {
+            if(attempt == null) onBack()
+            else showExitDialog = true
         }
     }
 
@@ -763,8 +799,11 @@ fun ExamScreen(
                     ?.size
                     ?: 0,
 
-            submitting =
-                submitting,
+            submitting = submitting || saving,
+            onCancelExam = {
+                showExitDialog = false
+                scope.launch { cancelCurrentExam() }
+            },
 
             onContinue = {
 
@@ -1656,6 +1695,7 @@ private fun ExitExamDialog(
     submitting: Boolean,
     onContinue: () -> Unit,
     onLeaveAndResume: () -> Unit,
+    onCancelExam: () -> Unit,
     onFinish: () -> Unit
 ) {
 
@@ -1696,7 +1736,8 @@ private fun ExitExamDialog(
 
                 Text(
                     text =
-                        "Si finalizas ahora, las preguntas sin responder se considerarán incorrectas."
+                        if(answered < total) "Si finalizas ahora, las preguntas sin responder serán incorrectas y no recibirás XP. Para ganar experiencia, responde todas."
+                        else "Al finalizar, recibirás experiencia según tus aciertos."
                 )
 
 
@@ -1735,6 +1776,14 @@ private fun ExitExamDialog(
                     fontSize =
                         12.sp
                 )
+
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick=onCancelExam,enabled=!submitting,
+                    modifier=Modifier.fillMaxWidth(),
+                    colors=ButtonDefaults.outlinedButtonColors(contentColor=MaterialTheme.colorScheme.error)){
+                    Text("Cancelar y descartar")
+                }
+                Text("Descarta este intento sin resultado, experiencia ni monedas.",color=VialGray,fontSize=12.sp)
             }
         },
 
@@ -1752,7 +1801,7 @@ private fun ExitExamDialog(
                     if (submitting) {
                         "Finalizando..."
                     } else {
-                        "Finalizar examen"
+                        "Entregar examen"
                     }
                 )
             }

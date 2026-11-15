@@ -31,13 +31,7 @@ import cl.vialapp.app.ui.games.crossroads.*
 
 @Composable
 internal fun GameCover(gameId: String, modifier: Modifier = Modifier) {
-    val palette = when (gameId) {
-        GameProgressStore.CARVIER_DRIVE -> listOf(Color(0xFF104B72), Color(0xFF214F64))
-        GameProgressStore.PELAO_ARENA, GameProgressStore.BALD_CHALLENGE -> listOf(Color(0xFF24304B), Color(0xFF513552))
-        GameProgressStore.AUTO_WORKSHOP -> listOf(Color(0xFF273E51), Color(0xFF75552F))
-        GameProgressStore.CROSSROADS_ARCADE -> listOf(Color(0xFF204C42), Color(0xFF315D72))
-        else -> listOf(Color(0xFF263D62), Color(0xFF356981))
-    }
+    val palette = gameCoverPalette(gameId)
     val category = when (gameId) {
         GameProgressStore.CARVIER_DRIVE -> "CONDUCCIÓN"
         GameProgressStore.PELAO_ARENA -> "REFLEJOS"
@@ -66,42 +60,65 @@ internal fun GameCover(gameId: String, modifier: Modifier = Modifier) {
             }, color = Color.White, fontSize = 23.sp, lineHeight = 26.sp, fontWeight = FontWeight.ExtraBold)
         }
         Box(Modifier.align(Alignment.CenterEnd).fillMaxWidth(.55f).fillMaxHeight().padding(8.dp), contentAlignment = Alignment.Center) {
-            when (gameId) {
-                GameProgressStore.PELAO_ARENA -> MascotGameThumbnail {
-                    PelaoSprite(PelaoPose.ATTACK_ONE, Modifier.fillMaxSize())
-                }
-                GameProgressStore.BALD_CHALLENGE -> MascotGameThumbnail {
-                    PelaoSprite(PelaoPose.VICTORY, Modifier.fillMaxSize())
-                }
-                GameProgressStore.CARVIER_DRIVE -> MascotGameThumbnail {
-                    Image(painterResource(R.drawable.mascot_carvier), "Carvier",
-                        Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                }
-                GameProgressStore.CROSSROADS_ARCADE -> {
-                    val preview = remember { TrafficFrame(cars = listOf(
-                        TrafficCar(1, TrafficLane.NORTH, .20f, 0, false, 0f),
-                        TrafficCar(2, TrafficLane.WEST, .20f, 1, false, 0f),
-                        TrafficCar(3, TrafficLane.SOUTH, .82f, 2, false, 0f)
-                    )) }
-                    TrafficBoard(preview, Modifier.size(122.dp))
-                }
-                GameProgressStore.AUTO_WORKSHOP -> Canvas(Modifier.fillMaxSize()) {
-                    val center = Offset(size.width * .55f, size.height * .5f)
-                    val u = minOf(size.width, size.height) / 140f
-                    drawRoundRect(Color(0xFF182836), center - Offset(48f*u, 59f*u), Size(96f*u, 118f*u), CornerRadius(22f*u))
-                    for (x in listOf(-48f, 36f)) for (y in listOf(-37f, 23f))
-                        drawRoundRect(Color(0xFF111827), center + Offset(x*u,y*u), Size(14f*u, 26f*u), CornerRadius(4f*u))
-                    drawRoundRect(Color(0xFF3B82F6), center - Offset(40f*u, 57f*u), Size(80f*u, 114f*u), CornerRadius(20f*u))
-                    drawRoundRect(Color(0xFF172E49), center - Offset(30f*u, 32f*u), Size(60f*u, 27f*u), CornerRadius(8f*u))
-                    drawRoundRect(Color(0xFF6B98BA), center + Offset(-28f*u, 20f*u), Size(56f*u, 18f*u), CornerRadius(6f*u))
-                    drawCircle(Color(0xFFFFD166), 21f*u, center + Offset(-39f*u, 38f*u), style = Stroke(5f*u))
-                }
-                else -> {
-                    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        RoadSignArt(RoadSign.STOP, Modifier.weight(1f).aspectRatio(1f))
-                        RoadSignArt(RoadSign.YIELD, Modifier.weight(1f).aspectRatio(1f))
-                    }
-                }
+            GameCoverIllustration(gameId)
+        }
+    }
+}
+
+private fun gameCoverPalette(gameId:String):List<Color> = when (gameId) {
+        GameProgressStore.CARVIER_DRIVE -> listOf(Color(0xFF104B72), Color(0xFF214F64))
+        GameProgressStore.PELAO_ARENA, GameProgressStore.BALD_CHALLENGE -> listOf(Color(0xFF24304B), Color(0xFF513552))
+        GameProgressStore.AUTO_WORKSHOP -> listOf(Color(0xFF273E51), Color(0xFF75552F))
+        GameProgressStore.CROSSROADS_ARCADE -> listOf(Color(0xFF204C42), Color(0xFF315D72))
+        else -> listOf(Color(0xFF263D62), Color(0xFF356981))
+    }
+
+@Composable
+internal fun GameRecordThumbnail(gameId:String,modifier:Modifier=Modifier){
+    Box(modifier.clip(RoundedCornerShape(14.dp))
+        .background(Brush.horizontalGradient(gameCoverPalette(gameId)))
+        .padding(4.dp),contentAlignment=Alignment.Center){
+        GameCoverIllustration(gameId)
+    }
+}
+
+/** Shared artwork for both the game catalog and personal records. */
+@Composable
+private fun GameCoverIllustration(gameId:String){
+    when (gameId) {
+        GameProgressStore.PELAO_ARENA -> MascotGameThumbnail {
+            PelaoSprite(PelaoPose.ATTACK_ONE, Modifier.fillMaxSize())
+        }
+        GameProgressStore.BALD_CHALLENGE -> MascotGameThumbnail {
+            PelaoSprite(PelaoPose.VICTORY, Modifier.fillMaxSize())
+        }
+        GameProgressStore.CARVIER_DRIVE -> MascotGameThumbnail {
+            Image(painterResource(R.drawable.mascot_carvier), "Carvier",
+                Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        }
+        GameProgressStore.CROSSROADS_ARCADE -> {
+            val preview = remember { TrafficFrame(cars = listOf(
+                TrafficCar(1, TrafficLane.NORTH, .20f, 0, false, 0f),
+                TrafficCar(2, TrafficLane.WEST, .20f, 1, false, 0f),
+                TrafficCar(3, TrafficLane.SOUTH, .82f, 2, false, 0f)
+            )) }
+            TrafficBoard(preview, Modifier.size(122.dp))
+        }
+        GameProgressStore.AUTO_WORKSHOP -> Canvas(Modifier.fillMaxSize()) {
+            val center = Offset(size.width * .55f, size.height * .5f)
+            val u = minOf(size.width, size.height) / 140f
+            drawRoundRect(Color(0xFF182836), center - Offset(48f*u, 59f*u), Size(96f*u, 118f*u), CornerRadius(22f*u))
+            for (x in listOf(-48f, 36f)) for (y in listOf(-37f, 23f))
+                drawRoundRect(Color(0xFF111827), center + Offset(x*u,y*u), Size(14f*u, 26f*u), CornerRadius(4f*u))
+            drawRoundRect(Color(0xFF3B82F6), center - Offset(40f*u, 57f*u), Size(80f*u, 114f*u), CornerRadius(20f*u))
+            drawRoundRect(Color(0xFF172E49), center - Offset(30f*u, 32f*u), Size(60f*u, 27f*u), CornerRadius(8f*u))
+            drawRoundRect(Color(0xFF6B98BA), center + Offset(-28f*u, 20f*u), Size(56f*u, 18f*u), CornerRadius(6f*u))
+            drawCircle(Color(0xFFFFD166), 21f*u, center + Offset(-39f*u, 38f*u), style = Stroke(5f*u))
+        }
+        else -> {
+            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                RoadSignArt(RoadSign.STOP, Modifier.weight(1f).aspectRatio(1f))
+                RoadSignArt(RoadSign.YIELD, Modifier.weight(1f).aspectRatio(1f))
             }
         }
     }
