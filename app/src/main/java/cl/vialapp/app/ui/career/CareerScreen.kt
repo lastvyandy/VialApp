@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -210,7 +211,7 @@ private fun StageCard(stage:CareerStage,enabled:Boolean,onClaim:()->Unit,onActiv
     val c=MaterialTheme.colorScheme
     Card(shape=RoundedCornerShape(20.dp),border=BorderStroke(1.dp,c.outlineVariant),colors=CardDefaults.cardColors(containerColor=c.surface)) {
         Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(Brush.horizontalGradient(zoneColors(stage.zone))).padding(14.dp),
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(Brush.horizontalGradient(zoneColors(stage.zone).map { lerp(it, Color(0xFF101827), .50f) })).padding(14.dp),
                 verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 Icon(painterResource(if(stage.available)R.drawable.ic_award_road else R.drawable.ic_award_lock),null,
                     tint=Color.White,modifier=Modifier.size(31.dp))
