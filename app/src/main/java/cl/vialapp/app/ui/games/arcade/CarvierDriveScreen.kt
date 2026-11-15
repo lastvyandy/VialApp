@@ -66,7 +66,6 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
             }
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { }
-        finally { }
         withContext(Dispatchers.Default) {
             rasterizeRoadCar(style,garageColor(paint),kit)
             roadPaints.forEachIndexed { i,color -> rasterizeRoadCar(trafficStyles[i],color,GarageKit()) }

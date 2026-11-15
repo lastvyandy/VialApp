@@ -26,6 +26,7 @@ import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.gamification.HomeXpCard
 import cl.vialapp.app.ui.learning.LearningPathEntry
+import cl.vialapp.app.ui.library.LibraryEntry
 import cl.vialapp.app.ui.games.GamesQuickEntry
 import cl.vialapp.app.ui.career.CareerShortcuts
 import cl.vialapp.app.ui.profile.ProfileAvatar
@@ -64,7 +65,8 @@ fun HomeScreen(
     avatarKey: String? = null,
     onLearningPath: () -> Unit = {},
     onCareer: () -> Unit = {},
-    onGarage: () -> Unit = {}
+    onGarage: () -> Unit = {},
+    onLibrary: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -184,7 +186,7 @@ fun HomeScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Hola, $name 👋",
+                        text = "Hola, $name",
                         color = HomeDark,
                         fontSize = 27.sp,
                         fontWeight = FontWeight.Bold
@@ -205,6 +207,7 @@ fun HomeScreen(
             }
         }
 
+        item { LibraryEntry(onClick = onLibrary) }
         item { GamesQuickEntry(onClick = onGames) }
         item { CareerShortcuts(onCareer, onGarage) }
 
@@ -411,7 +414,7 @@ fun HomeScreen(
                         }
                     } else if (priorityCategory != null) {
                         Text(
-                            text = "🎯 Prioridad recomendada",
+                            text = "Prioridad recomendada",
                             color = HomeBlue,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
@@ -558,14 +561,14 @@ fun HomeScreen(
             ) {
                 HomeActionCard(
                     modifier = Modifier.weight(1f),
-                    emoji = "🎯",
+                    drawable = R.drawable.ic_award_target,
                     title = "Practicar",
                     description = "Refuerza tus temas",
                     onClick = onPractice
                 )
                 HomeActionCard(
                     modifier = Modifier.weight(1f),
-                    emoji = "🚗",
+                    drawable = R.drawable.ic_award_road,
                     title = "Exámenes",
                     description = "Pon a prueba lo aprendido",
                     onClick = onExam
@@ -669,7 +672,7 @@ private fun HomeMetric(modifier: Modifier, value: String, label: String) {
 @Composable
 private fun HomeActionCard(
     modifier: Modifier,
-    emoji: String,
+    drawable: Int,
     title: String,
     description: String,
     onClick: () -> Unit
@@ -682,7 +685,7 @@ private fun HomeActionCard(
         colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
-            Text(text = emoji, fontSize = 29.sp)
+            Icon(painterResource(drawable),null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(29.dp))
             Spacer(modifier = Modifier.height(14.dp))
             Text(text = title, color = HomeDark, fontSize = 17.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(3.dp))

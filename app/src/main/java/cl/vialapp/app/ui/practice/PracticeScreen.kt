@@ -13,6 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import cl.vialapp.app.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -356,7 +358,7 @@ fun PracticeScreen(
 
                             Text(
                                 text =
-                                    "🚘 ¿Quieres medir tu progreso?",
+                                    "¿Quieres medir tu progreso?",
 
                                 color =
                                     PracticeDark,
@@ -450,7 +452,7 @@ private fun PriorityPracticeCard(
 
             Text(
                 text =
-                    "🎯 Tu prioridad de hoy",
+                    "Tu prioridad de hoy",
 
                 color =
                     PracticeBlue,
@@ -720,13 +722,7 @@ private fun EmptyPracticeState(
         Spacer(Modifier.height(14.dp))
         GamesQuickEntry(onClick = onGames)
         Spacer(Modifier.height(20.dp))
-        Text(
-            text =
-                "🚗",
-
-            fontSize =
-                54.sp
-        )
+        Icon(painterResource(R.drawable.ic_award_road),null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(50.dp))
 
 
         Spacer(

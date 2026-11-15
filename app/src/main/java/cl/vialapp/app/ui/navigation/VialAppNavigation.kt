@@ -505,6 +505,7 @@ fun VialAppNavigation(
             ) {
 
                 HomeScreen(
+                    onLibrary = { navController.navigate("library") },
 
                     user =
                         user,

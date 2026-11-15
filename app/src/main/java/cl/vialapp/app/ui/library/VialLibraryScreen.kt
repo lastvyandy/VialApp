@@ -50,7 +50,7 @@ internal fun VialLibraryScreen(userKey:String,licenseClass:String?,onBack:()->Un
     val prefs=remember(context,userKey){context.getSharedPreferences("vial_library_"+userKey,Context.MODE_PRIVATE)}
     var favorites by remember(prefs){mutableStateOf(prefs.getStringSet("favorites",emptySet())?.toSet().orEmpty())}
     var query by rememberSaveable{mutableStateOf("")}
-    var sourceFilter by rememberSaveable(licenseClass){mutableStateOf(if(licenseClass.equals("C",ignoreCase=true))"all" else "B")}
+    var sourceFilter by rememberSaveable(licenseClass){mutableStateOf(if(licenseClass?.trim()?.endsWith("C",ignoreCase=true)==true)"all" else "B")}
     var section by rememberSaveable{mutableStateOf<String?>(null)}
     var onlyFavorites by rememberSaveable{mutableStateOf(false)}
     var opened by rememberSaveable{mutableStateOf<String?>(null)}
@@ -84,7 +84,9 @@ internal fun VialLibraryScreen(userKey:String,licenseClass:String?,onBack:()->Un
                 Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                     Text("Basada en los libros de CONASET",fontWeight=FontWeight.Bold,color=colors.onPrimaryContainer)
                     Text("Clase B: edición 2024. Motociclistas: edición 2016. El manual de Clase C es complementario al de Clase B.",fontSize=12.sp,color=colors.onPrimaryContainer)
-                    Text("Fichas de estudio, no una publicación oficial. Comprueba las normas y ediciones vigentes para requisitos legales.",fontSize=12.sp,color=colors.onPrimaryContainer)
+                    Text("Fichas de estudio de las ediciones indicadas. CONASET dispone de una edición Clase B de febrero de 2026; la revisión integral frente a esa edición está pendiente.",fontSize=12.sp,color=colors.onPrimaryContainer)
+                    TextButton(onClick={openManualPortal(context)}){Text("Consultar versiones oficiales")}
+                    Text("Examen teórico B y C: 35 preguntas, 38 puntos posibles (3 preguntas dobles), mínimo 33 puntos. Tiempo máximo 45 minutos. Las preguntas reales no son públicas.",fontSize=12.sp,color=colors.onPrimaryContainer)
                 }
             }
         }
@@ -193,6 +195,6 @@ private fun ArticleView(article:VialArticle,saved:Boolean,onBack:()->Unit,onFavo
 }
 
 private fun openManualPortal(context:Context){
-    runCatching{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://mejoresconductores.conaset.cl/")))}
+    runCatching{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://mejoresconductores.conaset.cl/FileManager/MaterialDeEstudio")))}
         .onFailure{android.widget.Toast.makeText(context,"No se pudo abrir el navegador",android.widget.Toast.LENGTH_SHORT).show()}
 }

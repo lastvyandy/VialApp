@@ -756,7 +756,7 @@ private fun ProgressContent(
 
                     Text(
                         text =
-                            "ℹ️ Criterio de aprobación",
+                            "Criterio de entrenamiento de VialApp",
 
                         color =
                             ProgressDark,
@@ -776,7 +776,7 @@ private fun ProgressContent(
 
                     Text(
                         text =
-                            summary.passCriterion,
+                            summary.passCriterion + ". Indicador interno de práctica; no equivale al examen oficial (35 preguntas, 38 puntos, mínimo 33 para Clase B y C).",
 
                         color =
                             ProgressGray,

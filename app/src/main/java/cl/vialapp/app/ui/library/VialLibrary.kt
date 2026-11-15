@@ -129,7 +129,7 @@ internal object VialLibrary {
             "Una velocidad permitida no siempre es segura para las condiciones del momento.",
             "El aumento de velocidad reduce el campo visual y aumenta la distancia necesaria para detenerse.",
             "Adapta la marcha al estado de la vía, visibilidad y presencia de usuarios vulnerables.",
-            "Según la edición 2024, en las afueras de colegios durante la entrada y salida de clases debes circular a no más de 30 km/h. Respeta las señales y comprueba la normativa vigente."),
+            "Según las ediciones 2024 y febrero de 2026 (p. 97), en las afueras de colegios durante la entrada y salida de clases debes circular a no más de 30 km/h. Respeta las señales y comprueba la normativa vigente."),
         b("overtake",RULES,"Encuentros y adelantamientos",98,103,"adelantar sobrepasar distancia izquierda",
             "Adelantar exige visibilidad, espacio libre y respeto de las señales.",
             "Verifica el tráfico en ambos sentidos y señaliza la maniobra.",
