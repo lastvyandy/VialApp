@@ -28,6 +28,29 @@ class CarDepthRasterTest {
             }
         }
     }
+    @Test fun bothLampsStayVisibleAroundFrontAndRearQuarterViews(){
+        for(style in listOf("compact","hatch","sedan","suv","sport")){
+            val mesh=buildCarMesh(style)
+            for((base,finish) in listOf(0f to Finish.HEADLAMP,180f to Finish.TAILLAMP)){
+                for(offset in -20..20 step 10){
+                    val camera=CarCamera(base+offset,10f)
+                    val raster=CarDepthRaster(320,220)
+                    raster.render(mesh,camera,160f,110f,65f){it.finish.ordinal+1}
+                    val lamps=mesh.faces.filter{it.finish==finish}
+                    assertEquals(2,lamps.size)
+                    for(lamp in lamps){
+                        val p=camera.project(lamp.center)
+                        val x=(160f+p.x*65f).roundToInt()
+                        val y=(110f+p.y*65f).roundToInt()
+                        assertTrue("$style $finish at angle ${base+offset}",(-4..4).any{dy->
+                            (-4..4).any{dx->x+dx in 0 until 320 && y+dy in 0 until 220 &&
+                                raster.pixels[(y+dy)*320+x+dx]==finish.ordinal+1}
+                        })
+                    }
+                }
+            }
+        }
+    }
     @Test fun archClearsEveryTireAndWheelsStayInsideFenders(){
         for(style in listOf("compact","hatch","sedan","suv","sport")){
             val spec=carSpec(style)

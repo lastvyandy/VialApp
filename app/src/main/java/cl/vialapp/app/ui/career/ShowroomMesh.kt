@@ -20,11 +20,11 @@ internal data class CarSpec(val length:Float,val width:Float,val belt:Float,val 
     val wheelZ:Float,val tire:Float,val hood:Float,val tail:Float)
 
 internal fun carSpec(style:String):CarSpec=when(style) {
-    "hatch" -> CarSpec(1.84f,.89f,.80f,1.42f,.75f,-1.50f,.29f,-1.18f,1.16f,.38f,.72f,.82f)
-    "sedan" -> CarSpec(2.23f,.95f,.82f,1.39f,.82f,-1.22f,.28f,-.68f,1.36f,.39f,.76f,.78f)
-    "suv" -> CarSpec(2.15f,1.02f,1.02f,1.72f,.98f,-1.85f,.48f,-1.62f,1.34f,.46f,.94f,1.03f)
-    "sport" -> CarSpec(2.26f,1.04f,.66f,1.13f,.82f,-1.28f,.24f,-.56f,1.40f,.40f,.59f,.83f)
-    else -> CarSpec(1.90f,.90f,.78f,1.34f,.69f,-1.39f,.18f,-1.00f,1.15f,.37f,.71f,.79f)
+    "hatch" -> CarSpec(1.84f,.89f,.91f,1.44f,.75f,-1.50f,.29f,-1.18f,1.16f,.35f,.83f,.91f)
+    "sedan" -> CarSpec(2.23f,.95f,.94f,1.43f,.82f,-1.22f,.28f,-.68f,1.36f,.36f,.85f,.90f)
+    "suv" -> CarSpec(2.15f,1.02f,1.08f,1.74f,.98f,-1.85f,.48f,-1.62f,1.34f,.42f,1.00f,1.04f)
+    "sport" -> CarSpec(2.26f,1.04f,.85f,1.17f,.82f,-1.28f,.24f,-.56f,1.40f,.32f,.75f,.85f)
+    else -> CarSpec(1.90f,.90f,.91f,1.39f,.69f,-1.39f,.18f,-1.00f,1.15f,.35f,.83f,.90f)
 }
 
 private fun mix(a:Float,b:Float,t:Float)=a+(b-a)*t
@@ -43,9 +43,9 @@ private class MeshBuilder {
     fun panel(f:Finish,inside:V3,vararg p:V3) { face(p.toList(),f,inside)?.let{faces.add(it)} }
     fun ringBody(rings:List<List<V3>>,inside:V3,f:Finish) {
         for(i in 0 until rings.lastIndex) {
+            val localInside=(rings[i]+rings[i+1]).reduce{a,b->a+b}*(1f/(rings[i].size+rings[i+1].size))
             for(j in rings[i].indices) {
                 val k=(j+1)%rings[i].size
-                val localInside=(rings[i]+rings[i+1]).reduce{a,b->a+b}*(1f/(rings[i].size+rings[i+1].size))
                 panel(f,localInside,rings[i][j],rings[i][k],rings[i+1][k],rings[i+1][j])
             }
         }
@@ -86,9 +86,12 @@ internal fun buildCarMesh(style:String, kit: GarageKit = GarageKit()):CarMesh {
             for(i in 0..18) add(axle+radius*cos(i*PI/18).toFloat())
         }
     }.map{it.coerceIn(rear,front)}.distinct().sorted()
+    val rearShoulder=min(s.cabinRear,-s.wheelZ)
+    val frontShoulder=max(s.cabinFront,s.wheelZ)
+    fun smooth(t:Float)=t.coerceIn(0f,1f).let{it*it*(3f-2f*it)}
     fun baseTop(z:Float):Float=when {
-        z < s.cabinRear -> mix(s.tail-.09f,s.belt,(z-rear)/(s.cabinRear-rear).coerceAtLeast(.1f))
-        z > s.cabinFront -> mix(s.belt,s.hood-.10f,(z-s.cabinFront)/(front-s.cabinFront))
+        z < rearShoulder -> mix(s.tail-.06f,s.belt,smooth((z-rear)/(rearShoulder-rear).coerceAtLeast(.1f)))
+        z > frontShoulder -> mix(s.belt,s.hood-.06f,smooth((z-frontShoulder)/(front-frontShoulder)))
         else -> s.belt
     }
     fun top(z:Float)=max(baseTop(z),wheelArchY(s,z)+.105f)
@@ -107,7 +110,7 @@ internal fun buildCarMesh(style:String, kit: GarageKit = GarageKit()):CarMesh {
     b.ringBody(zValues.map(::ring),inside,Finish.PAINT)
 
     // Glasshouse: a broad roof, raked windshield and distinct rear hatch/sedan profile.
-    val bottom=s.belt-.018f
+    val bottom=min(top(s.cabinFront),top(s.cabinRear))-.018f
     val lowW=s.width*.83f
     val highW=s.width*(if(style=="suv").75f else .62f)
     val lf=V3(-lowW,bottom,s.cabinFront)
@@ -152,15 +155,16 @@ internal fun buildCarMesh(style:String, kit: GarageKit = GarageKit()):CarMesh {
     for(i in 0..2) b.box(0f,grilleY-.06f+i*.06f,front+.048f,noseW*.35f,.006f,.005f,Finish.CHROME)
     fun lens(x:Float,y:Float,end:Float,finish:Finish){
         val direction=if(end>0f)1f else -1f
-        fun panelAt(depth:Float,hw:Float,hh:Float,f:Finish){
+        fun outline(depth:Float,hw:Float,hh:Float):List<V3>{
             val zz=end+direction*depth
             val d=hw*.22f
-            b.panel(f,inside,V3(x-hw+d,y+hh,zz),V3(x+hw-d,y+hh,zz),
+            return listOf(V3(x-hw+d,y+hh,zz),V3(x+hw-d,y+hh,zz),
                 V3(x+hw,y+hh*.36f,zz),V3(x+hw-d,y-hh,zz),
                 V3(x-hw+d,y-hh,zz),V3(x-hw,y-hh*.36f,zz))
         }
-        panelAt(.030f,noseW*.248f,.080f,Finish.GRILLE)
-        panelAt(.046f,noseW*.213f,.057f,finish)
+        val housing=V3(x,y,end+direction*.012f)
+        b.ringBody(listOf(outline(-.009f,noseW*.247f,.080f),outline(.032f,noseW*.238f,.074f)),housing,Finish.GRILLE)
+        b.panel(finish,inside,*outline(.044f,noseW*.213f,.057f).toTypedArray())
     }
     for(side in listOf(-1f,1f)){
         val x=side*noseW*.69f
