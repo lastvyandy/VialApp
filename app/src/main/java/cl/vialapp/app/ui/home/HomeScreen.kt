@@ -26,6 +26,7 @@ import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.gamification.HomeXpCard
 import cl.vialapp.app.ui.learning.LearningPathEntry
+import cl.vialapp.app.ui.games.GamesQuickEntry
 import cl.vialapp.app.ui.profile.ProfileAvatar
 import cl.vialapp.app.ui.theme.vialColor
 import cl.vialapp.app.ui.theme.VialActionBlue
@@ -222,6 +223,8 @@ fun HomeScreen(
                 )
             }
         }
+
+        item { GamesQuickEntry(onClick = onGames) }
 
         // Compañero elegido: no modifica ni sincroniza el progreso.
         user.mascotId

@@ -12,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import cl.vialapp.app.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -154,13 +156,16 @@ fun GamesScreen(
                 shape = RoundedCornerShape(26.dp),
                 colors = CardDefaults.cardColors(containerColor = vialColor(Color(0xFFEAF1FF)))
             ) {
-                Row(
-                    modifier = Modifier.padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(text = "👨‍🦲💪🚗", fontSize = 42.sp)
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TrainingIcon(R.drawable.ic_home_gamepad)
+                        TrainingIcon(R.drawable.ic_award_target)
+                        TrainingIcon(R.drawable.ic_award_wheel)
+                    }
+                    Column {
                         Text(
                             text = "Zona de entrenamiento",
                             color = GamesDark,
@@ -191,12 +196,13 @@ fun GamesScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "🎮 Nivel ${gameProgress.level}",
-                                color = GamesDark,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                Icon(painterResource(R.drawable.ic_home_gamepad), contentDescription = null,
+                                    tint = GamesBlue, modifier = Modifier.size(21.dp))
+                                Text("Nivel ${gameProgress.level}", color = GamesDark,
+                                    fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            }
                             Text(
                                 text = "${gameProgress.totalXp} XP · ${gameProgress.totalPoints} puntos acumulados",
                                 color = GamesGray,
@@ -342,6 +348,17 @@ fun GamesScreen(
                     fontSize = 13.sp
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun TrainingIcon(drawable: Int) {
+    val c = MaterialTheme.colorScheme
+    Surface(shape = RoundedCornerShape(13.dp), color = c.surface) {
+        Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+            Icon(painterResource(drawable), contentDescription = null,
+                tint = c.primary, modifier = Modifier.size(25.dp))
         }
     }
 }

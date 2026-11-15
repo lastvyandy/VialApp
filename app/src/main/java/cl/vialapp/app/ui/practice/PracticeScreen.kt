@@ -23,6 +23,7 @@ import cl.vialapp.app.ui.theme.vialColor
 import cl.vialapp.app.ui.theme.VialActionBlue
 import cl.vialapp.app.ui.learning.LearningPathEntry
 import cl.vialapp.app.ui.simulator.SimulatorEntry
+import cl.vialapp.app.ui.games.GamesQuickEntry
 
 
 private val PracticeBlue: Color
@@ -45,7 +46,8 @@ fun PracticeScreen(
     onTakeExam: () -> Unit,
     onLearningPath: () -> Unit = {},
     onAdaptivePractice: () -> Unit = {},
-    onSimulator: () -> Unit = {}
+    onSimulator: () -> Unit = {},
+    onGames: () -> Unit = {}
 ) {
 
     val context =
@@ -189,7 +191,8 @@ fun PracticeScreen(
                 onTakeExam = onTakeExam,
                 onLearningPath = onLearningPath,
                 onAdaptivePractice = onAdaptivePractice,
-                onSimulator = onSimulator
+                onSimulator = onSimulator,
+                onGames = onGames
             )
         }
 
@@ -272,6 +275,7 @@ fun PracticeScreen(
                 }
 
 
+                item { GamesQuickEntry(onClick = onGames) }
                 item { SimulatorEntry(onClick = onSimulator) }
                 item { AdaptivePracticeEntry(onClick = onAdaptivePractice) }
                 item { LearningPathEntry(onClick = onLearningPath) }
@@ -706,7 +710,8 @@ private fun EmptyPracticeState(
     onTakeExam: () -> Unit,
     onLearningPath: () -> Unit,
     onAdaptivePractice: () -> Unit,
-    onSimulator: () -> Unit
+    onSimulator: () -> Unit,
+    onGames: () -> Unit
 ) {
 
     Column(
@@ -729,6 +734,8 @@ private fun EmptyPracticeState(
     ) {
 
 
+        GamesQuickEntry(onClick = onGames)
+        Spacer(Modifier.height(20.dp))
         Text(
             text =
                 "🚗",

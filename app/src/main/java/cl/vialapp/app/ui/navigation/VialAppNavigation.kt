@@ -687,6 +687,7 @@ fun VialAppNavigation(
 
                 PracticeScreen(
                     onAdaptivePractice = { navController.navigate("adaptive_practice") },
+                    onGames = { navController.navigate("games") },
                     onSimulator = { navController.navigate("simulator") },
                     onLearningPath = { navController.navigate("learning") },
 

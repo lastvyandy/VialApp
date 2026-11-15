@@ -4,6 +4,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -63,9 +67,16 @@ internal fun GameCover(gameId: String, modifier: Modifier = Modifier) {
         }
         Box(Modifier.align(Alignment.CenterEnd).fillMaxWidth(.55f).fillMaxHeight().padding(8.dp), contentAlignment = Alignment.Center) {
             when (gameId) {
-                GameProgressStore.PELAO_ARENA -> PelaoSprite(PelaoPose.ATTACK_ONE, Modifier.fillMaxSize())
-                GameProgressStore.BALD_CHALLENGE -> PelaoSprite(PelaoPose.VICTORY, Modifier.fillMaxSize())
-                GameProgressStore.CARVIER_DRIVE -> Image(painterResource(R.drawable.mascot_carvier), "Carvier", Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                GameProgressStore.PELAO_ARENA -> MascotGameThumbnail {
+                    PelaoSprite(PelaoPose.ATTACK_ONE, Modifier.fillMaxSize())
+                }
+                GameProgressStore.BALD_CHALLENGE -> MascotGameThumbnail {
+                    PelaoSprite(PelaoPose.VICTORY, Modifier.fillMaxSize())
+                }
+                GameProgressStore.CARVIER_DRIVE -> MascotGameThumbnail {
+                    Image(painterResource(R.drawable.mascot_carvier), "Carvier",
+                        Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                }
                 GameProgressStore.CROSSROADS_ARCADE -> {
                     val preview = remember { TrafficFrame(cars = listOf(
                         TrafficCar(1, TrafficLane.NORTH, .20f, 0, false, 0f),
@@ -93,5 +104,19 @@ internal fun GameCover(gameId: String, modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+}
+
+/** Use the same rounded square silhouette as the traffic-board cover without cropping a mascot. */
+@Composable
+private fun MascotGameThumbnail(content: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(24.dp)
+    Box(
+        Modifier.size(122.dp).clip(shape)
+            .background(Color.White.copy(alpha = .08f))
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = .12f)), shape),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
     }
 }
