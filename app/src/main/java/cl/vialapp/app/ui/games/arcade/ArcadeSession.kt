@@ -44,7 +44,8 @@ internal fun <S : ArcadeFrame> ArcadeSession(
     onBack: () -> Unit,
     scene: @Composable (S, Modifier, Boolean, (Int) -> Unit) -> Unit,
     controls: @Composable (S, Boolean, (Int) -> Unit) -> Unit,
-    resultArt: (@Composable (S, Modifier) -> Unit)? = null
+    resultArt: (@Composable (S, Modifier) -> Unit)? = null,
+    showPlayMessages: Boolean = true
 ) {
     val context = LocalContext.current
     val store = remember(context, userKey) { GameProgressStore(context, userKey) }
@@ -213,7 +214,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
                     }
                 }
             }
-            Surface(color = c.surface, shape = RoundedCornerShape(12.dp)) {
+            if (showPlayMessages) Surface(color = c.surface, shape = RoundedCornerShape(12.dp)) {
                 Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(frame.detail, fontSize = 12.sp, color = c.primary, fontWeight = FontWeight.Bold)
                     Text(frame.message, fontSize = 13.sp, color = c.onSurface, lineHeight = 18.sp)

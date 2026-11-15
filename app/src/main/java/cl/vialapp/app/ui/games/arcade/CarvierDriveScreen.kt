@@ -16,7 +16,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.res.painterResource
+import cl.vialapp.app.R
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.input.pointer.pointerInput
@@ -80,8 +82,9 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
     ArcadeSession(
         userKey = userKey, gameId = GameProgressStore.CARVIER_DRIVE, title = "Carvier al volante",
         subtitle = zoneName(zone) + " · Tres carriles y 65 segundos para llegar a la meta.",
-        rules = "Desliza o usa las flechas para cambiar de carril. Recoge monedas solo cuando sea seguro. En la zona escolar simulada activa 30 km/h; en la vía real respeta la señalización y los horarios de entrada y salida. Cuando aparezca PARE, pulsa Detener, espera el aviso de cruce libre y pulsa Avanzar. Tienes tres vidas.",
+        rules = "Desliza o usa las flechas para cambiar de carril. Recoge monedas solo cuando sea seguro. En la zona escolar simulada activa 30 km/h; en la vía real respeta la señalización y los horarios de entrada y salida. Reconoce las señales: el círculo rojo de 30 indica el límite; el octágono PARE exige detenerse. Pulsa Detener, espera la flecha verde y pulsa Avanzar cuando se habilite. La marca verde confirma una maniobra correcta. Tienes tres vidas.",
         duration = DriveEngine.TIME, create = { DriveEngine() }, onBack = onBack,
+        showPlayMessages = false,
         resultArt = { _, modifier ->
             Box(modifier, contentAlignment = Alignment.Center) {
                 ShowroomThumbnail(style, vehicleColor, Modifier.fillMaxWidth(.90f), kit=kit)
@@ -89,24 +92,7 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
         },
         scene = { frame, modifier, enabled, act ->
             Column(modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                val scheme = MaterialTheme.colorScheme
-                Surface(color = if (frame.stopChallenge) Color(0xFFB42318) else if (frame.schoolZone) Color(0xFF85520E) else scheme.surface, shape = RoundedCornerShape(12.dp)) {
-                    val fg = if (frame.stopChallenge || frame.schoolZone) Color.White else scheme.onSurface
-                    Column(Modifier.fillMaxWidth().padding(9.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(when {
-                        frame.stopChallenge && frame.stopCompleted && frame.stopped -> "PARE · cruce libre, pulsa Avanzar"
-                        frame.stopChallenge && frame.stopCompleted -> "✓ PARE respetado"
-                        !frame.stopChallenge && (frame.elapsed in 15f..18f || frame.elapsed in 40f..43f) -> "PRÓXIMA ZONA ESCOLAR · reduce a 30 km/h"
-                        frame.stopChallenge -> "PARE · detención completa"
-                        frame.schoolZone -> "ZONA ESCOLAR · máximo 30 km/h"
-                        else -> "VELOCIDAD: ${if (frame.stopped) 0 else if (frame.slow) 30 else 50} km/h (simulada)"
-                    }, color = fg, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 13.sp)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${if (frame.stopped) 0 else if (frame.slow) 30 else 50} km/h · simulado", color = fg, fontSize = 12.sp)
-                        Text("PARE ${frame.safeStops}/2 · ESCUELA ${frame.safeZones}/2", color = fg, fontSize = 11.sp)
-                    }
-                    }
-                }
+                DriveSignDashboard(frame)
                 DriveRoad(frame, Modifier.weight(1f).fillMaxWidth(), enabled, act, style, vehicleColor, zone, kit)
             }
         },
@@ -118,10 +104,9 @@ fun CarvierDriveScreen(userKey: String, onBack: () -> Unit) {
                 ArcadeControl("Der. ▶", enabled && !frame.stopped && frame.lane < 2, Modifier.weight(1f)) { act(1) }
             }
             ArcadeControl(when {
-                frame.stopped && frame.stopCompleted -> "AVANZAR · CRUCE LIBRE"
-                frame.stopped -> "DETENIDO · ESPERA"
-                frame.stopChallenge && !frame.stopCompleted -> "DETENER (PARE)"
-                else -> "DETENER · disponible ante PARE"
+                frame.stopped && frame.stopCompleted -> "Avanzar"
+                frame.stopped -> "Espera"
+                else -> "Detener"
             }, enabled && ((frame.stopChallenge && !frame.stopCompleted && !frame.stopped) || (frame.stopped && frame.stopCompleted)), Modifier.fillMaxWidth(), frame.stopCompleted && frame.stopped) { act(3) }
             }
         }
@@ -138,6 +123,9 @@ internal fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, 
     val playerSprite = remember(vehicleStyle,vehicleColor,kit) { rasterizeRoadCar(vehicleStyle,vehicleColor,kit) }
     val trafficSprites = remember { roadPaints.mapIndexed { i,color -> rasterizeRoadCar(trafficStyles[i],color,GarageKit()) } }
     val currentAct by rememberUpdatedState(act)
+    val stopSign = painterResource(R.drawable.ic_drive_stop)
+    val schoolSign = painterResource(R.drawable.ic_drive_school)
+    val speedSign = painterResource(R.drawable.ic_drive_limit_30)
     Canvas(modifier.clip(RoundedCornerShape(22.dp)).pointerInput(enabled) {
         if (enabled) {
             var travel = 0f
@@ -195,32 +183,23 @@ internal fun DriveRoad(frame: DriveFrame, modifier: Modifier, enabled: Boolean, 
             if (frame.schoolZone) {
                 drawRect(Color(0xFFFBBF24).copy(alpha = .18f), Offset(132f, 0f), Size(436f, 1000f))
                 for (i in 0..4) drawRect(Color(0xFFFDE68A), Offset(143f + i * 87f, 70f), Size(62f, 20f))
-                drawCircle(Color(0xFFFBBF24), 37f, Offset(64f, 130f))
-                drawCircle(Color(0xFF1F2937), 28f, Offset(64f, 130f))
-                drawLine(Color(0xFFFBBF24), Offset(49f, 146f), Offset(79f, 114f), 8f)
+            }
+            if (frame.schoolZone || driveCue(frame)==DriveCue.SCHOOL_AHEAD) {
+                // Use the same vector artwork as the HUD; no bitmap allocations per frame.
+                drawLine(Color(0xFFB3C5C8), Offset(62f, 188f), Offset(62f, 258f), 7f)
+                translate(16f, 100f) {
+                    with(schoolSign) { draw(size=Size(92f,92f)) }
+                }
+                translate(16f, 198f) {
+                    with(speedSign) { draw(size=Size(92f,92f)) }
+                }
             }
             if (frame.stopChallenge && !frame.stopCompleted) {
-                // Arcade checkpoint: visual stop line and octagonal marker ahead of the player.
-                drawLine(Color.White, Offset(145f, 737f), Offset(555f, 737f), 9f)
-                val center = Offset(626f, 710f)
-                val sign = Path().apply {
-                    for (i in 0..7) {
-                        val angle = Math.PI / 8 + i * Math.PI / 4
-                        val x = center.x + (42 * kotlin.math.cos(angle)).toFloat()
-                        val y = center.y + (42 * kotlin.math.sin(angle)).toFloat()
-                        if (i == 0) moveTo(x, y) else lineTo(x, y)
-                    }
-                    close()
+                drawLine(Color.White, Offset(145f,737f), Offset(555f,737f),9f)
+                drawLine(Color(0xFFB3C5C8),Offset(626f,720f),Offset(626f,808f),7f)
+                translate(578f,658f) {
+                    with(stopSign) { draw(size=Size(96f,96f)) }
                 }
-                drawPath(sign, Color(0xFFB42318))
-                drawPath(sign, Color.White, style = androidx.compose.ui.graphics.drawscope.Stroke(5f))
-                drawContext.canvas.nativeCanvas.drawText("PARE", center.x, center.y + 8f,
-                    android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                        color = android.graphics.Color.WHITE
-                        textSize = 24f
-                        textAlign = android.graphics.Paint.Align.CENTER
-                        typeface = android.graphics.Typeface.DEFAULT_BOLD
-                    })
             }
             frame.items.forEach { item ->
                 val center = Offset(laneX(item.lane.toFloat()), item.y * 1000f)
