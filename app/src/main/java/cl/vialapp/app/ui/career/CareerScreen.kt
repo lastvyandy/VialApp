@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.R
+import cl.vialapp.app.ui.rewards.LocalRewards
 import cl.vialapp.app.data.api.*
 import cl.vialapp.app.data.session.SessionManager
 import kotlinx.coroutines.CancellationException
@@ -55,6 +56,7 @@ fun CareerScreen(userKey:String, initiallyGarage:Boolean,onBack:()->Unit,onActiv
     val session=remember(context){SessionManager(context)}
     val scope=rememberCoroutineScope()
     val c=MaterialTheme.colorScheme
+    val rewards=LocalRewards.current
     var garage by remember(userKey,initiallyGarage){mutableStateOf(initiallyGarage)}
     var state by remember(userKey){mutableStateOf<CareerState?>(null)}
     var loading by remember(userKey){mutableStateOf(true)}
@@ -79,6 +81,7 @@ fun CareerScreen(userKey:String, initiallyGarage:Boolean,onBack:()->Unit,onActiv
     }
     fun act(action:String,id:String) {
         if(busy||loading)return
+        val previous=state
         busy=true; error=""
         scope.launch {
             try {
@@ -86,6 +89,14 @@ fun CareerScreen(userKey:String, initiallyGarage:Boolean,onBack:()->Unit,onActiv
                 val response=token?.let{ApiClient.api.changeCareer("Bearer "+it,CareerAction(action,id))}
                 val body=response?.body()
                 if(response?.isSuccessful==true && body!=null) {
+                if(action=="claim" && previous!=null){
+                    val old=previous.stages.firstOrNull{it.id==id}
+                    val confirmed=body.stages.firstOrNull{it.id==id}
+                    if(old!=null&&!old.claimed&&confirmed!=null&&confirmed.claimed){
+                        val coins=(body.bonusCoins-previous.bonusCoins).coerceIn(0,confirmed.rewardCoins)
+                        rewards.show("Recompensa de carrera",coins)
+                    }
+                }
                 state=body
                 cacheEquippedGarage(context,userKey,body)
             }
@@ -129,8 +140,8 @@ fun CareerScreen(userKey:String, initiallyGarage:Boolean,onBack:()->Unit,onActiv
         }
         val data=state
         if(data!=null) {
+            item { Wallet(data) }
             if(!garage) {
-                item { Wallet(data) }
                 item {
                     Text("Tu recorrido",fontSize=22.sp,fontWeight=FontWeight.Bold,color=c.onSurface)
                     Text("${data.stages.count { it.claimed }} de ${data.stages.size} etapas completadas",color=c.onSurfaceVariant)
@@ -158,12 +169,16 @@ fun CareerScreen(userKey:String, initiallyGarage:Boolean,onBack:()->Unit,onActiv
 @Composable
 private fun Wallet(data:CareerState) {
     val c=MaterialTheme.colorScheme
-    Surface(color=c.primaryContainer,shape=RoundedCornerShape(19.dp)) {
+    val animatedCoins by androidx.compose.animation.core.animateIntAsState(data.coins,animationSpec=androidx.compose.animation.core.tween(650),label="walletCoins")
+    val dark=cl.vialapp.app.ui.theme.LocalVialAppearance.current.dark
+    val bg=if(dark)Color(0xFF3E331C)else Color(0xFFFFF2D6)
+    val fg=if(dark)Color(0xFFFFD77C)else Color(0xFF80520A)
+    Surface(color=bg,shape=RoundedCornerShape(19.dp)) {
         Row(Modifier.fillMaxWidth().padding(15.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-            Icon(painterResource(R.drawable.ic_collection_medal),null,tint=c.onPrimaryContainer,modifier=Modifier.size(34.dp))
+            Icon(painterResource(R.drawable.ic_vial_coin),null,tint=fg,modifier=Modifier.size(34.dp))
             Column(Modifier.weight(1f)) {
-                Text("${data.coins} monedas",fontSize=24.sp,fontWeight=FontWeight.ExtraBold,color=c.onPrimaryContainer)
-                Text("100 iniciales · 1 por cada 5 XP · premios de carrera",fontSize=12.sp,color=c.onPrimaryContainer)
+                Text("$animatedCoins monedas",fontSize=24.sp,fontWeight=FontWeight.ExtraBold,color=fg)
+                Text("100 iniciales · 1 por cada 5 XP · premios de carrera",fontSize=12.sp,color=fg)
             }
         }
     }

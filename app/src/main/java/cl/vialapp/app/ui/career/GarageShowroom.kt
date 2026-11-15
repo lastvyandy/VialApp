@@ -72,7 +72,7 @@ internal fun GarageShowroom(data:CareerState,enabled:Boolean,
                         Surface(shape=RoundedCornerShape(12.dp),color=panel) {
                             Row(Modifier.padding(horizontal=10.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,
                                 horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                                Icon(painterResource(R.drawable.ic_collection_medal),null,tint=gold,modifier=Modifier.size(18.dp))
+                                Icon(painterResource(R.drawable.ic_vial_coin),null,tint=gold,modifier=Modifier.size(18.dp))
                                 Text(data.coins.toString(),color=gold,fontWeight=FontWeight.Bold)
                             }
                         }

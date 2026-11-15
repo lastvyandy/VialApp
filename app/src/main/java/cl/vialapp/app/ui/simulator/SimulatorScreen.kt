@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.vialapp.app.R
+import cl.vialapp.app.ui.rewards.LocalRewards
 import cl.vialapp.app.data.api.*
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
@@ -56,6 +57,10 @@ fun SimulatorScreen(userKey: String, mascotId: String?, onBack: () -> Unit) {
     var loading by remember(userKey) { mutableStateOf(true) }
     var refresh by remember(userKey) { mutableIntStateOf(0) }
     val c=MaterialTheme.colorScheme
+    val dark=cl.vialapp.app.ui.theme.LocalVialAppearance.current.dark
+    val completeBg=if(dark)Color(0xFF173D33) else Color(0xFFE5F7ED)
+    val completeFg=if(dark)Color(0xFFADEBC8) else Color(0xFF17613D)
+    val completeBorder=if(dark)Color(0xFF429C71) else Color(0xFF91D3AB)
     LaunchedEffect(userKey,refresh) {
         loading=true
         try {
@@ -91,27 +96,35 @@ fun SimulatorScreen(userKey: String, mascotId: String?, onBack: () -> Unit) {
                 }
             } else {
                 item {
-                    Surface(color=c.primaryContainer,shape=RoundedCornerShape(20.dp)) {
+                    val finishedCount=data.scenarios.count{it.id in data.completedIds}
+                    val allDone=data.scenarios.isNotEmpty()&&finishedCount==data.scenarios.size
+                    Surface(color=if(allDone)completeBg else c.primaryContainer,shape=RoundedCornerShape(20.dp)) {
                         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                            Text("Tu recorrido",color=c.onPrimaryContainer,fontWeight=FontWeight.Bold,fontSize=18.sp)
-                            Text(data.scenarios.count { it.id in data.completedIds }.toString()+" de "+data.scenarios.size+" escenarios completados",color=c.onPrimaryContainer)
+                            Text(if(allDone)"¡Recorrido completado!" else "Tu recorrido",color=if(allDone)completeFg else c.onPrimaryContainer,fontWeight=FontWeight.Bold,fontSize=18.sp)
+                            Text(finishedCount.toString()+" de "+data.scenarios.size+" escenarios completados",color=if(allDone)completeFg else c.onPrimaryContainer)
                             LinearProgressIndicator(progress={data.scenarios.count { it.id in data.completedIds }.toFloat()/data.scenarios.size.coerceAtLeast(1)},
-                                modifier=Modifier.fillMaxWidth().height(7.dp))
+                                modifier=Modifier.fillMaxWidth().height(7.dp),color=if(dark)Color(0xFF79DBA7) else Color(0xFF22894F))
                         }
                     }
                 }
                 items(data.scenarios,key={it.id}) { item ->
+                    val done=item.id in data.completedIds
                     Card(onClick={scenario=item},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(22.dp),
-                        border=BorderStroke(1.dp,c.outlineVariant)) {
+                        colors=CardDefaults.cardColors(containerColor=if(done)completeBg else c.surface),
+                        border=BorderStroke(if(done)2.dp else 1.dp,if(done)completeBorder else c.outlineVariant)) {
                         Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically,
                             horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                             SimulatorBoard(item.scene,0f,modifier=Modifier.width(110.dp))
                             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                                Text(item.category.uppercase(),color=c.primary,fontSize=10.sp,fontWeight=FontWeight.Bold)
+                                Text(item.category.uppercase(),color=if(done)completeFg else c.primary,fontSize=10.sp,fontWeight=FontWeight.Bold)
                                 Text(item.title,color=c.onSurface,fontSize=17.sp,fontWeight=FontWeight.Bold)
                                 Text(item.description,color=c.onSurfaceVariant,fontSize=12.sp)
-                                Text(if (item.id in data.completedIds) "Completado · Repetir" else "Comenzar · Hasta 20 XP",
-                                    color=c.primary,fontWeight=FontWeight.SemiBold,fontSize=12.sp)
+                                if(done){
+                                    Surface(color=completeFg,shape=RoundedCornerShape(8.dp)){
+                                        Text("✓ Completado",Modifier.padding(horizontal=8.dp,vertical=4.dp),color=completeBg,fontSize=11.sp,fontWeight=FontWeight.Bold)
+                                    }
+                                    Text("Repetir escenario ›",color=completeFg,fontWeight=FontWeight.SemiBold,fontSize=12.sp)
+                                }else Text("Comenzar · Hasta 20 XP",color=c.primary,fontWeight=FontWeight.SemiBold,fontSize=12.sp)
                             }
                         }
                     }
@@ -135,6 +148,7 @@ private fun ScenarioPlay(scenario:DrivingScenario,mascotId:String?,manager:Sessi
 private fun ScenarioRound(scenario:DrivingScenario,mascotId:String?,manager:SessionManager,store:GameProgressStore,
                          onExit:()->Unit,onSaved:()->Unit,onReplay:()->Unit) {
     val c=MaterialTheme.colorScheme
+    val rewards=LocalRewards.current
     var play by remember { mutableStateOf(ScenarioDecisionState.start(scenario.steps.size)) }
     val stage=play.stage
     val attempts=play.attempts
@@ -184,6 +198,7 @@ private fun ScenarioRound(scenario:DrivingScenario,mascotId:String?,manager:Sess
             if (response?.isSuccessful==true && body!=null) {
                 result=body
                 store.applyRemoteProgress(body.gamification)
+                if(!body.duplicate)rewards.xp("Escenario completado",body.gamification.totalXp,body.xpAwarded)
                 onSaved()
             } else saveError=true
         } catch (e:CancellationException) { throw e }

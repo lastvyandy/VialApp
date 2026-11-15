@@ -258,6 +258,8 @@ class MainActivity : ComponentActivity() {
 
                 else {
 
+                    androidx.compose.runtime.key(currentUser!!.id) {
+                    cl.vialapp.app.ui.rewards.RewardHost {
                     VialAppNavigation(
                         user = currentUser!!,
                         openPracticeRequested = openPractice,
@@ -293,6 +295,8 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     )
+                    }
+                    }
                 }
             }
         }
