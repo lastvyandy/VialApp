@@ -1668,13 +1668,7 @@ internal fun ExamXpRewardBanner(
 
                 Text(
                     text =
-                        if (
-                            xp >= 30
-                        ) {
-                            "Examen completado"
-                        } else {
-                            "Bonus de repaso"
-                        },
+"Experiencia obtenida",
                     color =
                         vialColor(Color(
                             0xFF166534
