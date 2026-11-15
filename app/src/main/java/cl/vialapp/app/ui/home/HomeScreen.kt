@@ -25,6 +25,8 @@ import cl.vialapp.app.data.api.ExamAttemptResponse
 import cl.vialapp.app.data.api.UserResponse
 import cl.vialapp.app.data.api.LearningChapterSummary
 import cl.vialapp.app.ui.learning.HomeJourneyCard
+import cl.vialapp.app.ui.leaderboard.HomeLeagueShortcut
+import cl.vialapp.app.data.api.WeeklyLeaderboardResponse
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.data.session.AuthenticatedRead
@@ -73,7 +75,8 @@ fun HomeScreen(
     onSimulator: () -> Unit = {},
     onAdaptivePractice: () -> Unit = {},
     onContinueChapter: (String) -> Unit = { onLearningPath() },
-    onOfflineStudy: () -> Unit = onLibrary
+    onOfflineStudy: () -> Unit = onLibrary,
+    onLeague: () -> Unit = onProgress
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -102,6 +105,15 @@ fun HomeScreen(
             else response.errorBody()?.close()
         }catch(cancelled:CancellationException){throw cancelled}
         catch(_:Exception){}
+    }
+    var league by remember(user.id){mutableStateOf<WeeklyLeaderboardResponse?>(null)}
+    LaunchedEffect(user.id,rewards.serial){
+        try {
+            val response=AuthenticatedRead.get(sessionManager,"weekly league preview"){ApiClient.api.getWeeklyLeaderboard(it,limit=1)}
+            league=response.body()?.takeIf{response.isSuccessful}
+            response.errorBody()?.close()
+        }catch(cancelled:CancellationException){throw cancelled}
+        catch(_:Exception){league=null}
     }
     var journey by remember(user.id) { mutableStateOf<List<LearningChapterSummary>?>(null) }
     var journeyLoading by remember(user.id) { mutableStateOf(true) }
@@ -319,6 +331,8 @@ fun HomeScreen(
             }
         }
 
+
+        item(key="home_league") { HomeLeagueShortcut(league,onLeague) }
 
         item(key="home_journey") {
             HomeJourneyCard(user.id,licenseText,user.licenseClass,journey,journeyLoading,

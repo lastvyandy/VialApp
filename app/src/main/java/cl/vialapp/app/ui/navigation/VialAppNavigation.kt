@@ -315,7 +315,7 @@ fun VialAppNavigation(
                         NavigationBarItem(
 
                             selected = currentRoute == item.route ||
-                                (item.route == "stats" && currentRoute == "leaderboard/weekly") ||
+                                (currentRoute == "leaderboard/weekly" && item.route == navController.previousBackStackEntry?.destination?.route) ||
                                 (item.route == "exams" && currentRoute == "exams/category/{category}"),
 
                             onClick = {
@@ -523,6 +523,7 @@ fun VialAppNavigation(
                     },
 
                     onExam = { navigateTopLevel("exams") },
+                    onLeague = { navController.navigate("leaderboard/weekly") { launchSingleTop = true } },
 
                     onProgress = {
 

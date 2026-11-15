@@ -19,6 +19,11 @@ import cl.vialapp.app.data.api.ApiClient
 import cl.vialapp.app.data.api.LeaderboardEntryResponse
 import cl.vialapp.app.data.api.WeeklyLeaderboardResponse
 import cl.vialapp.app.data.session.SessionManager
+import cl.vialapp.app.data.session.AuthenticatedRead
+import cl.vialapp.app.data.session.readError
+import androidx.compose.ui.res.painterResource
+import cl.vialapp.app.R
+import cl.vialapp.app.ui.theme.LocalVialAppearance
 import cl.vialapp.app.ui.profile.ProfileAvatar
 import cl.vialapp.app.ui.mascot.MascotReaction
 import cl.vialapp.app.ui.mascot.MascotReactionCard
@@ -46,12 +51,13 @@ fun WeeklyLeaderboardScreen(
 ) {
     val context = LocalContext.current
     val session = remember(context) { SessionManager(context) }
+    var weekOffset by remember(userKey){mutableIntStateOf(0)}
     var refresh by remember(userKey) { mutableIntStateOf(0) }
     var data by remember(userKey) { mutableStateOf<WeeklyLeaderboardResponse?>(null) }
     var loading by remember(userKey) { mutableStateOf(true) }
     var error by remember(userKey) { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(userKey, refresh) {
+    LaunchedEffect(userKey, weekOffset, refresh) {
         loading = true
         error = null
         try {
@@ -59,18 +65,20 @@ fun WeeklyLeaderboardScreen(
             if (token.isNullOrBlank()) {
                 error = "Inicia sesión para consultar la liga."
             } else {
-                val response = ApiClient.api.getWeeklyLeaderboard("Bearer $token")
+                val response = AuthenticatedRead.get(session,"weekly league"){ApiClient.api.getWeeklyLeaderboard(it,weekOffset)}
                 val body = response.body()
-                if (response.isSuccessful && body != null) {
+                if (response.isSuccessful && body != null && body.weekOffset==weekOffset) {
                     data = body
                 } else {
-                    error = "No se pudo cargar la liga. Inténtalo de nuevo."
+                    error = if(response.isSuccessful) "Esta semana no está disponible. Actualiza o reintenta."
+                        else readError(response.code())
+                    response.errorBody()?.close()
                 }
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (_: Exception) {
-            error = "No hay conexión con el servidor."
+        } catch (e: Exception) {
+            error = readError(e)
         } finally {
             loading = false
         }
@@ -82,7 +90,7 @@ fun WeeklyLeaderboardScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            TextButton(onClick=onBack,contentPadding=PaddingValues(0.dp)){Text("‹ Progreso")}
+            TextButton(onClick=onBack,contentPadding=PaddingValues(0.dp)){Text("‹ Volver")}
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "Liga semanal",
@@ -96,12 +104,24 @@ fun WeeklyLeaderboardScreen(
                 }
             }
             Text(
-                "Compite con XP de exámenes, lecciones y misiones. Cada lunes empieza una nueva liga.",
+                "Compite aprendiendo. Cada lunes comienza una nueva liga.",
                 color = LeagueGray,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 modifier = Modifier.padding(top = 5.dp)
             )
+        }
+        item(key="week_selector"){
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                listOf("Esta semana","Semana anterior").forEachIndexed { index,label ->
+                    if(weekOffset==index) Button(onClick={},enabled=false,modifier=Modifier.weight(1f),
+                        colors=ButtonDefaults.buttonColors(disabledContainerColor=MaterialTheme.colorScheme.primaryContainer,
+                            disabledContentColor=MaterialTheme.colorScheme.onPrimaryContainer)){
+                        Text(label,textAlign=TextAlign.Center)
+                    } else OutlinedButton(onClick={data=null;error=null;loading=true;weekOffset=index},
+                        modifier=Modifier.weight(1f)){Text(label,textAlign=TextAlign.Center)}
+                }
+            }
         }
         if (loading) {
             item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
@@ -116,7 +136,7 @@ fun WeeklyLeaderboardScreen(
                 }
             }
         }
-        data?.let { board ->
+        data?.takeIf{it.weekOffset==weekOffset}?.let { board ->
             val mine = board.myEntry
             item {
                 Text(
@@ -124,7 +144,7 @@ fun WeeklyLeaderboardScreen(
                     color = LeagueGray,
                     fontSize = 13.sp
                 )
-                Text("Reinicio: lunes, 00:00 (Chile continental)", color = LeagueGray, fontSize = 12.sp)
+                Text(if(weekOffset==0)"Reinicio: lunes, 00:00 (Chile continental)" else "Clasificación de la semana finalizada", color = LeagueGray, fontSize = 12.sp)
             }
             item {
                 Card(
@@ -139,7 +159,7 @@ fun WeeklyLeaderboardScreen(
                             color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold
                         )
                         if (mine == null) {
-                            Text("Completa una actividad de estudio con XP para participar.", color = Color.White, fontSize = 13.sp)
+                            Text(if(weekOffset==0)"Completa una actividad de estudio con XP para participar." else "No participaste en esta semana.", color = Color.White, fontSize = 13.sp)
                         }
                         if (mine != null) {
                             Text(mine.alias, color = Color.White.copy(alpha = .8f), fontSize = 12.sp)
@@ -161,7 +181,7 @@ fun WeeklyLeaderboardScreen(
                     }
                 }
             }
-            if (mine != null && mine.position <= 3 && MascotReactions.isSupported(mascotId)) {
+            if (weekOffset==0 && mine != null && mine.position <= 3 && MascotReactions.isSupported(mascotId)) {
                 item {
                     MascotReactionCard(
                         mascotId = mascotId.orEmpty(),
@@ -173,7 +193,7 @@ fun WeeklyLeaderboardScreen(
                 item {
                     Card(colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))) {
                         Text(
-                            "Todavía no hay participantes. ¡Sé el primero en sumar XP!",
+                            if(weekOffset==0)"Todavía no hay participantes. ¡Sé el primero en sumar XP!" else "No hubo participantes con XP de estudio esta semana.",
                             color = LeagueGray,
                             modifier = Modifier.padding(20.dp)
                         )
@@ -186,7 +206,7 @@ fun WeeklyLeaderboardScreen(
                     LeaguePodium(board.entries.take(3))
                 }
                 item {
-                    Text("Clasificación", color = LeagueDark, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                    Text("Clasificación · ${board.entries.size} de ${board.participants}", color = LeagueDark, fontWeight = FontWeight.Bold, fontSize = 19.sp)
                 }
                 items(board.entries, key = { it.position }) { entry ->
                     LeagueRow(entry)
@@ -201,7 +221,7 @@ fun WeeklyLeaderboardScreen(
             }
             item {
                 Text(
-                    "En la liga se muestra solo el primer nombre del perfil o un alias si no está disponible. Los XP directos de minijuegos no cuentan aquí; tus XP del perfil se conservan.",
+                    "Solo aparecen participantes que ganaron XP de estudio en la semana seleccionada. Desde el 16/11/2026 también cuentan la práctica inteligente y los escenarios del simulador. Los XP directos de minijuegos no cuentan en la liga. Se muestra el primer nombre o un alias.",
                     color = LeagueGray,
                     fontSize = 12.sp,
                     lineHeight = 17.sp
@@ -305,3 +325,35 @@ private fun medalEmoji(position: Int): String = when (position) {
 private fun shortDate(value: String): String = runCatching {
     LocalDate.parse(value).format(DateTimeFormatter.ofPattern("dd/MM"))
 }.getOrDefault(value)
+
+
+/** Compact entry above the study journey; the study journey remains the main action. */
+@Composable
+internal fun HomeLeagueShortcut(board:WeeklyLeaderboardResponse?,onClick:()->Unit){
+    val dark=LocalVialAppearance.current.dark
+    val bg=if(dark)Color(0xFF342B4F) else Color(0xFFF0EAFE)
+    val ink=if(dark)Color(0xFFF1E8FF) else Color(0xFF4C3480)
+    val iconBg=if(dark)Color(0xFF4E3D72) else Color(0xFFE3D5FC)
+    Card(onClick=onClick,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(18.dp),
+        colors=CardDefaults.cardColors(containerColor=bg)){
+        Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(11.dp)){
+            Surface(color=iconBg,shape=RoundedCornerShape(13.dp)){
+                Box(Modifier.size(44.dp),contentAlignment=Alignment.Center){
+                    Icon(painterResource(R.drawable.ic_league),null,tint=ink,modifier=Modifier.size(26.dp))
+                }
+            }
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){
+                Text("Liga semanal",color=ink,fontWeight=FontWeight.ExtraBold,fontSize=16.sp)
+                val mine=board?.myEntry
+                Text(when {
+                    mine!=null -> "Puesto #"+mine.position+" · "+mine.xp+" XP"
+                    board!=null && board.participants>0 -> board.participants.toString()+" participantes · ¡Únete!"
+                    board!=null -> "Nueva semana · ¡Suma XP!"
+                    else -> "Consulta tu posición y el ranking"
+                },color=ink,fontSize=12.sp)
+            }
+            Text("›",color=ink,fontSize=27.sp,fontWeight=FontWeight.Bold)
+        }
+    }
+}

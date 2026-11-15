@@ -182,7 +182,9 @@ interface VialApi {
 
     @GET("users/me/gamification/leaderboard/weekly")
     suspend fun getWeeklyLeaderboard(
-        @Header("Authorization") authorization: String
+        @Header("Authorization") authorization: String,
+        @Query("week_offset") weekOffset: Int = 0,
+        @Query("limit") limit: Int = 50
     ): Response<WeeklyLeaderboardResponse>
 
     @POST("users/me/gamification/achievements")

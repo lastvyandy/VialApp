@@ -18,7 +18,8 @@ data class WeeklyLeaderboardResponse(
     @SerializedName("participants") val participants: Int,
     @SerializedName("entries") val entries: List<LeaderboardEntryResponse>,
     @SerializedName("my_entry") val myEntry: LeaderboardEntryResponse? = null,
-    @SerializedName("previous_medal") val previousMedal: Int? = null
+    @SerializedName("previous_medal") val previousMedal: Int? = null,
+    @SerializedName("week_offset") val weekOffset: Int = 0
 )
 
 data class AvatarResponse(val key: String? = null)
