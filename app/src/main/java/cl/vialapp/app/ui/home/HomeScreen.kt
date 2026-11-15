@@ -25,8 +25,6 @@ import cl.vialapp.app.data.api.UserResponse
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.gamification.HomeXpCard
-import cl.vialapp.app.ui.learning.LearningPathEntry
-import cl.vialapp.app.ui.library.LibraryEntry
 import cl.vialapp.app.ui.games.GamesQuickEntry
 import cl.vialapp.app.ui.career.CareerShortcuts
 import cl.vialapp.app.ui.profile.ProfileAvatar
@@ -66,7 +64,9 @@ fun HomeScreen(
     onLearningPath: () -> Unit = {},
     onCareer: () -> Unit = {},
     onGarage: () -> Unit = {},
-    onLibrary: () -> Unit = {}
+    onLibrary: () -> Unit = {},
+    onSimulator: () -> Unit = {},
+    onAdaptivePractice: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -176,7 +176,7 @@ fun HomeScreen(
             top = 18.dp,
             bottom = 110.dp
         ),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // Cabecera
         item {
@@ -207,10 +207,6 @@ fun HomeScreen(
             }
         }
 
-        item { LibraryEntry(onClick = onLibrary) }
-        item { GamesQuickEntry(onClick = onGames) }
-        item { CareerShortcuts(onCareer, onGarage) }
-
         // Compañero elegido: no modifica ni sincroniza el progreso.
         user.mascotId
             ?.takeIf { it == "carvier" || it == "mister_pelao" }
@@ -222,61 +218,6 @@ fun HomeScreen(
                     )
                 }
             }
-
-        // Tarjeta principal
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(Color(0xFF1D4ED8), Color(0xFF285BC4))
-                        )
-                    )
-                    .padding(24.dp)
-            ) {
-                Column {
-                    Text(
-                        text = "TU PREPARACIÓN",
-                        color = Color.White.copy(alpha = 0.78f),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(7.dp))
-                    Text(
-                        text = licenseText,
-                        color = Color.White,
-                        fontSize = 29.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(7.dp))
-                    Text(
-                        text = if (summary?.hasData == true) {
-                            "Llevas ${summary.totalTests} exámenes completados."
-                        } else {
-                            "Empieza hoy y construye tu progreso paso a paso."
-                        },
-                        color = Color.White.copy(alpha = 0.90f),
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Button(
-                        onClick = onPractice,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = VialActionBlue
-                        ),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text(
-                            text = "Continuar practicando",
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-        }
 
         // Examen en curso
         activeAttempt?.let { attempt ->
@@ -300,7 +241,7 @@ fun HomeScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(text = "⏱", fontSize = 25.sp)
+                                Icon(painterResource(R.drawable.ic_vial_exam),null,tint=HomeBlue,modifier=Modifier.size(25.dp))
                             }
                         }
 
@@ -339,6 +280,66 @@ fun HomeScreen(
             }
         }
 
+
+        // Tarjeta principal
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(Color(0xFF1D4ED8), Color(0xFF285BC4))
+                        )
+                    )
+                    .padding(20.dp)
+            ) {
+                Column {
+                    Text(
+                        text = "TU PREPARACIÓN",
+                        color = Color.White.copy(alpha = 0.78f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(7.dp))
+                    Text(
+                        text = licenseText,
+                        color = Color.White,
+                        fontSize = 29.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(7.dp))
+                    Text(
+                        text = if (summary?.hasData == true) {
+                            "Llevas ${summary.totalTests} exámenes completados."
+                        } else {
+                            "Empieza hoy y construye tu progreso paso a paso."
+                        },
+                        color = Color.White.copy(alpha = 0.90f),
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Button(
+                        onClick = onPractice,
+                        modifier = Modifier.fillMaxWidth().heightIn(min=48.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = VialActionBlue
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(
+                            text = "Continuar practicando",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    TextButton(onClick=onExam,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                        colors=ButtonDefaults.textButtonColors(contentColor=Color.White)) {
+                        Text("Ver exámenes",fontWeight=FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
 
         item {
             when {
@@ -379,10 +380,6 @@ fun HomeScreen(
             }
         }
 
-
-        item {
-            LearningPathEntry(onClick = onLearningPath)
-        }
 
         // Tu ruta de hoy
         item {
@@ -456,7 +453,7 @@ fun HomeScreen(
                         }
                     } else {
                         Text(
-                            text = "🚦 Descubre tus puntos débiles",
+                            text = "Descubre tus puntos débiles",
                             color = HomeDark,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
@@ -480,6 +477,21 @@ fun HomeScreen(
             }
         }
 
+        item {
+            Text("Herramientas de estudio",color=HomeDark,fontSize=21.sp,fontWeight=FontWeight.Bold)
+        }
+        item {
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_vial_library,"Biblioteca vial","Consulta sin conexión",onLibrary)
+                HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_award_road,"Ruta de aprendizaje","Avanza por temas",onLearningPath)
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_award_wheel,"Simulador vial","Situaciones de tránsito",onSimulator)
+                HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_award_target,"Práctica inteligente","Refuerza tus errores",onAdaptivePractice)
+            }
+        }
         // Resumen de progreso
         if (summary?.hasData == true) {
             item {
@@ -544,78 +556,11 @@ fun HomeScreen(
             }
         }
 
-        // Acciones principales
         item {
-            Text(
-                text = "¿Qué quieres hacer?",
-                color = HomeDark,
-                fontSize = 21.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("Aprende jugando",color=HomeDark,fontSize=21.sp,fontWeight=FontWeight.Bold)
         }
-
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                HomeActionCard(
-                    modifier = Modifier.weight(1f),
-                    drawable = R.drawable.ic_award_target,
-                    title = "Practicar",
-                    description = "Refuerza tus temas",
-                    onClick = onPractice
-                )
-                HomeActionCard(
-                    modifier = Modifier.weight(1f),
-                    drawable = R.drawable.ic_award_road,
-                    title = "Exámenes",
-                    description = "Pon a prueba lo aprendido",
-                    onClick = onExam
-                )
-            }
-        }
-
-        item {
-            Card(
-                onClick = onGames,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(1.dp, Color(0xFF526B95)),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (LocalVialAppearance.current.dark) Color(0xFF293E60) else Color(0xFF172033),
-                    contentColor = Color.White
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    HomeFeatureIcon(R.drawable.ic_home_gamepad, Color(0xFFBFDBFE), Color(0xFF42608B))
-                    Spacer(modifier = Modifier.width(15.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Minijuegos",
-                            color = Color.White,
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(3.dp))
-                        Text(
-                            text = "Entrena, compite y supera tus récords.",
-                            color = Color(0xFFDCE7F6),
-                            fontSize = 13.sp
-                        )
-                    }
-                    Text(
-                        text = "JUGAR ›",
-                        color = Color(0xFFBFDBFE),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
-                }
-            }
-        }
+        item { GamesQuickEntry(onClick=onGames) }
+        item { CareerShortcuts(onCareer,onGarage) }
 
         item {
             Card(
@@ -679,15 +624,17 @@ private fun HomeActionCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.height(150.dp),
+        modifier = modifier.heightIn(min=112.dp),
         shape = RoundedCornerShape(22.dp),
         border = HomeCardBorder,
         colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Icon(painterResource(drawable),null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(29.dp))
-            Spacer(modifier = Modifier.height(14.dp))
-            Text(text = title, color = HomeDark, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Column(modifier = Modifier.padding(14.dp)) {
+            Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.primaryContainer){
+                Icon(painterResource(drawable),null,tint=MaterialTheme.colorScheme.onPrimaryContainer,modifier=Modifier.padding(9.dp).size(23.dp))
+            }
+            Spacer(modifier = Modifier.height(9.dp))
+            Text(text = title, color = HomeDark, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(3.dp))
             Text(text = description, color = HomeGray, fontSize = 12.sp, lineHeight = 16.sp)
         }

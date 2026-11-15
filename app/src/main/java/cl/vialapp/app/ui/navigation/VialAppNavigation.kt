@@ -204,9 +204,9 @@ fun VialAppNavigation(
             ),
 
             BottomItem(
-                route = "leaderboard/weekly",
-                label = "Liga",
-                icon = R.drawable.ic_league
+                route = "exams",
+                label = "Exámenes",
+                icon = R.drawable.ic_vial_exam
             ),
 
             BottomItem(
@@ -314,9 +314,9 @@ fun VialAppNavigation(
 
                         NavigationBarItem(
 
-                            selected =
-                                currentRoute ==
-                                        item.route,
+                            selected = currentRoute == item.route ||
+                                (item.route == "stats" && currentRoute == "leaderboard/weekly") ||
+                                (item.route == "exams" && currentRoute == "exams/category/{category}"),
 
                             onClick = {
 
@@ -506,6 +506,8 @@ fun VialAppNavigation(
 
                 HomeScreen(
                     onLibrary = { navController.navigate("library") },
+                    onSimulator = { navController.navigate("simulator") },
+                    onAdaptivePractice = { navController.navigate("adaptive_practice") },
 
                     user =
                         user,
@@ -519,12 +521,7 @@ fun VialAppNavigation(
                         )
                     },
 
-                    onExam = {
-
-                        navController.navigate(
-                            "exams"
-                        )
-                    },
+                    onExam = { navigateTopLevel("exams") },
 
                     onProgress = {
 
@@ -563,7 +560,8 @@ fun VialAppNavigation(
             composable("leaderboard/weekly") {
                 WeeklyLeaderboardScreen(
                     userKey = user.id,
-                    mascotId = user.mascotId
+                    mascotId = user.mascotId,
+                    onBack = { navController.popBackStack() }
                 )
             }
 
@@ -926,7 +924,8 @@ fun VialAppNavigation(
                     userKey = user.id,
                     licenseClass = user.licenseClass,
                     onPractice = { navigateTopLevel("practice") },
-                    onOpenCollection = { navController.navigate("collection") }
+                    onOpenCollection = { navController.navigate("collection") },
+                    onOpenLeague = { navController.navigate("leaderboard/weekly") { launchSingleTop = true } }
                 )
             }
 

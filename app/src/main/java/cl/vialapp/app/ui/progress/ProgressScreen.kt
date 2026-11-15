@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import cl.vialapp.app.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,7 +46,8 @@ fun ProgressScreen(
     userKey: String,
     onOpenCollection: () -> Unit = {},
     licenseClass: String? = null,
-    onPractice: () -> Unit = {}
+    onPractice: () -> Unit = {},
+    onOpenLeague: () -> Unit = {}
 ) {
 
     val context =
@@ -154,7 +157,7 @@ fun ProgressScreen(
 
 
         error.isNotEmpty() || stats == null || stats?.summary?.hasData != true -> {
-            EmptyProgressState(userKey, licenseClass, onPractice, onOpenCollection, error)
+            EmptyProgressState(userKey, licenseClass, onPractice, onOpenCollection, error, onOpenLeague)
         }
 
 
@@ -166,7 +169,8 @@ fun ProgressScreen(
                 userKey = userKey,
                 onOpenCollection = onOpenCollection,
                 licenseClass = licenseClass,
-                onPractice = onPractice
+                onPractice = onPractice,
+                onOpenLeague = onOpenLeague
             )
         }
     }
@@ -180,7 +184,8 @@ private fun ProgressContent(
     userKey: String,
     onOpenCollection: () -> Unit,
     licenseClass: String?,
-    onPractice: () -> Unit
+    onPractice: () -> Unit,
+    onOpenLeague: () -> Unit
 ) {
 
     val summary =
@@ -209,18 +214,6 @@ private fun ProgressContent(
             )
     ) {
 
-
-        item { ReadinessCard(userKey, licenseClass, onPractice) }
-
-        item {
-            CollectionEntryCard(onClick = onOpenCollection)
-        }
-
-        item {
-            ProgressGamificationSection(
-                userKey = userKey
-            )
-        }
 
         /*
          * CABECERA
@@ -273,6 +266,19 @@ private fun ProgressContent(
             )
         }
 
+
+        item { ReadinessCard(userKey, licenseClass, onPractice) }
+
+        item { LeagueEntry(onClick=onOpenLeague) }
+        item {
+            CollectionEntryCard(onClick = onOpenCollection)
+        }
+
+        item {
+            ProgressGamificationSection(
+                userKey = userKey
+            )
+        }
 
         /*
          * PROMEDIO PRINCIPAL
@@ -1188,14 +1194,20 @@ private fun EmptyProgressState(
     licenseClass: String?,
     onPractice: () -> Unit,
     onOpenCollection: () -> Unit,
-    error: String
+    error: String,
+    onOpenLeague: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(ProgressBackground),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 110.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        item {
+            Text("Tu progreso",fontSize=30.sp,fontWeight=FontWeight.Bold,color=ProgressDark)
+            Text("Mira cómo has avanzado.",color=ProgressGray,fontSize=14.sp)
+        }
         item { ReadinessCard(userKey, licenseClass, onPractice) }
+        item { LeagueEntry(onClick=onOpenLeague) }
         item { CollectionEntryCard(onClick = onOpenCollection) }
         item { ProgressGamificationSection(userKey = userKey) }
         item {
@@ -1256,5 +1268,22 @@ private fun formatDuration(
     } else {
 
         "${remainingSeconds}s"
+    }
+}
+@Composable
+private fun LeagueEntry(onClick:()->Unit){
+    val c=MaterialTheme.colorScheme
+    Card(onClick=onClick,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(22.dp),
+        colors=CardDefaults.cardColors(containerColor=c.surface)){
+        Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
+            Surface(shape=RoundedCornerShape(14.dp),color=c.primaryContainer){
+                Icon(painterResource(R.drawable.ic_league),null,tint=c.onPrimaryContainer,modifier=Modifier.padding(12.dp).size(25.dp))
+            }
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)){
+                Text("Liga semanal",fontSize=17.sp,fontWeight=FontWeight.Bold,color=c.onSurface)
+                Text("Consulta tu posición y la clasificación",fontSize=13.sp,color=c.onSurfaceVariant)
+            }
+            Text("›",fontSize=26.sp,color=c.primary)
+        }
     }
 }

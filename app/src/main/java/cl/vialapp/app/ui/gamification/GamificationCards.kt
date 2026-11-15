@@ -11,6 +11,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import cl.vialapp.app.R
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -445,12 +448,7 @@ private fun XpOverviewCard(
                             Alignment.Center
                     ) {
 
-                        Text(
-                            text =
-                                "🎮",
-                            fontSize =
-                                23.sp
-                        )
+                        Icon(painterResource(R.drawable.ic_collection_medal),null,tint=GamificationBlue,modifier=Modifier.size(25.dp))
                     }
                 }
 
@@ -694,12 +692,7 @@ private fun HomeStreakCard(
                             Alignment.Center
                     ) {
 
-                        Text(
-                            text =
-                                "🔥",
-                            fontSize =
-                                22.sp
-                        )
+                        Icon(painterResource(R.drawable.ic_award_flame),null,tint=GamificationOrange,modifier=Modifier.size(25.dp))
                     }
                 }
 
@@ -940,18 +933,7 @@ private fun HomeDailyMissionCard(
                             Alignment.Center
                     ) {
 
-                        Text(
-                            text =
-                                if (
-                                    mission.claimed
-                                ) {
-                                    "✅"
-                                } else {
-                                    "🎯"
-                                },
-                            fontSize =
-                                21.sp
-                        )
+                        Icon(painterResource(if(mission.claimed)R.drawable.ic_collection_medal else R.drawable.ic_award_target),null,tint=if(mission.claimed)GamificationGreen else GamificationBlue,modifier=Modifier.size(25.dp))
                     }
                 }
 

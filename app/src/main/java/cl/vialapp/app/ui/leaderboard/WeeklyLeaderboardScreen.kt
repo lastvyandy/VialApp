@@ -41,7 +41,8 @@ private val LeagueBg: Color
 @Composable
 fun WeeklyLeaderboardScreen(
     userKey: String,
-    mascotId: String?
+    mascotId: String?,
+    onBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val session = remember(context) { SessionManager(context) }
@@ -81,9 +82,10 @@ fun WeeklyLeaderboardScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
+            TextButton(onClick=onBack,contentPadding=PaddingValues(0.dp)){Text("‹ Progreso")}
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "🏆 Liga semanal",
+                    "Liga semanal",
                     color = LeagueDark,
                     fontSize = 25.sp,
                     fontWeight = FontWeight.ExtraBold,
