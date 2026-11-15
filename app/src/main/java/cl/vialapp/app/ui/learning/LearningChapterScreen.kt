@@ -43,7 +43,7 @@ private fun chapterGames(id: String): List<ChapterGame> = when (id) {
 }
 
 @Composable
-fun LearningChapterScreen(userKey: String, chapterId: String, mascotId: String?, onBack: () -> Unit, onGame: (String) -> Unit) {
+fun LearningChapterScreen(userKey: String, chapterId: String, mascotId: String?, onBack: () -> Unit, onGame: (String) -> Unit, resumePending:Boolean=false) {
     val c = MaterialTheme.colorScheme
     val context = LocalContext.current
     val session = remember(context) { SessionManager(context) }
@@ -55,6 +55,7 @@ fun LearningChapterScreen(userKey: String, chapterId: String, mascotId: String?,
     var refresh by remember(userKey, chapterId) { mutableIntStateOf(0) }
     var activity by remember(userKey, chapterId) { mutableStateOf<StudyActivity?>(null) }
     var flashcards by remember(userKey, chapterId) { mutableStateOf(false) }
+    var autoResumed by remember(userKey,chapterId){mutableStateOf(false)}
 
     LaunchedEffect(userKey, chapterId, refresh) {
         loading = true
@@ -69,6 +70,10 @@ fun LearningChapterScreen(userKey: String, chapterId: String, mascotId: String?,
                     chapter = body.chapter
                     progress = body.progress
                     store.applyRemoteProgress(body.gamification)
+                    if(resumePending && !autoResumed){
+                        autoResumed=true
+                        activity=pendingLearningActivity(body.chapter,body.progress)
+                    }
                 } else error = "No se pudo abrir esta etapa."
             }
         } catch (cancelled: CancellationException) { throw cancelled }
@@ -115,6 +120,12 @@ fun LearningChapterScreen(userKey: String, chapterId: String, mascotId: String?,
                         Text(if (saved.completed) "Etapa completada · puedes repasar cuando quieras."
                             else "Lee, responde y completa el desafío final.", color = c.onPrimaryContainer, fontSize = 13.sp)
                     }
+                }
+            }
+            if(!saved.completed) item {
+                val pending=pendingLearningActivity(content,saved)
+                if(pending!=null) Button(onClick={activity=pending},modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(16.dp)){
+                    Text("Continuar · "+pending.title,fontWeight=FontWeight.Bold)
                 }
             }
             item { Text("Lecciones", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = c.onSurface) }
@@ -244,4 +255,17 @@ private fun LearningFlashcards(cards: List<List<String>>, onBack: () -> Unit) {
             }
         } else item { Text("No hay tarjetas disponibles.", color = c.onSurfaceVariant) }
     }
+}
+
+/** Only starts the first unfinished lesson or unlocked final challenge. */
+internal fun pendingLearningActivity(chapter:LearningChapter,progress:LearningProgress):StudyActivity?{
+    if(progress.completed)return null
+    val lesson=chapter.lessons.firstOrNull{it.id !in progress.completedLessons}
+    if(lesson!=null){
+        val steps=lesson.concepts.map{StudyStep(it.id,it.title,it.blocks,it.question)}
+        return if(steps.isEmpty())null else StudyActivity(lesson.title,steps,false)
+    }
+    if(progress.quizCompleted)return null
+    val steps=chapter.quiz.mapIndexedNotNull{i,q->q.id?.let{StudyStep(it,"Pregunta "+(i+1),emptyList(),q)}}
+    return if(steps.isEmpty())null else StudyActivity("Desafío final",steps,false)
 }

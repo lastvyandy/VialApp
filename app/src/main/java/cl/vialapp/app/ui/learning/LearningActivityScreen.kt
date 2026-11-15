@@ -98,9 +98,17 @@ internal fun LearningActivityScreen(
                     Image(painterResource(if (mascotId == "mister_pelao") R.drawable.mascot_mister_pelao else R.drawable.mascot_carvier),
                         null, modifier = Modifier.height(155.dp).fillMaxWidth(), contentScale = ContentScale.Fit)
                 }
-                Text(if (activity.review) "¡Repaso completado!" else "¡Actividad completada!", color = c.onSurface,
+                val chapterFinished = !initialProgress.completed && feedback?.progress?.completed == true && !activity.review
+                if(chapterFinished) {
+                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=14.dp)){
+                        Icon(painterResource(R.drawable.ic_collection_medal),null,tint=c.primary,modifier=Modifier.size(32.dp))
+                        Text("¡Etapa completada!",color=c.primary,fontWeight=FontWeight.ExtraBold,fontSize=20.sp)
+                    }
+                }
+                Text(if (activity.review) "¡Repaso completado!" else if(chapterFinished) "¡Un paso más hacia tu licencia!" else "¡Actividad completada!", color = c.onSurface,
                     fontWeight = FontWeight.ExtraBold, fontSize = 28.sp, modifier = Modifier.padding(top = 15.dp))
                 Text("$correct de ${activity.steps.size - start} respuestas correctas en esta sesión.", color = c.onSurfaceVariant, fontSize = 15.sp)
+                if(chapterFinished) Text("Tu avance ya quedó guardado en el camino.",color=c.onSurfaceVariant,fontSize=13.sp)
                 Text(if (xp > 0) "+$xp XP confirmados" else "Progreso sincronizado · sin XP nuevos", color = c.primary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(14.dp))
                 Button(onClick = onBack, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp)) {

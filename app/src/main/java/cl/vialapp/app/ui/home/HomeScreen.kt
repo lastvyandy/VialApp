@@ -22,6 +22,8 @@ import cl.vialapp.app.data.api.AdvancedStatsResponse
 import cl.vialapp.app.data.api.ApiClient
 import cl.vialapp.app.data.api.ExamAttemptResponse
 import cl.vialapp.app.data.api.UserResponse
+import cl.vialapp.app.data.api.LearningChapterSummary
+import cl.vialapp.app.ui.learning.HomeJourneyCard
 import cl.vialapp.app.data.games.GameProgressStore
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.ui.gamification.HomeXpCard
@@ -66,7 +68,8 @@ fun HomeScreen(
     onGarage: () -> Unit = {},
     onLibrary: () -> Unit = {},
     onSimulator: () -> Unit = {},
-    onAdaptivePractice: () -> Unit = {}
+    onAdaptivePractice: () -> Unit = {},
+    onContinueChapter: (String) -> Unit = { onLearningPath() }
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -84,6 +87,19 @@ fun HomeScreen(
 
     var activeAttempt by remember {
         mutableStateOf<ExamAttemptResponse?>(null)
+    }
+
+    var journey by remember(user.id) { mutableStateOf<List<LearningChapterSummary>?>(null) }
+    var journeyLoading by remember(user.id) { mutableStateOf(true) }
+    LaunchedEffect(user.id, user.licenseClass) {
+        journeyLoading = true
+        try {
+            val token=sessionManager.getAccessToken()
+            val response=token?.let{ApiClient.api.getLearningPath("Bearer "+it)}
+            journey=response?.takeIf{it.isSuccessful}?.body()?.chapters?.sortedBy{it.order}
+        } catch(cancelled:CancellationException){throw cancelled}
+        catch(_:Exception){journey=null}
+        finally{journeyLoading=false}
     }
 
     var dashboardLoading by remember {
@@ -281,64 +297,9 @@ fun HomeScreen(
         }
 
 
-        // Tarjeta principal
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(Color(0xFF1D4ED8), Color(0xFF285BC4))
-                        )
-                    )
-                    .padding(20.dp)
-            ) {
-                Column {
-                    Text(
-                        text = "TU PREPARACIÓN",
-                        color = Color.White.copy(alpha = 0.78f),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(7.dp))
-                    Text(
-                        text = licenseText,
-                        color = Color.White,
-                        fontSize = 29.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(7.dp))
-                    Text(
-                        text = if (summary?.hasData == true) {
-                            "Llevas ${summary.totalTests} exámenes completados."
-                        } else {
-                            "Empieza hoy y construye tu progreso paso a paso."
-                        },
-                        color = Color.White.copy(alpha = 0.90f),
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Button(
-                        onClick = onPractice,
-                        modifier = Modifier.fillMaxWidth().heightIn(min=48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = VialActionBlue
-                        ),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text(
-                            text = "Continuar practicando",
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    TextButton(onClick=onExam,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
-                        colors=ButtonDefaults.textButtonColors(contentColor=Color.White)) {
-                        Text("Ver exámenes",fontWeight=FontWeight.SemiBold)
-                    }
-                }
-            }
+        item(key="home_journey") {
+            HomeJourneyCard(user.id,licenseText,user.licenseClass,journey,journeyLoading,
+                onPath=onLearningPath,onContinue=onContinueChapter,onExam=onExam,onPractice=onPractice)
         }
 
         item {
@@ -381,10 +342,10 @@ fun HomeScreen(
         }
 
 
-        // Tu ruta de hoy
+        // Recomendación de refuerzo
         item {
             Text(
-                text = "Tu ruta de hoy",
+                text = "Refuerzo recomendado",
                 color = HomeDark,
                 fontSize = 21.sp,
                 fontWeight = FontWeight.Bold
@@ -483,7 +444,7 @@ fun HomeScreen(
         item {
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_vial_library,"Biblioteca vial","Consulta sin conexión",onLibrary)
-                HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_award_road,"Ruta de aprendizaje","Avanza por temas",onLearningPath)
+                HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_vial_exam,"Exámenes","Pon a prueba lo aprendido",onExam)
             }
         }
         item {

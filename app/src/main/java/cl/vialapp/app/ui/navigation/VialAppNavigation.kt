@@ -285,7 +285,7 @@ fun VialAppNavigation(
                 currentRoute != "offline_study" &&
                 currentRoute != "library" &&
                 currentRoute != "learning" &&
-                currentRoute != "learning/{chapterId}" &&
+                currentRoute != "learning/{chapterId}?resume={resume}" &&
                 currentRoute != "adaptive_practice" &&
                 currentRoute != "simulator" &&
                 currentRoute != "career" && currentRoute != "garage"
@@ -538,6 +538,10 @@ fun VialAppNavigation(
                     },
 
                     onLearningPath = { navController.navigate("learning") },
+                    onContinueChapter = { id ->
+                        navController.navigate("learning") { launchSingleTop = true }
+                        navController.navigate("learning/"+Uri.encode(id)+"?resume=true") { launchSingleTop = true }
+                    },
                     onCareer = { navController.navigate("career") },
                     onGarage = { navController.navigate("garage") },
                     onResumeExam = { testId ->
@@ -977,15 +981,20 @@ fun VialAppNavigation(
                     onBack = { navController.popBackStack() },
                     onChapter = { id -> navController.navigate("learning/${Uri.encode(id)}") },
                     onExam = { navController.navigate("exams") },
-                    onSimulator = { navController.navigate("simulator") }
+                    onSimulator = { navController.navigate("simulator") },
+                    onLibrary = { navController.navigate("library") }
                 )
             }
-            composable("learning/{chapterId}", arguments = listOf(navArgument("chapterId") { type = NavType.StringType })) { entry ->
+            composable("learning/{chapterId}?resume={resume}", arguments = listOf(
+                navArgument("chapterId") { type = NavType.StringType },
+                navArgument("resume") { type = NavType.BoolType; defaultValue = false }
+            )) { entry ->
                 val chapterId = entry.arguments?.getString("chapterId")
                 if (chapterId.isNullOrBlank()) {
                     PlaceholderScreen("Etapa no encontrada")
                 } else {
                     LearningChapterScreen(user.id, chapterId, user.mascotId,
+                        resumePending = entry.arguments?.getBoolean("resume") == true,
                         onBack = { navController.popBackStack() },
                         onGame = { route -> navController.navigate(route) })
                 }
