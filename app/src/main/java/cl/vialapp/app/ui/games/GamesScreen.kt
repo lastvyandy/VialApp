@@ -321,8 +321,8 @@ fun GamesScreen(
                 gameId = GameProgressStore.SIGN_HUNT_ARCADE,
                 record = progressStore.getHighScore(GameProgressStore.SIGN_HUNT_ARCADE),
                 title = "Caza la Señal",
-                subtitle = "Seis oleadas · objetivos móviles",
-                description = "Atrapa la señal correcta mientras se acerca a la meta, encadena combos y supera oleadas cada vez más rápidas.",
+                subtitle = "Supervivencia · dificultad progresiva",
+                description = "Atrapa señales chilenas en oleadas infinitas. Mantén tus vidas y supera tu récord.",
                 accent = GamesBlue,
                 enabled = true,
                 onClick = onOpenSigns

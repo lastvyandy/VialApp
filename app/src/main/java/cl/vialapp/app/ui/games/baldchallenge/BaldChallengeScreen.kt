@@ -767,17 +767,6 @@ fun BaldChallengeScreen(
             ?: return
 
 
-    val progress by animateFloatAsState(
-        targetValue =
-            (
-                    (currentIndex + 1).toFloat() /
-                            questions.size.toFloat()
-                    )
-                .coerceIn(0f, 1f),
-        label = "gameProgress"
-    )
-
-
     val coachTitle =
         when {
             answered && answerWasCorrect && powerModeArmed ->
@@ -834,225 +823,22 @@ fun BaldChallengeScreen(
             .background(GameBackground)
     ) {
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(vialColor(Color.White))
-                .padding(
-                    horizontal = 18.dp,
-                    vertical = 12.dp
-                )
-        ) {
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(
-                    onClick = { confirmExit = true },
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Text(
-                        text = "✕",
-                        color = GameGray,
-                        fontSize = 21.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(
-                    modifier = Modifier.width(9.dp)
-                )
-
-                LinearProgressIndicator(
-                    progress = {
-                        progress
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(9.dp),
-                    color =
-                        if (isBossRound) {
-                            GameOrange
-                        } else {
-                            GameBlue
-                        },
-                    trackColor = vialColor(Color(0xFFE5EAF2))
-                )
-
-                Spacer(
-                    modifier = Modifier.width(14.dp)
-                )
-
-                Text(
-                    text = buildString {
-                        repeat(lives) {
-                            append("❤️")
-                        }
-
-                        repeat(3 - lives) {
-                            append("🖤")
-                        }
-                    },
-                    fontSize = 15.sp
-                )
-            }
-
-            Spacer(
-                modifier = Modifier.height(7.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text =
-                        if (isBossRound) {
-                            "⚠️ BOSS"
-                        } else {
-                            "RONDA ${currentIndex + 1}/${questions.size}"
-                        },
-                    color =
-                        if (isBossRound) {
-                            GameOrange
-                        } else {
-                            GameGray
-                        },
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(
-                    modifier = Modifier.weight(1f)
-                )
-
-                if (streak >= 2) {
-                    Text(
-                        text = "🔥 x$streak",
-                        modifier = Modifier.graphicsLayer {
-                            scaleX = streakScale
-                            scaleY = streakScale
-                        },
-                        color = GameOrange,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    )
-
-                    Spacer(
-                        modifier = Modifier.width(13.dp)
-                    )
-                }
-
-                if (powerModeActive) {
-                    Text(
-                        text = "⚡ x2",
-                        color = GamePurple,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 13.sp
-                    )
-
-                    Spacer(
-                        modifier = Modifier.width(13.dp)
-                    )
-                }
-
-                AnimatedVisibility(
-                    visible =
-                        showPointsBurst &&
-                                earnedPoints > 0,
-                    enter =
-                        fadeIn(
-                            animationSpec = tween(100)
-                        ) +
-                                scaleIn(
-                                    initialScale = 0.55f
-                                ),
-                    exit =
-                        fadeOut(
-                            animationSpec = tween(220)
-                        ) +
-                                scaleOut(
-                                    targetScale = 1.25f
-                                )
-                ) {
-                    Text(
-                        text = "+$earnedPoints",
-                        color = GameGreen,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 13.sp
-                    )
-                }
-
-                if (
-                    showPointsBurst &&
-                    earnedPoints > 0
-                ) {
-                    Spacer(
-                        modifier = Modifier.width(9.dp)
-                    )
-                }
-
-                Text(
-                    text = "🏆 $score",
-                    color = GameBlue,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                )
-            }
-
-            Spacer(
-                modifier = Modifier.height(10.dp)
-            )
-
-            PelaoPowerBar(
-                power = pelaoPower,
-                active = powerModeActive,
-                armed = powerModeArmed
-            )
-
-            AnimatedVisibility(
-                visible = showPowerBurst,
-                enter =
-                    fadeIn(
-                        animationSpec = tween(120)
-                    ) +
-                            scaleIn(
-                                initialScale = 0.82f
-                            ),
-                exit =
-                    fadeOut(
-                        animationSpec = tween(240)
-                    ) +
-                            scaleOut(
-                                targetScale = 1.08f
-                            )
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            top = 10.dp
-                        ),
-                    shape = RoundedCornerShape(14.dp),
-                    color = vialColor(Color(0xFFF2EAFE))
-                ) {
-                    Text(
-                        text =
-                            "⚡ PELAO POWER CARGADO · PRÓXIMA RONDA x2",
-                        modifier = Modifier.padding(
-                            horizontal = 12.dp,
-                            vertical = 9.dp
-                        ),
-                        color = GamePurple,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
+        Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            TextButton(onClick={confirmExit=true},contentPadding=PaddingValues(0.dp)){Text("Salir")}
+            Text("Ronda "+(currentIndex+1)+"/"+questions.size,modifier=Modifier.weight(1f),color=GameDark,fontSize=12.sp,fontWeight=FontWeight.Bold)
+            Text("♥".repeat(lives)+"♡".repeat(3-lives),color=GameRed,fontSize=14.sp)
+            Text(score.toString()+" pts",color=GameBlue,fontWeight=FontWeight.Bold,fontSize=12.sp)
         }
-
+        Column(Modifier.fillMaxWidth().padding(horizontal=10.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+            ClassicStage(round=currentIndex+1,total=questions.size,correct=correctCount,
+                answered=answered,right=answerWasCorrect,boss=isBossRound,power=powerModeActive,
+                seconds=secondsLeft,coachTitle=coachTitle,coachSubtitle=coachSubtitle,
+                earned=if(showPointsBurst)earnedPoints else 0)
+            PelaoPowerBar(power=pelaoPower,active=powerModeActive,armed=powerModeArmed)
+        }
+        val questionScroll=rememberScrollState()
+        LaunchedEffect(currentIndex){questionScroll.scrollTo(0)}
 
         Column(
             modifier = Modifier
@@ -1073,18 +859,9 @@ fun BaldChallengeScreen(
                     translationX =
                         shakeOffset.value
                 }
-                .verticalScroll(
-                    rememberScrollState()
-                )
-                .padding(20.dp)
+                .verticalScroll(questionScroll)
+                .padding(horizontal=14.dp,vertical=10.dp)
         ) {
-
-            ClassicStage(
-                round=currentIndex+1,total=questions.size,correct=correctCount,
-                answered=answered,right=answerWasCorrect,boss=isBossRound,power=powerModeActive,
-                seconds=secondsLeft,coachTitle=coachTitle,coachSubtitle=coachSubtitle,
-                earned=if(showPointsBurst)earnedPoints else 0
-            )
 
             if (
                 speedBonusExpired &&
@@ -2143,7 +1920,7 @@ private fun ClassicStage(round:Int,total:Int,correct:Int,answered:Boolean,right:
                 }
             }
         }
-        BoxWithConstraints(Modifier.fillMaxWidth().height(143.dp).clip(RoundedCornerShape(14.dp))){
+        BoxWithConstraints(Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(14.dp))){
             Canvas(Modifier.fillMaxSize()){
                 drawRect(Brush.verticalGradient(listOf(Color(0xFF354F76),Color(0xFF14223A))),size=size)
                 val floor=size.height*.83f

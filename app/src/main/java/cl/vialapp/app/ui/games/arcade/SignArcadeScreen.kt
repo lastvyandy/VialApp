@@ -34,15 +34,15 @@ import cl.vialapp.app.data.games.GameProgressStore
 @Composable
 fun SignArcadeScreen(userKey: String, onBack: () -> Unit) {
     ArcadeSession(userKey=userKey,gameId=GameProgressStore.SIGN_HUNT_ARCADE,
-        title="Caza la Señal",subtitle="Atrapa señales en movimiento antes de que crucen la meta.",
-        rules="Lee la misión de la parte superior. Toca directamente la señal que corresponde mientras las tres bajan por la carretera. Acertar pronto da puntos extra; equivocarte o dejar escapar la señal cuesta una vida. Cada oleada es más rápida.",
-        duration=SignEngine.TIME,create={SignEngine()},onBack=onBack,showPlayMessages=false,
+        title="Caza la Señal",subtitle="Supervivencia · señales en movimiento, sin límite de oleadas.",
+        rules="Lee la misión de la parte superior. Toca directamente la señal que corresponde mientras las tres bajan por la carretera. Acertar pronto da puntos extra; equivocarte o dejar escapar la señal cuesta una vida. Cada oleada es más rápida hasta una velocidad máxima jugable. La partida termina cuando pierdes las tres vidas.",
+        duration=SignEngine.TIME,create={SignEngine()},onBack=onBack,showPlayMessages=false,endless=true,
         scene={frame,modifier,enabled,act->SignScene(frame,modifier,enabled,act)},
         controls={frame,_,_->
             val c=MaterialTheme.colorScheme
             Surface(color=c.surfaceVariant,shape=RoundedCornerShape(14.dp)){
                 Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.SpaceBetween){
-                    Text("Capturadas "+frame.correct+"/"+frame.questions.size,fontWeight=FontWeight.Bold,color=c.onSurfaceVariant)
+                    Text("Capturadas "+frame.correct,fontWeight=FontWeight.Bold,color=c.onSurfaceVariant)
                     Text("Combo ×"+frame.combo,color=c.primary,fontWeight=FontWeight.ExtraBold)
                 }
             }
@@ -57,7 +57,7 @@ private fun SignScene(frame:SignFrame,modifier:Modifier,enabled:Boolean,act:(Int
     Column(modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF172C47)).padding(9.dp),
         verticalArrangement=Arrangement.spacedBy(7.dp)){
         Column(Modifier.fillMaxWidth().padding(4.dp),horizontalAlignment=Alignment.CenterHorizontally){
-            Text("OLEADA "+(frame.index+1).coerceAtMost(frame.questions.size)+"/"+frame.questions.size,
+            Text("OLEADA "+(frame.index+1)+" · NIVEL "+frame.speedTier,
                 color=Color(0xFFBBD6FF),fontSize=11.sp,fontWeight=FontWeight.Bold)
             Text(frame.current.sign.meaning,color=Color.White,fontSize=18.sp,fontWeight=FontWeight.ExtraBold,textAlign=TextAlign.Center)
         }
@@ -144,12 +144,31 @@ internal fun RoadSignArt(sign: RoadSign, modifier: Modifier = Modifier) {
                     drawPath(triangle, Color.White)
                     drawPath(triangle, red, style = Stroke(19f, join = androidx.compose.ui.graphics.StrokeJoin.Round))
                 }
+                RoadSign.CURVE_RIGHT,RoadSign.CURVE_LEFT,RoadSign.BUMP,RoadSign.NARROW_BRIDGE,RoadSign.SCHOOL,RoadSign.TWO_WAY -> {
+                    val yellow=Color(0xFFFFD344)
+                    val diamond=Path().apply{moveTo(100f,4f);lineTo(196f,100f);lineTo(100f,196f);lineTo(4f,100f);close()}
+                    drawPath(diamond,yellow);drawPath(diamond,Color.Black,style=Stroke(3f))
+                    fun line(a:Offset,b:Offset,w:Float=13f){drawLine(Color.Black,a,b,w,StrokeCap.Round)}
+                    when(sign){
+                        RoadSign.CURVE_RIGHT,RoadSign.CURVE_LEFT->{
+                            val dir=if(sign==RoadSign.CURVE_RIGHT)1f else -1f
+                            val path=Path().apply{moveTo(100f-dir*25f,150f);lineTo(100f-dir*25f,105f);quadraticBezierTo(100f-dir*25f,69f,100f+dir*38f,69f)}
+                            drawPath(path,Color.Black,style=Stroke(17f,cap=StrokeCap.Round))
+                            val head=Path().apply{moveTo(100f+dir*54f,69f);lineTo(100f+dir*21f,46f);lineTo(100f+dir*21f,92f);close()};drawPath(head,Color.Black)
+                        }
+                        RoadSign.BUMP->{val hump=Path().apply{moveTo(48f,122f);quadraticBezierTo(100f,55f,152f,122f);close()};drawPath(hump,Color.Black)}
+                        RoadSign.NARROW_BRIDGE->{for(dir in listOf(-1f,1f)){val p=Path().apply{moveTo(100f+dir*52f,146f);lineTo(100f+dir*52f,124f);lineTo(100f+dir*25f,105f);lineTo(100f+dir*25f,73f);lineTo(100f+dir*52f,53f)};drawPath(p,Color.Black,style=Stroke(12f))}}
+                        RoadSign.SCHOOL->{for((x,y) in listOf(Offset(78f,75f),Offset(125f,89f))){drawCircle(Color.Black,9f,Offset(x,y));line(Offset(x,y+13f),Offset(x-4f,y+41f),11f);line(Offset(x-4f,y+39f),Offset(x-18f,y+61f),8f);line(Offset(x-4f,y+39f),Offset(x+12f,y+61f),8f);line(Offset(x,y+20f),Offset(x+18f,y+30f),8f)}}
+                        RoadSign.TWO_WAY->{for(dir in listOf(-1f,1f)){val x=100f+dir*26f;line(Offset(x,62f),Offset(x,138f),13f);val y=100f-dir*42f;val h=Path().apply{moveTo(x,y);lineTo(x-17f,y+dir*27f);lineTo(x+17f,y+dir*27f);close()};drawPath(h,Color.Black)}}
+                        else->Unit
+                    }
+                }
                 else -> {
                     drawCircle(Color.White, 94f, Offset(100f,100f))
                     drawCircle(red, 85f, Offset(100f,100f), style = Stroke(15f))
                     when (sign) {
-                        RoadSign.MAX_50 -> signText("50", 76f, 126f, android.graphics.Color.BLACK)
-                        RoadSign.NO_PARKING -> signText("E", 98f, 133f, android.graphics.Color.BLACK)
+                        RoadSign.MAX_50,RoadSign.MAX_30,RoadSign.MAX_60 -> signText(sign.name.substringAfter("_"), 76f, 126f, android.graphics.Color.BLACK)
+                        RoadSign.NO_PARKING,RoadSign.NO_STOP -> signText("E", 98f, 133f, android.graphics.Color.BLACK)
                         RoadSign.NO_ENTRY -> {
                             drawLine(Color.Black, Offset(100f, 151f), Offset(100f, 70f), 23f)
                             val arrow = Path().apply { moveTo(100f, 45f); lineTo(64f, 83f); lineTo(136f, 83f); close() }
@@ -161,9 +180,28 @@ internal fun RoadSignArt(sign: RoadSign, modifier: Modifier = Modifier) {
                             val arrow = Path().apply { moveTo(37f, 85f); lineTo(79f, 51f); lineTo(79f, 119f); close() }
                             drawPath(arrow, Color.Black)
                         }
+                        RoadSign.NO_RIGHT -> {
+                            drawLine(Color.Black,Offset(77f,150f),Offset(77f,85f),23f)
+                            drawLine(Color.Black,Offset(77f,85f),Offset(133f,85f),23f)
+                            drawPath(Path().apply{moveTo(163f,85f);lineTo(121f,51f);lineTo(121f,119f);close()},Color.Black)
+                        }
+                        RoadSign.NO_U -> {
+                            val p=Path().apply{moveTo(68f,151f);lineTo(68f,83f);cubicTo(68f,37f,134f,37f,134f,83f);lineTo(134f,119f)}
+                            drawPath(p,Color.Black,style=Stroke(20f,cap=StrokeCap.Round))
+                            drawPath(Path().apply{moveTo(134f,150f);lineTo(104f,112f);lineTo(164f,112f);close()},Color.Black)
+                        }
+                        RoadSign.NO_OVERTAKE -> {
+                            for(x in listOf(62f,138f)){
+                                val ink=if(x<100f)red else Color.Black
+                                drawRoundRect(ink,Offset(x-23f,58f),Size(46f,84f),CornerRadius(10f))
+                                drawRoundRect(Color.White,Offset(x-15f,74f),Size(30f,17f),CornerRadius(4f))
+                                drawRoundRect(Color.White,Offset(x-15f,115f),Size(30f,12f),CornerRadius(4f))
+                            }
+                        }
                         else -> Unit
                     }
-                    if (sign != RoadSign.MAX_50) {
+                    if (sign==RoadSign.NO_STOP)drawLine(red,Offset(42f,158f),Offset(158f,42f),15f)
+                    if (sign !in listOf(RoadSign.MAX_30,RoadSign.MAX_50,RoadSign.MAX_60,RoadSign.NO_OVERTAKE)) {
                         if (sign == RoadSign.NO_LEFT) drawLine(red, Offset(42f, 158f), Offset(158f, 42f), 15f)
                         else drawLine(red, Offset(42f, 42f), Offset(158f, 158f), 15f)
                     }

@@ -45,7 +45,8 @@ internal fun <S : ArcadeFrame> ArcadeSession(
     scene: @Composable (S, Modifier, Boolean, (Int) -> Unit) -> Unit,
     controls: @Composable (S, Boolean, (Int) -> Unit) -> Unit,
     resultArt: (@Composable (S, Modifier) -> Unit)? = null,
-    showPlayMessages: Boolean = true
+    showPlayMessages: Boolean = true,
+    endless:Boolean = false
 ) {
     val context = LocalContext.current
     val store = remember(context, userKey) { GameProgressStore(context, userKey) }
@@ -196,14 +197,14 @@ internal fun <S : ArcadeFrame> ArcadeSession(
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 ArcadeMetric("PUNTOS", frame.score.toString(), Modifier.weight(1f))
-                ArcadeMetric("TIEMPO", "${ceil((duration - frame.elapsed).coerceAtLeast(0f).toDouble()).toInt()}s", Modifier.weight(1f))
+                ArcadeMetric("TIEMPO", if(endless) "${frame.elapsed.toInt()}s" else "${ceil((duration - frame.elapsed).coerceAtLeast(0f).toDouble()).toInt()}s", Modifier.weight(1f))
                 ArcadeMetric("ESTADO", frame.health, Modifier.weight(1f))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(if (paused) "Partida pausada" else "Toma decisiones seguras", fontSize = 12.sp, color = c.onSurfaceVariant)
                 TextButton(onClick = { paused = true; help = true }, contentPadding = PaddingValues(0.dp)) { Text("? Cómo jugar") }
             }
-            LinearProgressIndicator(progress = { (frame.elapsed / duration).coerceIn(0f, 1f) },
+            if(!endless) LinearProgressIndicator(progress = { (frame.elapsed / duration).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(4.dp))
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 scene(frame, Modifier.fillMaxSize(), !paused, ::act)
