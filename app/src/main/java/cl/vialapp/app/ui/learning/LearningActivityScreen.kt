@@ -36,6 +36,7 @@ internal fun LearningActivityScreen(
     val session = remember(context) { SessionManager(context) }
     val store = remember(context, userKey) { GameProgressStore(context, userKey) }
     val scope = rememberCoroutineScope()
+    val chapterWasCompleted = remember(activity) { initialProgress.completed }
     val start = remember(activity) { resumeIndex(activity.steps.map { it.id }, initialProgress, activity.review) }
     var index by remember(activity) { mutableIntStateOf(start) }
     var choice by remember(activity, index) { mutableIntStateOf(-1) }
@@ -98,7 +99,7 @@ internal fun LearningActivityScreen(
                     Image(painterResource(if (mascotId == "mister_pelao") R.drawable.mascot_mister_pelao else R.drawable.mascot_carvier),
                         null, modifier = Modifier.height(155.dp).fillMaxWidth(), contentScale = ContentScale.Fit)
                 }
-                val chapterFinished = !initialProgress.completed && feedback?.progress?.completed == true && !activity.review
+                val chapterFinished = !chapterWasCompleted && feedback?.progress?.completed == true && !activity.review
                 if(chapterFinished) {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=14.dp)){
                         Icon(painterResource(R.drawable.ic_collection_medal),null,tint=c.primary,modifier=Modifier.size(32.dp))

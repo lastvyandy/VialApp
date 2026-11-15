@@ -57,7 +57,7 @@ internal fun HomeJourneyCard(
         .background(Brush.linearGradient(listOf(Color(0xFF172F58),Color(0xFF2255A1))))
         .padding(18.dp),verticalArrangement=Arrangement.spacedBy(11.dp)){
         Text("TU CAMINO A LA LICENCIA",color=Color(0xFFBED6FF),fontSize=11.sp,fontWeight=FontWeight.Bold)
-        Text("Licencia "+licenseText.removePrefix("Licencia "),color=Color.White,fontSize=27.sp,fontWeight=FontWeight.ExtraBold)
+        Text(if(licenseText.startsWith("Licencia",ignoreCase=true))licenseText else "Licencia "+licenseText,color=Color.White,fontSize=27.sp,fontWeight=FontWeight.ExtraBold)
         if(isMotorcycleLicense(licenseClass)) Text("Ruta común de Clase B · complementa con preparación de moto.",color=fg,fontSize=12.sp)
         when {
             count>0 && chapters!=null -> {

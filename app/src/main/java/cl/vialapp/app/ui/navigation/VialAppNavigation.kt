@@ -506,6 +506,7 @@ fun VialAppNavigation(
 
                 HomeScreen(
                     onLibrary = { navController.navigate("library") },
+                    onOfflineStudy = { navController.navigate("offline_study") },
                     onSimulator = { navController.navigate("simulator") },
                     onAdaptivePractice = { navController.navigate("adaptive_practice") },
 

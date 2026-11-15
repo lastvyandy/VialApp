@@ -69,7 +69,8 @@ fun HomeScreen(
     onLibrary: () -> Unit = {},
     onSimulator: () -> Unit = {},
     onAdaptivePractice: () -> Unit = {},
-    onContinueChapter: (String) -> Unit = { onLearningPath() }
+    onContinueChapter: (String) -> Unit = { onLearningPath() },
+    onOfflineStudy: () -> Unit = onLibrary
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -444,7 +445,7 @@ fun HomeScreen(
         item {
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_vial_library,"Biblioteca vial","Consulta sin conexión",onLibrary)
-                HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_vial_exam,"Exámenes","Pon a prueba lo aprendido",onExam)
+                HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_vial_bookmark,"Repaso sin conexión","Practica donde estés",onOfflineStudy)
             }
         }
         item {
