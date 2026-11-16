@@ -110,7 +110,7 @@ private fun accountHash(id:String)=MessageDigest.getInstance("SHA-256").digest(i
         loading=true;message=""
         try{
             val flag=ApiClient.api.getPublicFeatures()
-            enabled=flag.body()?.paymentsEnabled?.takeIf{flag.isSuccessful}
+            enabled=flag.body()?.let{it.paymentsEnabled&&it.googlePlayEnabled}?.takeIf{flag.isSuccessful}
             if(enabled!=true){loading=false;return@LaunchedEffect}
             if(client.isReady){connected=true;query()}
             else client.startConnection(object:BillingClientStateListener{
@@ -147,7 +147,7 @@ private fun accountHash(id:String)=MessageDigest.getInstance("SHA-256").digest(i
         Text("VialApp Premium",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.ExtraBold)
         Text("Acceso a exámenes, correcciones y práctica Premium. Pago único por el período que elijas, sin renovación automática.")
         if(user.premiumLicenseClasses.isNotEmpty())Text("Acceso activo: "+user.premiumLicenseClasses.joinToString(", "){ "Clase "+it })
-        if(enabled==false)Text("Los pagos están temporalmente deshabilitados.")
+        if(enabled==false)Text("Los pagos desde Google Play todavía no están habilitados.")
         if(loading||verifying>0){LinearProgressIndicator(Modifier.fillMaxWidth());if(verifying>0)Text("Verificando compra…")}
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
             listOf("b" to "Clase B","c" to "Clase C","all" to "Ambas").forEach{(id,label)->FilterChip(selected=license==id,onClick={license=id},label={Text(label)})}

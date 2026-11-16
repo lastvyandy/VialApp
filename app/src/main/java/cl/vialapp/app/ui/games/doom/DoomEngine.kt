@@ -182,7 +182,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             gate(6,3,1,DoomChallenge("En un túnel con poca visibilidad, ¿qué debes hacer?",listOf("Encender luces bajas y adaptar la velocidad","Apagar las luces","Adelantar sin visibilidad"),0,"Usa luces bajas y adapta tu velocidad a la visibilidad."))
             gate(16,3,3,DoomChallenge("Si el vehículo de adelante frena, ¿qué te protege?",listOf("Circular pegado","Mantener distancia de seguridad","Acelerar"),1,"La distancia de seguridad permite reaccionar y frenar."))
             gate(11,6,1,DoomChallenge("Ante un peatón en un paso habilitado, ¿qué haces?",listOf("Tocar la bocina","Acelerar","Ceder el paso"),2,"Cede el paso y detente si es necesario."))
-            gate(16,11,0);gate(18,6,0);gate(6,11,2)
+            gate(16,11,0);gate(6,11,2)
             for((xx,yy) in listOf(9 to 2,13 to 4,9 to 9,12 to 12,14 to 14,18 to 9,3 to 9,4 to 14))grid[yy*width+xx]=2
             fun foe(k:DoomKind,xx:Float,yy:Float){enemies+=DoomEnemy(enemies.size,k,xx,yy,cooldown=1f+random.nextFloat())}
             foe(DoomKind.GUARD,4.4f,3.5f);foe(DoomKind.RUNNER,4.3f,4.5f)
@@ -198,7 +198,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             supply(DoomLootKind.KEY,19.5f,14.5f);supply(DoomLootKind.MEDKIT,17.5f,12.5f);supply(DoomLootKind.SHELLS,18.5f,8.5f)
             supply(DoomLootKind.SHELLS,10.5f,8.5f);supply(DoomLootKind.PLASMA,14.5f,10.5f);supply(DoomLootKind.CELL,10.5f,14.5f)
             supply(DoomLootKind.MEDKIT,8.5f,12.5f);supply(DoomLootKind.ARMOR,11.5f,14.5f);supply(DoomLootKind.COIN,13.5f,11.5f)
-            supply(DoomLootKind.SHELLS,5.5f-1f,11.5f);supply(DoomLootKind.MEDKIT,2.5f,10.5f);supply(DoomLootKind.CELL,4.5f,15.5f);supply(DoomLootKind.COIN,2.5f,15.5f)
+            supply(DoomLootKind.SHELLS,4.5f,11.5f);supply(DoomLootKind.MEDKIT,2.5f,10.5f);supply(DoomLootKind.CELL,4.5f,15.5f);supply(DoomLootKind.COIN,2.5f,15.5f)
             explosives+=listOf(DoomExplosive(12.5f,3.5f,true),DoomExplosive(14.5f,3.5f,false),DoomExplosive(17.5f,9.5f,false),DoomExplosive(19.5f,11.5f,true),DoomExplosive(12.5f,10.5f,true),DoomExplosive(8.5f,13.5f,false),DoomExplosive(3.5f,13.5f,true))
             for((xx,yy) in listOf(2.5f to 1.5f,8.5f to 1.5f,14.5f to 1.5f,19.5f to 1.5f,17.5f to 7.5f,12.5f to 7.5f,2.5f to 7.5f))decor+=DoomDecor(DoomDecorKind.LAMP,xx,yy,.45f,.84f)
             grid[exitY*width+exitX]=6

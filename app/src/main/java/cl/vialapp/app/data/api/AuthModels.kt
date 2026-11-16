@@ -12,7 +12,8 @@ data class PasswordResetMessage(val message:String)
 
 data class PublicFeatures(
     @SerializedName("payments_enabled") val paymentsEnabled:Boolean,
-    @SerializedName("google_client_id") val googleClientId:String?=null
+    @SerializedName("google_client_id") val googleClientId:String?=null,
+    @SerializedName("google_play_enabled") val googlePlayEnabled:Boolean=false
 )
 data class GoogleLoginRequest(
     val token:String,
