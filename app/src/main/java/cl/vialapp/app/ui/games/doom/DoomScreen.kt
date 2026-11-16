@@ -66,6 +66,9 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
     val store=remember(context,userKey){GameProgressStore(context,userKey)}
     val session=remember(context){SessionManager(context)}
     var run by remember{mutableStateOf<DoomEngine?>(null)}
+    val levels=remember(context,userKey){context.getSharedPreferences("doom_levels",android.content.Context.MODE_PRIVATE)}
+    var unlocked by remember(userKey){mutableStateOf(levels.getBoolean(userKey+"_level2",false))}
+    val unlockNext:()->Unit={unlocked=true;levels.edit().putBoolean(userKey+"_level2",true).apply()}
     val engine=run
     val audio=LocalGameAudio.current
     if(engine==null){
@@ -81,10 +84,13 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
             Text("Pulgar izquierdo: muévete en cualquier dirección. Desliza sobre la escena para mirar; toca directamente las puertas. Mantén FIRE para disparar y toca el arma del HUD para cambiarla.",color=White,fontSize=13.sp)
             Text("Récord: "+store.getHighScore(GameProgressStore.PELAO_DOOM)+" · Prototipo jugable",color=Gold,fontSize=12.sp)
             Button(onClick={run=DoomEngine();audio?.play("start")},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
-                Text("ENTRAR AL SECTOR",fontWeight=FontWeight.Black,color=Color.White)
+                Text("E1M1 · ESTACIONAMIENTO INFERNAL",fontWeight=FontWeight.Black,color=Color.White)
+            }
+            Button(onClick={run=DoomEngine(level=2);audio?.play("start")},enabled=unlocked,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
+                Text(if(unlocked)"E1M2 · TUNEL BAJO CONTROL" else "E1M2 · COMPLETA E1M1",fontWeight=FontWeight.Black)
             }
         }
-    }else key(engine){DoomRun(engine,store,session,onMenu={run=null},onRetry={run=DoomEngine();audio?.play("start")})}
+    }else key(engine){DoomRun(engine,store,session,onMenu={run=null},onRetry={run=DoomEngine(level=engine.level);audio?.play("start")},onNext=if(engine.level==1){{run=DoomEngine(level=2);audio?.play("start")}}else null,onComplete={if(engine.level==1)unlockNext()})}
 }
 
 @Composable
@@ -94,7 +100,7 @@ internal fun DoomPreview(modifier:Modifier=Modifier){
 }
 
 @Composable
-private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,onMenu:()->Unit,onRetry:()->Unit){
+private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,onMenu:()->Unit,onRetry:()->Unit,onNext:(()->Unit)?,onComplete:()->Unit){
     val context=LocalContext.current
     val audio=LocalGameAudio.current
     val rewards=LocalRewards.current
@@ -128,7 +134,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     val musicPrefs=remember(context){context.getSharedPreferences("vial_audio",android.content.Context.MODE_PRIVATE)}
     var musicEnabled by remember{mutableStateOf(musicPrefs.getBoolean("doom_music_enabled",true))}
     val music=remember(context){
-        val id=context.resources.getIdentifier("doom_music","raw",context.packageName)
+        val id=context.resources.getIdentifier(if(e.level==2)"doom_music_2" else "doom_music","raw",context.packageName).let{if(it==0&&e.level==2)context.resources.getIdentifier("doom_music","raw",context.packageName)else it}
         if(id==0)null else runCatching{MediaPlayer.create(context,id)?.apply{isLooping=true;setVolume(.24f,.24f)}}.getOrNull()
     }
     DisposableEffect(music){onDispose{runCatching{music?.release()}}}
@@ -176,6 +182,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     LaunchedEffect(finished){
         if(!finished)return@LaunchedEffect
         clear()
+        if(e.won)onComplete()
         // Let a final enemy collapse before cutting to the intermission.
         repeat(24){e.advanceDeathAnimations(1f/30f);revision++;delay(33)}
         resultVisible=true
@@ -200,13 +207,13 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
         return
     }
     if(resultVisible){
-        DoomIntermission(e,reward,saving,onMenu,onRetry)
+        DoomIntermission(e,reward,saving,onMenu,onRetry,if(e.won)onNext else null)
         return
     }
     Column(Modifier.fillMaxSize().background(Dark).padding(horizontal=5.dp,vertical=3.dp)){
         Row(Modifier.fillMaxWidth().height(34.dp),verticalAlignment=Alignment.CenterVertically){
             DoomUtilityIcon("Salir",UtilityGlyph.EXIT,!saving){if(finished&&!saving)onMenu()else if(!finished){clear();paused=true;exit=true}}
-            Text("SECTOR 01  /  "+e.kills+"/"+e.enemies.size+" ROBOTS",color=Gold,fontWeight=FontWeight.Bold,fontSize=11.sp,modifier=Modifier.weight(1f))
+            Text("SECTOR 0"+e.level+"  /  "+e.kills+"/"+e.enemies.size+" ROBOTS",color=Gold,fontWeight=FontWeight.Bold,fontSize=11.sp,modifier=Modifier.weight(1f))
             DoomUtilityIcon("Efectos de sonido",UtilityGlyph.SOUND,true,audio?.enabled==true){audio?.let{it.setEffectsEnabled(!it.enabled)}}
             if(music!=null)DoomUtilityIcon("Música",UtilityGlyph.MUSIC,true,musicEnabled){musicEnabled=!musicEnabled;musicPrefs.edit().putBoolean("doom_music_enabled",musicEnabled).apply()}
             DoomUtilityIcon(if(paused)"Continuar" else "Pausa",if(paused)UtilityGlyph.PLAY else UtilityGlyph.PAUSE,!finished&&challenge==null&&!exit){clear();paused=!paused}
@@ -247,7 +254,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     if(challenge!=null&&!finished)AlertDialog(onDismissRequest={change{e.dismissChallenge()}},containerColor=Dark,title={Text("TERMINAL DE CONTROL",color=Gold,fontWeight=FontWeight.Black)},
         text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(6.dp)){
             Text(challenge.prompt,color=White,fontWeight=FontWeight.Bold)
-            if(e.pending?.kind==1){
+            if(e.level==1&&e.pending?.kind==1){
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){
                     listOf(RoadSign.YIELD,RoadSign.STOP,RoadSign.MAX_50).forEachIndexed{i,sign->
                         Button(onClick={change{e.answer(i)}},modifier=Modifier.weight(1f),contentPadding=PaddingValues(4.dp),

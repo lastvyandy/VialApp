@@ -91,5 +91,17 @@ fun main(){
     blast.reload();check(blast.weaponPhase==DoomWeaponPhase.RELOADING)
     repeat(30){blast.step(.025f)}
     check(blast.ammunition==reserve&&blast.magazineAmmo==min(reserve,10))
+    val second=DoomEngine(level=2)
+    check(second.enemies.size==17&&second.secretTotal==1&&second.doors.count{it.kind==1}==2)
+    second.enemies.forEach{it.hp=0}
+    check(second.cell(second.exitX,second.exitY)==6)
+    walk(second,5.5f,3.5f);second.interact();check(second.pending!=null);second.answer(0)
+    check(second.doors.first().open)
+    walk(second,7.5f,3.5f);walk(second,11.5f,3.5f);walk(second,11.5f,5.5f)
+    second.interact();check(second.pending!=null);second.answer(2)
+    walk(second,11.5f,7.5f);walk(second,11.5f,11.5f);walk(second,15.5f,11.5f)
+    second.interact();walk(second,17.5f,11.5f);walk(second,19.5f,11.5f);walk(second,19.5f,14.5f);check(second.hasKey)
+    walk(second,19.5f,11.5f);walk(second,17.5f,11.5f);walk(second,15.5f,11.5f);walk(second,7.5f,11.5f)
+    second.interact();walk(second,5.5f,11.5f);walk(second,2.5f,11.5f);walk(second,2.5f,13.5f);second.interact();check(second.won)
     println("DOOM smoke OK: combat, three weapons, coins, touch-ray doors, classroom gates, secret, credential, exit, all 12 face states, enemy deaths, reload and chain explosions.")
 }

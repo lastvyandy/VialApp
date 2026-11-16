@@ -41,7 +41,11 @@ internal fun doomFaceState(hp:Int,look:Int,angry:Boolean,berserk:Boolean):DoomFa
         else->when{look<0->DoomFaceState.LEFT;look>0->DoomFaceState.RIGHT;else->DoomFaceState.NORMAL}
     }
 }
-internal class DoomEngine(seed:Int=19){
+internal class DoomEngine(seed:Int=19,val level:Int=1){
+    val levelTitle get()=if(level==2)"TUNEL BAJO CONTROL" else "ESTACIONAMIENTO INFERNAL"
+    val exitX get()=if(level==2)1 else 20
+    val exitY get()=if(level==2)13 else 13
+    val secretTotal get()=doors.count{it.kind==3}
     val width=22
     val height=17
     private val grid=IntArray(width*height){1}
@@ -117,6 +121,7 @@ internal class DoomEngine(seed:Int=19){
     init{
         fun room(x1:Int,y1:Int,x2:Int,y2:Int,wall:Int){for(yy in y1-1..y2+1)for(xx in x1-1..x2+1)if(xx in 0 until width&&yy in 0 until height&&grid[yy*width+xx]!=0)grid[yy*width+xx]=wall
             for(yy in y1..y2)for(xx in x1..x2)grid[yy*width+xx]=0}
+        if(level==1){
         room(1,1,7,6,1);room(9,1,14,6,2);room(16,1,20,6,3)
         room(1,8,7,15,2);room(9,8,14,15,1);room(16,8,20,15,4)
         fun door(x:Int,y:Int,kind:Int,q:DoomChallenge?=null){doors+=DoomDoor(x,y,kind,q);grid[y*width+x]=5}
@@ -169,6 +174,36 @@ internal class DoomEngine(seed:Int=19){
             DoomDecor(DoomDecorKind.CRATE,20.5f,8.5f,.72f),
             DoomDecor(DoomDecorKind.BARREL,16.5f,15.5f,.74f)
         )
+        }else{
+            // A winding tunnel with two mandatory checkpoints and an optional supply bunker.
+            room(1,1,5,5,3);room(7,1,15,5,2);room(17,1,20,5,4)
+            room(17,7,20,15,1);room(7,7,15,15,3);room(1,7,5,15,4)
+            fun gate(xx:Int,yy:Int,kind:Int,q:DoomChallenge?=null){doors+=DoomDoor(xx,yy,kind,q);grid[yy*width+xx]=5}
+            gate(6,3,1,DoomChallenge("En un túnel con poca visibilidad, ¿qué debes hacer?",listOf("Encender luces bajas y adaptar la velocidad","Apagar las luces","Adelantar sin visibilidad"),0,"Usa luces bajas y adapta tu velocidad a la visibilidad."))
+            gate(16,3,3,DoomChallenge("Si el vehículo de adelante frena, ¿qué te protege?",listOf("Circular pegado","Mantener distancia de seguridad","Acelerar"),1,"La distancia de seguridad permite reaccionar y frenar."))
+            gate(11,6,1,DoomChallenge("Ante un peatón en un paso habilitado, ¿qué haces?",listOf("Tocar la bocina","Acelerar","Ceder el paso"),2,"Cede el paso y detente si es necesario."))
+            gate(16,11,0);gate(18,6,0);gate(6,11,2)
+            for((xx,yy) in listOf(9 to 2,13 to 4,9 to 9,12 to 12,14 to 14,18 to 9,3 to 9,4 to 14))grid[yy*width+xx]=2
+            fun foe(k:DoomKind,xx:Float,yy:Float){enemies+=DoomEnemy(enemies.size,k,xx,yy,cooldown=1f+random.nextFloat())}
+            foe(DoomKind.GUARD,4.4f,3.5f);foe(DoomKind.RUNNER,4.3f,4.5f)
+            foe(DoomKind.SHOTGUNNER,10.5f,3.5f);foe(DoomKind.DRONE,14.5f,2.5f);foe(DoomKind.HEAVY,14.5f,4.5f)
+            foe(DoomKind.DRONE,19.5f,3.5f);foe(DoomKind.RUNNER,18.5f,4.5f)
+            foe(DoomKind.GUARD,19.2f,8.5f);foe(DoomKind.HEAVY,19.5f,13.5f);foe(DoomKind.DRONE,17.5f,14.5f)
+            foe(DoomKind.SHOTGUNNER,13.5f,8.5f);foe(DoomKind.RUNNER,8.5f,10.5f);foe(DoomKind.HEAVY,13.5f,13.5f);foe(DoomKind.DRONE,8.5f,14.5f)
+            foe(DoomKind.SHOTGUNNER,4.5f,8.5f);foe(DoomKind.RUNNER,4.5f,12.5f);foe(DoomKind.BOSS,2.5f,12.5f)
+            fun supply(k:DoomLootKind,xx:Float,yy:Float){loot+=DoomLoot(k,xx,yy)}
+            supply(DoomLootKind.SHOTGUN,3.5f,2.5f);supply(DoomLootKind.AMMO,3.5f,4.5f)
+            supply(DoomLootKind.ARMOR,7.5f,3.5f);supply(DoomLootKind.SHELLS,8.5f,4.5f);supply(DoomLootKind.MEDKIT,12.5f,2.5f)
+            supply(DoomLootKind.PLASMA,19.5f,2.5f);supply(DoomLootKind.CELL,19.5f,4.5f);supply(DoomLootKind.COIN,18.5f,2.5f)
+            supply(DoomLootKind.KEY,19.5f,14.5f);supply(DoomLootKind.MEDKIT,17.5f,12.5f);supply(DoomLootKind.SHELLS,18.5f,8.5f)
+            supply(DoomLootKind.SHELLS,10.5f,8.5f);supply(DoomLootKind.PLASMA,14.5f,10.5f);supply(DoomLootKind.CELL,10.5f,14.5f)
+            supply(DoomLootKind.MEDKIT,8.5f,12.5f);supply(DoomLootKind.ARMOR,11.5f,14.5f);supply(DoomLootKind.COIN,13.5f,11.5f)
+            supply(DoomLootKind.SHELLS,5.5f-1f,11.5f);supply(DoomLootKind.MEDKIT,2.5f,10.5f);supply(DoomLootKind.CELL,4.5f,15.5f);supply(DoomLootKind.COIN,2.5f,15.5f)
+            explosives+=listOf(DoomExplosive(12.5f,3.5f,true),DoomExplosive(14.5f,3.5f,false),DoomExplosive(17.5f,9.5f,false),DoomExplosive(19.5f,11.5f,true),DoomExplosive(12.5f,10.5f,true),DoomExplosive(8.5f,13.5f,false),DoomExplosive(3.5f,13.5f,true))
+            for((xx,yy) in listOf(2.5f to 1.5f,8.5f to 1.5f,14.5f to 1.5f,19.5f to 1.5f,17.5f to 7.5f,12.5f to 7.5f,2.5f to 7.5f))decor+=DoomDecor(DoomDecorKind.LAMP,xx,yy,.45f,.84f)
+            grid[exitY*width+exitX]=6
+            message="Carvier: Reactiva los controles del túnel y consigue la credencial."
+        }
     }
     fun cell(cx:Int,cy:Int):Int{
         if(cx !in 0 until width||cy !in 0 until height)return 1
@@ -267,7 +302,7 @@ internal class DoomEngine(seed:Int=19){
     // Accessible fallback, also used in the deterministic progression test.
     fun interact(){
         if(finished||pending!=null)return
-        if(hypot(20.5f-x,13.5f-y)<1.55f){interactExit();return}
+        if(hypot(exitX+.5f-x,exitY+.5f-y)<1.55f){interactExit();return}
         val door=doors.filter{!it.open}.minByOrNull{hypot(it.x+.5f-x,it.y+.5f-y)}
         if(door==null||hypot(door.x+.5f-x,door.y+.5f-y)>1.6f){tell("Acércate a una puerta o terminal.");return}
         openDoor(door)

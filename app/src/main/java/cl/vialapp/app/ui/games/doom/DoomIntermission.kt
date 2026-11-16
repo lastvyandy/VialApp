@@ -80,14 +80,14 @@ private fun DrawScope.pixelText(text:String,x:Float,y:Float,unit:Float,color:Col
         }
     }
 }
-@Composable internal fun DoomIntermission(e:DoomEngine,reward:GameRunResult?,saving:Boolean,onMenu:()->Unit,onRetry:()->Unit){
+@Composable internal fun DoomIntermission(e:DoomEngine,reward:GameRunResult?,saving:Boolean,onMenu:()->Unit,onRetry:()->Unit,onNext:(()->Unit)?=null){
     val audio=LocalGameAudio.current
     var stage by remember{mutableIntStateOf(0)}
     var tally by remember{mutableFloatStateOf(0f)}
     var skip by remember{mutableStateOf(false)}
     val metrics=listOf("KILLS" to e.kills*100/e.enemies.size.coerceAtLeast(1),
         "ITEMS" to e.loot.count{it.taken}*100/e.loot.size.coerceAtLeast(1),
-        "SECRETS" to e.secrets*100,
+        "SECRETS" to e.secrets*100/e.secretTotal.coerceAtLeast(1),
         "TRANSITO" to if(e.questionsAnswered>0)e.questionsCorrect*100/e.questionsAnswered else 0)
     LaunchedEffect(skip){
         if(skip){stage=metrics.size;tally=1f;return@LaunchedEffect}
@@ -124,8 +124,8 @@ private fun DrawScope.pixelText(text:String,x:Float,y:Float,unit:Float,color:Col
             fun t(text:String,x:Float,y:Float,scale:Float,c:Color,centered:Boolean=false){
                 pixelText(text,ox+x*u,oy+y*u,u*scale,c,centered)
             }
-            t("E1M1",160f,6f,1.35f,ivory,true)
-            t("ESTACIONAMIENTO INFERNAL",160f,21f,1.8f,red,true)
+            t("E1M"+e.level,160f,6f,1.35f,ivory,true)
+            t(e.levelTitle,160f,21f,1.8f,red,true)
             t(if(e.won)"COMPLETADO" else "MISION FALLIDA",160f,43f,2.05f,red,true)
             for((i,m) in metrics.withIndex()){
                 val y=69f+i*20f
@@ -143,7 +143,7 @@ private fun DrawScope.pixelText(text:String,x:Float,y:Float,unit:Float,color:Col
         }
         // Classic text menu: genuine touch actions, no Material cards or buttons.
         Row(Modifier.align(Alignment.BottomCenter).padding(bottom=4.dp).height(30.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){
-            RetroMenuItem("REINTENTAR",!saving,onRetry)
+            if(onNext!=null)RetroMenuItem("SIGUIENTE",!saving,onNext) else RetroMenuItem("REINTENTAR",!saving,onRetry)
             RetroMenuItem("MENU",!saving,onMenu)
         }
     }
