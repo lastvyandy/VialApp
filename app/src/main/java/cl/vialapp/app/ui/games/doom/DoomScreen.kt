@@ -113,7 +113,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                 DoomEvent.HIT->"doom_hit";DoomEvent.HURT->"doom_hurt";DoomEvent.COIN->"coin";DoomEvent.LOOT->"doom_pickup"
                 DoomEvent.SWITCH->"doom_switch";DoomEvent.DOOR->"doom_door";DoomEvent.CORRECT->"correct";DoomEvent.WRONG->"wrong"
                 DoomEvent.VICTORY->"victory";DoomEvent.DEFEAT->"wrong";DoomEvent.SECRET->"xp"
-                DoomEvent.EXPLOSION->"doom_blast";DoomEvent.RELOAD->"doom_switch";DoomEvent.ENEMY_SHOT->"doom_hit"
+                DoomEvent.EXPLOSION->"doom_explosion";DoomEvent.RELOAD->"doom_reload";DoomEvent.ENEMY_SHOT->"doom_enemy"
             })
         }
     }
