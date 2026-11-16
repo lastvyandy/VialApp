@@ -52,7 +52,11 @@ internal class ArenaAudio(context:Context){
             "tool" to pool.load(context,R.raw.sfx_tool,1),
             "signal" to pool.load(context,R.raw.sfx_signal,1),
             "drift" to pool.load(context,R.raw.sfx_drift,1),
-            "engine" to pool.load(context,R.raw.sfx_engine,1))
+            "engine" to pool.load(context,R.raw.sfx_engine,1),
+            "doom_shot" to pool.load(context,R.raw.doom_shot,1),
+            "doom_blast" to pool.load(context,R.raw.doom_blast,1),
+            "doom_plasma" to pool.load(context,R.raw.doom_plasma,1),
+            "doom_door" to pool.load(context,R.raw.doom_door,1))
     }
     fun setEffectsEnabled(value:Boolean){
         enabled=value
@@ -67,11 +71,11 @@ internal class ArenaAudio(context:Context){
         val id=ids[name]?:return
         if(closed||!enabled||!foreground||!loaded.contains(id)||name=="engine")return
         val now=SystemClock.elapsedRealtime()
-        val interval=when(name){"coin"->65L;"hit","heavy"->75L;"correct","signal","tool"->180L;else->220L}
+        val interval=when(name){"coin"->65L;"hit","heavy","doom_shot","doom_blast","doom_plasma"->75L;"correct","signal","tool"->180L;else->220L}
         if(now-(lastPlayed[name]?:-10000L)<interval)return
         lastPlayed[name]=now
         streams.remove(name)?.let{pool.stop(it)}
-        val volume=when(name){"horn"->.58f;"crash"->.55f;"coin","reward"->.68f;"signal"->.38f;else->.61f}
+        val volume=when(name){"doom_shot","doom_blast","doom_plasma"->.57f;"doom_door"->.5f;"horn"->.58f;"crash"->.55f;"coin","reward"->.68f;"signal"->.38f;else->.61f}
         val stream=pool.play(id,volume,volume,1,0,1f)
         if(stream!=0)streams[name]=stream
     }
