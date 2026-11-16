@@ -103,5 +103,46 @@ fun main(){
     second.interact();walk(second,17.5f,11.5f);walk(second,19.5f,11.5f);walk(second,19.5f,14.5f);check(second.hasKey)
     walk(second,19.5f,11.5f);walk(second,17.5f,11.5f);walk(second,15.5f,11.5f);walk(second,7.5f,11.5f)
     second.interact();walk(second,5.5f,11.5f);walk(second,2.5f,11.5f);walk(second,2.5f,13.5f);second.interact();check(second.won)
-    println("DOOM smoke OK: combat, three weapons, coins, touch-ray doors, classroom gates, secret, credential, exit, all 12 face states, enemy deaths, reload and chain explosions.")
+    val third=DoomEngine(level=3)
+    check(third.width==30&&third.height==23&&third.enemies.size==33)
+    check(third.bossHealth==560&&third.secretTotal==2&&third.doors.count{it.kind==1}==3)
+    check(third.loot.all{!third.solid(it.x,it.y,.12f)})
+    check(third.enemies.all{!third.solid(it.x,it.y,.19f)})
+    third.enemies.forEach{it.hp=0}
+    walk(third,3.5f,3.5f);check(third.owns(DoomWeapon.SHOTGUN))
+    walk(third,6.5f,3.5f);third.interact();check(third.pending?.kind==1)
+    third.answer(1);walk(third,8.5f,3.5f);check(third.owns(DoomWeapon.MINIGUN))
+    repeat(36){third.step(.025f)};check(third.weapon==DoomWeapon.MINIGUN)
+    val belt=third.ammunition;third.drainEvents()
+    repeat(12){third.step(.025f,DoomInput(fire=true))}
+    check(third.ammunition<belt&&third.drainEvents().contains(DoomEvent.MINIGUN_SHOT))
+    walk(third,19.5f,3.5f);third.interact();check(third.pending?.kind==3);third.answer(2)
+    walk(third,23.5f,3.5f);check(third.owns(DoomWeapon.PLASMA)&&third.secrets==1)
+    walk(third,19.5f,3.5f);walk(third,14.5f,3.5f);walk(third,14.5f,6.5f);third.interact();third.answer(0)
+    walk(third,14.5f,8.5f);check(third.owns(DoomWeapon.ROCKET))
+    repeat(44){third.step(.025f)};check(third.weapon==DoomWeapon.ROCKET)
+    third.explosives.clear()
+    third.drainEvents()
+    val rocketsBefore=third.ammunition
+    third.step(.025f,DoomInput(fire=true))
+    check(third.rockets.size==1&&third.ammunition==rocketsBefore-1)
+    check(third.drainEvents().contains(DoomEvent.ROCKET_SHOT))
+    repeat(100){third.step(.025f)}
+    check(third.rockets.isEmpty()&&third.drainEvents().contains(DoomEvent.EXPLOSION))
+    walk(third,14.5f,11.5f);walk(third,19.5f,11.5f);third.interact()
+    walk(third,27.5f,11.5f);walk(third,27.5f,13.5f);check(third.hasKey)
+    walk(third,27.5f,11.5f);walk(third,14.5f,11.5f);walk(third,14.5f,14.5f);third.interact();check(third.pending?.kind==1);third.answer(1)
+    walk(third,14.5f,19.5f);walk(third,8.5f,19.5f);third.interact();check(third.pending?.kind==3);third.answer(0)
+    walk(third,6.5f,19.5f);walk(third,3.5f,19.5f);check(third.secrets==2)
+    walk(third,8.5f,19.5f);walk(third,19.5f,19.5f);third.interact()
+    walk(third,27.5f,19.5f);third.interact()
+    check(third.won&&third.questionsAnswered==5&&third.questionsCorrect==5)
+    // Isolate the new boss's attack pattern and test the seven-shot phase.
+    val bossFight=DoomEngine(level=3)
+    val boss=bossFight.enemies.last()
+    bossFight.enemies.filter{it!==boss}.forEach{it.hp=0}
+    boss.x=5.5f;boss.y=3.5f;boss.hp=200;boss.cooldown=0f
+    bossFight.step(.025f)
+    check(bossFight.bolts.size==7&&bossFight.bossAlive)
+    println("DOOM smoke OK: combat, three missions, five weapons, coins, touch-ray doors, classroom gates, secret, credential, exit, all 12 face states, enemy deaths, reload and chain explosions.")
 }
