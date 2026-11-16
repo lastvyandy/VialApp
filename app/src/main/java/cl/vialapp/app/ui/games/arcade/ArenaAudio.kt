@@ -88,7 +88,7 @@ internal class ArenaAudio(context:Context){
         if(now-(lastPlayed[name]?:-10000L)<interval)return
         lastPlayed[name]=now
         streams.remove(name)?.let{pool.stop(it)}
-        val volume=when(name){"doom_shot"->.48f;"doom_blast"->.62f;"doom_plasma"->.56f;"doom_door"->.43f;"doom_hit"->.24f;"doom_hurt"->.44f;"doom_pickup"->.48f;"doom_switch"->.40f;"doom_explosion"->.68f;"doom_reload"->.42f;"doom_enemy"->.26f;"doom_death"->.57f;"doom_machine_death"->.55f;"doom_player_death"->.59f;"doom_correct","doom_wrong","doom_exit"->.43f;"horn"->.58f;"crash"->.55f;"coin","reward"->.68f;"signal"->.38f;else->.61f}
+        val volume=when(name){"doom_shot"->.48f;"doom_blast"->.62f;"doom_plasma"->.56f;"doom_door"->.43f;"doom_hit"->.24f;"doom_hurt"->.44f;"doom_pickup"->.54f;"doom_switch"->.40f;"doom_explosion"->.68f;"doom_reload"->.42f;"doom_enemy"->.26f;"doom_death"->.57f;"doom_machine_death"->.55f;"doom_player_death"->.59f;"doom_correct","doom_wrong","doom_exit"->.43f;"horn"->.58f;"crash"->.55f;"coin","reward"->.68f;"signal"->.38f;else->.61f}
         val stream=pool.play(id,volume,volume,1,0,1f)
         if(stream!=0)streams[name]=stream
     }

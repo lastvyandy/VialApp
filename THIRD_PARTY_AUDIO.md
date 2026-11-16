@@ -1,0 +1,1 @@
+The Doom-mode item pickup sound is the unmodified Freedoom `sounds/dsitemup.wav` from commit `e61c4f86722259ba9f410567156d958c712584a2`. See `app/src/main/assets/licenses/freedoom.txt` for the license and attribution, included in the Android package.
