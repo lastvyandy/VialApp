@@ -2,6 +2,8 @@ package cl.vialapp.app.ui.gamification
 
 import cl.vialapp.app.ui.rewards.LocalRewards
 import cl.vialapp.app.ui.games.GameRecordThumbnail
+import cl.vialapp.app.ui.games.GameCatalog
+import androidx.compose.foundation.clickable
 import cl.vialapp.app.ui.rewards.RewardXpLine
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
@@ -1192,7 +1194,8 @@ private fun HomeDailyMissionCard(
 
 @Composable
 fun ProgressGamificationSection(
-    userKey: String
+    userKey: String,
+    onOpenGame: ((String) -> Unit)? = null
 ) {
     val context =
         LocalContext.current
@@ -1210,16 +1213,6 @@ fun ProgressGamificationSection(
 
     val streak =
         store.streakSnapshot()
-
-    val baldHighScore =
-        store.getHighScore(
-            GameProgressStore.BALD_CHALLENGE
-        )
-
-    val crossroadsHighScore =
-        store.getHighScore(
-            GameProgressStore.CROSSROADS_ARCADE
-        )
 
     val xpProgress =
         (
@@ -1643,12 +1636,10 @@ fun ProgressGamificationSection(
 
 
         Column(verticalArrangement=Arrangement.spacedBy(9.dp)){
-            GameRecordRow(GameProgressStore.CARVIER_DRIVE,"Carvier al volante",store.getHighScore(GameProgressStore.CARVIER_DRIVE))
-            GameRecordRow(GameProgressStore.PELAO_ARENA,"Don Pelao Arena",store.getHighScore(GameProgressStore.PELAO_ARENA))
-            GameRecordRow(GameProgressStore.AUTO_WORKSHOP,"Taller del Auto",store.getHighScore(GameProgressStore.AUTO_WORKSHOP))
-            GameRecordRow(GameProgressStore.BALD_CHALLENGE,"Reto del Pelao · clásico",baldHighScore)
-            GameRecordRow(GameProgressStore.CROSSROADS_ARCADE,"Cruce Caótico",crossroadsHighScore)
-            GameRecordRow(GameProgressStore.SIGN_HUNT_ARCADE,"Caza la Señal",store.getHighScore(GameProgressStore.SIGN_HUNT_ARCADE))
+            GameCatalog.entries.forEach { game ->
+                GameRecordRow(game.id, game.title, store.getHighScore(game.id),
+                    onClick=onOpenGame?.let { open -> { open(game.route) } })
+            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -1739,11 +1730,12 @@ private fun ProgressMetric(
 private fun GameRecordRow(
     gameId: String,
     title: String,
-    score: Int
+    score: Int,
+    onClick: (() -> Unit)? = null
 ) {
     Surface(
         modifier =
-            Modifier.fillMaxWidth(),
+            Modifier.fillMaxWidth().then(if(onClick!=null)Modifier.clickable(onClick=onClick)else Modifier),
         shape =
             RoundedCornerShape(
                 18.dp

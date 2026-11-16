@@ -17,6 +17,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -62,7 +64,7 @@ internal fun GameCover(gameId: String, modifier: Modifier = Modifier) {
                 GameProgressStore.VIAL_RALLY -> "Rally"
                 GameProgressStore.AUTO_WORKSHOP -> "Box 01"
                 GameProgressStore.CROSSROADS_ARCADE -> "Hora punta"
-                else -> "Ojo a la vía"
+                else -> "Caza la señal"
             }, color = Color.White, fontSize = 23.sp, lineHeight = 26.sp, fontWeight = FontWeight.ExtraBold)
         }
         Box(Modifier.align(Alignment.CenterEnd).fillMaxWidth(.55f).fillMaxHeight().padding(8.dp), contentAlignment = Alignment.Center) {
@@ -78,6 +80,7 @@ private fun gameCoverPalette(gameId:String):List<Color> = when (gameId) {
         GameProgressStore.VIAL_RALLY -> listOf(Color(0xFF203C51),Color(0xFFB47842))
         GameProgressStore.AUTO_WORKSHOP -> listOf(Color(0xFF273E51), Color(0xFF75552F))
         GameProgressStore.CROSSROADS_ARCADE -> listOf(Color(0xFF204C42), Color(0xFF315D72))
+        GameProgressStore.SIGN_HUNT_ARCADE -> listOf(Color(0xFF172C47),Color(0xFF286579))
         else -> listOf(Color(0xFF263D62), Color(0xFF356981))
     }
 
@@ -125,12 +128,7 @@ private fun GameCoverIllustration(gameId:String){
             drawRoundRect(Color(0xFF6B98BA), center + Offset(-28f*u, 20f*u), Size(56f*u, 18f*u), CornerRadius(6f*u))
             drawCircle(Color(0xFFFFD166), 21f*u, center + Offset(-39f*u, 38f*u), style = Stroke(5f*u))
         }
-        else -> {
-            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                RoadSignArt(RoadSign.STOP, Modifier.weight(1f).aspectRatio(1f))
-                RoadSignArt(RoadSign.YIELD, Modifier.weight(1f).aspectRatio(1f))
-            }
-        }
+        else -> SignHuntCover()
     }
 }
 
@@ -145,5 +143,53 @@ private fun MascotGameThumbnail(content: @Composable () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         content()
+    }
+}
+
+/** A compact preview of the actual three-lane sign-catching game, not loose road-sign icons. */
+@Composable
+private fun SignHuntCover() {
+    BoxWithConstraints(
+        Modifier.size(122.dp).aspectRatio(1f).clip(RoundedCornerShape(24.dp))
+            .background(Color(0xFF203B51))
+            .border(1.dp,Color.White.copy(alpha=.16f),RoundedCornerShape(24.dp)),
+        contentAlignment=Alignment.Center
+    ) {
+        val tile=minOf(maxWidth,maxHeight)
+        Canvas(Modifier.fillMaxSize()){
+            val w=size.width;val h=size.height
+            fun point(x:Float,y:Float)=Offset(w*x,h*y)
+            drawRect(Brush.verticalGradient(listOf(Color(0xFF52828A),Color(0xFF172C47))))
+            val road=Path().apply{
+                moveTo(w*.30f,0f);lineTo(w*.70f,0f);lineTo(w*.96f,h);lineTo(w*.04f,h);close()
+            }
+            drawPath(road,Color(0xFF2D3A4B))
+            for(side in listOf(-1f,1f)){
+                drawLine(Color(0xFFD6E5E8),point(.5f+side*.19f,0f),point(.5f+side*.45f,1f),strokeWidth=w*.025f)
+                for(k in 0..3){
+                    val y=k*.25f
+                    fun x(t:Float)=.5f+side*(.07f+.075f*t)
+                    drawLine(Color(0xFFB5CBD4),point(x(y),y),point(x(y+.13f),y+.13f),strokeWidth=w*.016f,cap=StrokeCap.Round)
+                }
+            }
+            drawLine(Color(0xFF65DDA7),point(.09f,.84f),point(.91f,.84f),strokeWidth=h*.035f)
+        }
+        SignCoverTile(RoadSign.YIELD,Modifier.align(Alignment.TopEnd).offset(x=-tile*.15f,y=tile*.12f).size(tile*.32f),false)
+        SignCoverTile(RoadSign.STOP,Modifier.align(Alignment.BottomStart).offset(x=tile*.13f,y=-tile*.22f).size(tile*.46f),true)
+        Canvas(Modifier.align(Alignment.BottomEnd).offset(x=-tile*.11f,y=-tile*.09f).size(tile*.22f)){
+            drawCircle(Color(0xFF15865F))
+            drawLine(Color.White,Offset(size.width*.25f,size.height*.50f),Offset(size.width*.43f,size.height*.68f),size.width*.10f,cap=StrokeCap.Round)
+            drawLine(Color.White,Offset(size.width*.43f,size.height*.68f),Offset(size.width*.77f,size.height*.32f),size.width*.10f,cap=StrokeCap.Round)
+        }
+    }
+}
+
+@Composable
+private fun SignCoverTile(sign:RoadSign,modifier:Modifier,selected:Boolean){
+    val shape=RoundedCornerShape(10.dp)
+    Box(modifier.clip(shape).background(Color(0xFF162B42))
+        .border(if(selected)2.dp else 1.dp,if(selected)Color(0xFF61E8AB)else Color(0xFFBBCEDA),shape).padding(3.dp),
+        contentAlignment=Alignment.Center){
+        RoadSignArt(sign,Modifier.fillMaxSize())
     }
 }

@@ -257,7 +257,7 @@ fun GamesScreen(
             PlayableGameCard(
                 gameId = GameProgressStore.CARVIER_DRIVE,
                 record = progressStore.getHighScore(GameProgressStore.CARVIER_DRIVE),
-                title = "Carvier al volante",
+                title = GameCatalog.title(GameProgressStore.CARVIER_DRIVE),
                 subtitle = "Conducción arcade · 3 carriles",
                 description = "Esquiva el tráfico, recoge monedas y reduce la velocidad en zonas escolares.",
                 accent = GamesBlue,
@@ -270,7 +270,7 @@ fun GamesScreen(
             PlayableGameCard(
                 gameId = GameProgressStore.PELAO_ARENA,
                 record = progressStore.getHighScore(GameProgressStore.PELAO_ARENA),
-                title = "Don Pelao Arena",
+                title = GameCatalog.title(GameProgressStore.PELAO_ARENA),
                 subtitle = "Combate y conocimiento · tres rivales",
                 description = "Domina el combate, rompe seis escudos con conocimientos viales y derrota a tres rivales.",
                 accent = GamesGreen,
@@ -283,7 +283,7 @@ fun GamesScreen(
             PlayableGameCard(
                 gameId = GameProgressStore.VIAL_RALLY,
                 record = progressStore.getHighScore(GameProgressStore.VIAL_RALLY),
-                title = "Vial Rally",
+                title = GameCatalog.title(GameProgressStore.VIAL_RALLY),
                 subtitle = "Carreras arcade · 8 circuitos",
                 description = if(rallyExams>=3)"Compite con tu auto del garaje en tres modos y desbloquea circuitos con XP." else "Licencia de competición · "+rallyExams+"/3 exámenes completos. Entra para ver tu progreso.",
                 accent = GamesOrange,
@@ -297,7 +297,7 @@ fun GamesScreen(
             PlayableGameCard(
                 gameId = GameProgressStore.BALD_CHALLENGE,
                 record = progressStore.getHighScore(GameProgressStore.BALD_CHALLENGE),
-                title = "Reto del Pelao · clásico",
+                title = GameCatalog.title(GameProgressStore.BALD_CHALLENGE),
                 subtitle = "5 rondas · 3 vidas · Pelao Power",
                 description = "Responde rápido, arma combos y llega al BOSS con el modo x2 cargado.",
                 accent = GamesGreen,
@@ -312,7 +312,7 @@ fun GamesScreen(
             PlayableGameCard(
                 gameId = GameProgressStore.CROSSROADS_ARCADE,
                 record = progressStore.getHighScore(GameProgressStore.CROSSROADS_ARCADE),
-                title = "Cruce Caótico",
+                title = GameCatalog.title(GameProgressStore.CROSSROADS_ARCADE),
                 subtitle = "Arcade en tiempo real · 75 s",
                 description = "Controla los semáforos de una ciudad en movimiento, evita la congestión y da prioridad a las ambulancias.",
                 accent = GamesOrange,
@@ -327,7 +327,7 @@ fun GamesScreen(
             PlayableGameCard(
                 gameId = GameProgressStore.SIGN_HUNT_ARCADE,
                 record = progressStore.getHighScore(GameProgressStore.SIGN_HUNT_ARCADE),
-                title = "Caza la Señal",
+                title = GameCatalog.title(GameProgressStore.SIGN_HUNT_ARCADE),
                 subtitle = "Supervivencia · dificultad progresiva",
                 description = "Atrapa señales chilenas en oleadas infinitas. Mantén tus vidas y supera tu récord.",
                 accent = GamesBlue,
@@ -340,7 +340,7 @@ fun GamesScreen(
             PlayableGameCard(
                 gameId = GameProgressStore.PELAO_DOOM,
                 record = progressStore.getHighScore(GameProgressStore.PELAO_DOOM),
-                title = "Don Pelao: Operación Caos Vial",
+                title = GameCatalog.title(GameProgressStore.PELAO_DOOM),
                 subtitle = "FPS retro · Episodio 01",
                 description = "Explora el sector, combate robots y abre terminales resolviendo desafíos de tránsito.",
                 accent = Color(0xFFBA5240),
