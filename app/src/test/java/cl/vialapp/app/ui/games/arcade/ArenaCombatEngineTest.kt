@@ -86,4 +86,35 @@ class ArenaCombatEngineTest {
         e.act(23)
         assertEquals(ArenaPhase.RECOVER,e.snapshot().phase)
     }
+    @Test fun jumpingHasAnArcAndReturnsToGround(){
+        val e=ArenaCombatEngine(7)
+        e.act(7)
+        assertTrue(e.snapshot().jump>0f)
+        repeat(9){e.step(1f/30f)}
+        assertTrue(e.snapshot().jumpHeight>.6f)
+        val remaining=e.snapshot().jump
+        e.act(7)
+        assertEquals(remaining,e.snapshot().jump,.001f)
+        repeat(17){e.step(1f/30f)}
+        assertEquals(0f,e.snapshot().jumpHeight,.001f)
+    }
+    @Test fun bufferedKickExecutesAfterJabRecovery(){
+        val e=ArenaCombatEngine(9)
+        // Move into attack distance without waiting for an enemy wind-up.
+        repeat(5){e.act(1)}
+        e.act(2)
+        repeat(3){e.step(1f/30f)}
+        assertEquals(ArenaMove.JAB,e.snapshot().move)
+        assertTrue(e.snapshot().rivalHp<85)
+        assertEquals(1,e.snapshot().combo)
+        val before=e.snapshot().rivalHp
+        e.act(3)
+        assertEquals(3,e.snapshot().queued)
+        assertEquals(before,e.snapshot().rivalHp)
+        repeat(25){e.step(1f/30f)}
+        assertEquals(68,e.snapshot().rivalHp)
+        assertEquals(ArenaPhase.KNOWLEDGE,e.snapshot().phase)
+        assertEquals(2,e.snapshot().combo)
+        assertEquals(-1,e.snapshot().queued)
+    }
 }

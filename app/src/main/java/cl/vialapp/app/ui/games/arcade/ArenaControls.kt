@@ -28,7 +28,7 @@ import kotlinx.coroutines.delay
 @Composable
 internal fun ArenaControls(f:ArenaCombatFrame,enabled:Boolean,act:(Int)->Unit){
     val ready=enabled&&f.phase!=ArenaPhase.ROUND_CLEAR
-    val attackReady=ready&&f.lock<=0f&&f.evade<=0f&&f.playerImpact<=0f
+    val attackReady=ready&&f.evade<=0f&&f.playerImpact<=0f&&(f.lock<=0f||f.move!=null&&f.hitIn<=0f&&f.lock<=.24f)
     Row(Modifier.fillMaxWidth().background(Color(0xFF142135),RoundedCornerShape(18.dp))
         .padding(horizontal=10.dp,vertical=5.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
         Column(horizontalAlignment=Alignment.CenterHorizontally){
@@ -37,12 +37,13 @@ internal fun ArenaControls(f:ArenaCombatFrame,enabled:Boolean,act:(Int)->Unit){
         }
         Column(horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(4.dp)){
             Row(horizontalArrangement=Arrangement.spacedBy(7.dp),verticalAlignment=Alignment.Bottom){
-                ActionCircle("Fuerte",3,attackReady,Color(0xFFA3542C),46,act)
-                ActionCircle("Golpe",2,attackReady,Color(0xFFD77C36),62,act)
+                ActionCircle("Salto",7,ready&&f.jump<=0f&&f.lock<=0f&&f.evade<=0f,Color(0xFF317E91),46,act)
+                ActionCircle("Patada",3,attackReady,Color(0xFFB55738),50,act)
+                ActionCircle("Puño",2,attackReady,Color(0xFFD77C36),54,act)
             }
             Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){
                 ActionCircle("Guardia",4,attackReady,Color(0xFF376BA9),46,act)
-                ActionCircle("Esquiva",5,ready&&f.evadeLock<=0f&&f.playerImpact<=0f,Color(0xFF317E91),46,act)
+                ActionCircle("Dash",5,ready&&f.evadeLock<=0f&&f.playerImpact<=0f,Color(0xFF317E91),46,act)
                 ActionCircle("Especial",6,attackReady&&f.power>=100,Color(0xFF865ABB),46,act)
             }
         }
@@ -53,7 +54,7 @@ private fun ArenaJoystick(enabled:Boolean,act:(Int)->Unit){
     var direction by remember{mutableIntStateOf(0)}
     val callback by rememberUpdatedState(act)
     LaunchedEffect(direction,enabled){
-        if(enabled&&direction!=0)while(true){callback(if(direction<0)0 else 1);delay(95)}
+        if(enabled&&direction!=0)while(true){callback(if(direction<0)8 else 9);delay(35)}
     }
     Box(Modifier.size(98.dp).clip(CircleShape).background(Color(0xFF243950))
         .border(2.dp,Color(0xFF647D98),CircleShape)
@@ -90,7 +91,7 @@ private fun ArenaJoystick(enabled:Boolean,act:(Int)->Unit){
 private fun ActionCircle(label:String,action:Int,enabled:Boolean,color:Color,diameter:Int,act:(Int)->Unit){
     Column(horizontalAlignment=Alignment.CenterHorizontally){
         Box(Modifier.size(diameter.dp).clip(CircleShape)
-            .background(if(enabled)color else color.copy(alpha=.30f))
+            .background(Brush.verticalGradient(if(enabled)listOf(color.copy(alpha=.95f),color.copy(alpha=.65f))else listOf(color.copy(alpha=.32f),color.copy(alpha=.19f))))
             .border(1.5.dp,if(enabled)Color.White.copy(alpha=.62f)else Color.White.copy(alpha=.16f),CircleShape)
             .clickable(enabled=enabled){act(action)}.semantics{contentDescription=label},contentAlignment=Alignment.Center){
             Canvas(Modifier.fillMaxSize().padding(11.dp)){
@@ -98,11 +99,14 @@ private fun ActionCircle(label:String,action:Int,enabled:Boolean,color:Color,dia
                 val ink=Color.White.copy(alpha=if(enabled)1f else .35f)
                 val stroke=w*.10f
                 when(action){
-                    2,3->{
+                    2->{
                         val fist=Path().apply{moveTo(w*.24f,h*.43f);lineTo(w*.24f,h*.19f);quadraticBezierTo(w*.35f,h*.1f,w*.43f,h*.22f);quadraticBezierTo(w*.55f,h*.05f,w*.64f,h*.24f);quadraticBezierTo(w*.8f,h*.09f,w*.84f,h*.32f);lineTo(w*.84f,h*.53f);lineTo(w*.69f,h*.82f);lineTo(w*.30f,h*.82f);lineTo(w*.10f,h*.55f);quadraticBezierTo(w*.1f,h*.38f,w*.24f,h*.43f);close()}
                         drawPath(fist,ink)
-                        if(action==3)drawLine(color,Offset(w*.27f,h*.56f),Offset(w*.73f,h*.56f),stroke)
+                        drawLine(color,Offset(w*.33f,h*.30f),Offset(w*.33f,h*.44f),stroke*.45f)
+                        drawLine(color,Offset(w*.54f,h*.29f),Offset(w*.54f,h*.44f),stroke*.45f)
                     }
+                    3->{val p=Path().apply{moveTo(w*.30f,h*.08f);lineTo(w*.58f,h*.12f);lineTo(w*.49f,h*.53f);lineTo(w*.88f,h*.66f);quadraticBezierTo(w*.96f,h*.72f,w*.84f,h*.90f);lineTo(w*.22f,h*.80f);lineTo(w*.23f,h*.49f);close()};drawPath(p,ink);drawLine(color,Offset(w*.25f,h*.68f),Offset(w*.80f,h*.79f),stroke*.6f)}
+                    7->{drawLine(ink,Offset(w*.5f,h*.88f),Offset(w*.5f,h*.16f),stroke,StrokeCap.Round);drawLine(ink,Offset(w*.5f,h*.16f),Offset(w*.20f,h*.45f),stroke,StrokeCap.Round);drawLine(ink,Offset(w*.5f,h*.16f),Offset(w*.80f,h*.45f),stroke,StrokeCap.Round)}
                     4->{val p=Path().apply{moveTo(w*.5f,h*.08f);lineTo(w*.88f,h*.24f);lineTo(w*.82f,h*.61f);quadraticBezierTo(w*.73f,h*.84f,w*.5f,h*.95f);quadraticBezierTo(w*.25f,h*.84f,w*.18f,h*.61f);lineTo(w*.12f,h*.24f);close()};drawPath(p,ink,style=Stroke(stroke))}
                     5->{drawLine(ink,Offset(w*.18f,h*.5f),Offset(w*.84f,h*.5f),stroke,StrokeCap.Round);drawLine(ink,Offset(w*.18f,h*.5f),Offset(w*.43f,h*.23f),stroke,StrokeCap.Round);drawLine(ink,Offset(w*.18f,h*.5f),Offset(w*.43f,h*.77f),stroke,StrokeCap.Round)}
                     6->{val p=Path().apply{moveTo(w*.60f,h*.03f);lineTo(w*.14f,h*.56f);lineTo(w*.46f,h*.56f);lineTo(w*.36f,h*.98f);lineTo(w*.87f,h*.38f);lineTo(w*.55f,h*.38f);close()};drawPath(p,ink)}

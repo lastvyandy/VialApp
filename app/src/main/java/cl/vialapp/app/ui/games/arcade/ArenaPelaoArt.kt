@@ -16,18 +16,24 @@ internal fun DrawScope.drawPelao(f:ArenaCombatFrame){
     val pants=Color(0xFF33465A)
     val beard=Color(0xFF412B27)
     val m=f.move
-    val punch=if(m!=null&&f.lock>0f)sin((f.lock/m.lock).coerceIn(0f,1f)*3.141593f)else 0f
+    val swing=if(m!=null&&f.lock>0f)sin((f.lock/m.lock).coerceIn(0f,1f)*3.141593f)else 0f
+    val kick=if(m==ArenaMove.HEAVY)swing else 0f
+    val punch=if(m==ArenaMove.HEAVY)0f else swing
+    val gait=if(f.walk>0f)sin(f.walkCycle)*f.walkDir else 0f
+    val air=f.jumpHeight
     val crouch=if(f.evade>0f)15f else if(f.finished&&!f.won)17f else 0f
-    val lean=12f*punch-(if(f.playerImpact>0f)8f else 0f)
-    val chest=Offset(lean,-112f+crouch+sin(f.elapsed*5f)*1.8f)
+    val lean=16f*punch-10f*kick+4f*gait-(if(f.playerImpact>0f)12f else 0f)
+    val chest=Offset(lean,-112f+crouch+sin(f.elapsed*7f)*2.8f+3f*kotlin.math.abs(gait))
     val waist=Offset(lean,-65f+crouch*.55f)
     fun limb(a:Offset,b:Offset,width:Float,ink:Color){
         drawLine(outline,a,b,width+4f,StrokeCap.Round)
         drawLine(ink,a,b,width,StrokeCap.Round)
     }
     fun leg(side:Float){
-        val knee=Offset(side*23f,-31f)
-        val ankle=Offset(side*30f,-10f)
+        val activeKick=if(side>0f)kick else 0f
+        val stride=side*gait
+        val knee=Offset(side*23f+38f*activeKick+stride*13f,-31f-39f*activeKick-8f*air)
+        val ankle=Offset(side*30f+79f*activeKick+stride*22f,-10f-66f*activeKick-18f*air-kotlin.math.abs(stride)*5f)
         limb(waist+Offset(side*12f,0f),knee,24f,pants)
         limb(knee,ankle,19f,pants)
         drawRoundRect(outline,ankle-Offset(11f,0f),Size(31f,10f),CornerRadius(4f))
@@ -80,9 +86,13 @@ internal fun DrawScope.drawPelao(f:ArenaCombatFrame){
     drawCircle(outline,2.7f,face+Offset(-6f,-1f));drawCircle(outline,2.7f,face+Offset(15f,-1f))
     drawLine(shade,face+Offset(3f,0f),face+Offset(7f,6f),3f,StrokeCap.Round)
     drawLine(light,face+Offset(-4f,16f),face+Offset(10f,15f),2f,StrokeCap.Round)
-    val hand=when{f.won->front+Offset(14f,-50f);guard->face+Offset(15f,16f);else->chest+Offset(40f+43f*punch,-15f-3f*punch)}
+    val hand=when{f.won->front+Offset(14f,-50f);guard->face+Offset(15f,16f);else->chest+Offset(37f+52f*punch-12f*kick,-20f-5f*punch)}
     arm(front,front+Offset(14f+15f*punch,if(f.won)-20f else 21f-23f*punch),hand)
     if(guard)drawOval(Color(0xFF7DD3FC).copy(alpha=.75f),chest-Offset(42f,51f),Size(96f,104f),style=Stroke(3f))
+    if(kick>.4f){
+        val trail=Path().apply{moveTo(38f,-32f);quadraticBezierTo(96f,-82f,128f,-65f);quadraticBezierTo(90f,-60f,53f,-22f);close()}
+        drawPath(trail,Color(0xFFFFDC9C).copy(alpha=.22f*kick))
+    }
     if(m==ArenaMove.SPECIAL&&punch>0f){
         drawCircle(Color(0xFFF9C950).copy(alpha=.22f),24f+10f*punch,hand)
         drawCircle(Color(0xFFFDE68A),18f,hand,style=Stroke(3f))
