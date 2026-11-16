@@ -45,7 +45,7 @@ internal class DoomView(context:Context):View(context){
         val moving=hypot(e.x-previousX,e.y-previousY)>.001f
         previousX=e.x;previousY=e.y
         val horizon=h*.5f+(if(moving)sin(e.walk*1.65f)*1.1f else 0f)
-        val muzzle=if(e.shotFlash>0f).21f else 0f
+        val muzzle=(if(e.shotFlash>0f).21f else 0f)+e.blastFlash*1.1f
         for(y in 0 until h){
             val rowDistance=(focal*.5f)/abs(y+.5f-horizon).coerceAtLeast(.5f)
             val light=(.90f/(1f+rowDistance*.12f)+muzzle/(1f+rowDistance*.4f)).coerceIn(.12f,.89f)
@@ -83,12 +83,14 @@ internal class DoomView(context:Context):View(context){
         }
         sprites.clear()
         for(p in e.decor)if(hypot(p.x-e.x,p.y-e.y)>.42f)sprites+=Sprite(p.x,p.y,p.scale,art.decor[p.kind.ordinal],false,p.lift)
+        for(b in e.explosives)if(!b.exploded)sprites+=Sprite(b.x,b.y,if(b.crate).70f else .77f,art.explosive[if(b.crate)1 else 0])
+        for(b in e.explosions){val frame=((.52f-b.time)/.52f*6).toInt().coerceIn(0,5);sprites+=Sprite(b.x,b.y,1.05f+frame*.13f,art.explosion[frame],true,.12f)}
         for(l in e.loot)if(!l.taken)sprites+=Sprite(l.x,l.y,.46f,art.loot[l.kind.ordinal])
         for(a in e.enemies){
             if(a.hp>0){
                 val phase=if(a.alert)((e.elapsed*6+a.id*.4f).toInt() and 3)else 0
-                val size=if(a.kind==DoomKind.BOSS)1.18f else if(a.kind==DoomKind.DRONE).73f else .91f
-                val pose=art.enemyFrames[a.kind.ordinal][phase]
+                val size=when(a.kind){DoomKind.BOSS->1.33f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
+                val pose=if(a.attackFlash>0f)art.enemyAttack[a.kind.ordinal] else art.enemyFrames[a.kind.ordinal][phase]
                 sprites+=Sprite(a.x,a.y,size,pose,a.flash>0f,if(a.kind==DoomKind.DRONE).25f+sin(e.elapsed*4+a.id)*.07f else 0f)
             }else sprites+=Sprite(a.x,a.y,.42f,art.wreck)
         }
@@ -115,9 +117,9 @@ internal class DoomView(context:Context):View(context){
         lowCanvas.save()
         val gunScale=(h/180f).coerceIn(.68f,1.32f)
         val bob=if(moving)sin(e.walk)*3.5f else 0f
-        lowCanvas.translate(w/2f+bob,h-1f+(if(e.shotFlash>0f)7f else if(moving)abs(cos(e.walk))*2.3f else 0f))
+        lowCanvas.translate(w/2f+bob,h-1f+gunScale*(e.weaponLowering*91f+e.recoil*(if(e.weapon==DoomWeapon.SHOTGUN)17f else 8f))+(if(moving)abs(cos(e.walk))*2.3f else 0f))
         lowCanvas.scale(gunScale,gunScale)
-        drawGun(lowCanvas,e.weapon,e.shotFlash>0f)
+        drawGun(lowCanvas,e.weapon,e.shotFlash>0f,e.weaponPhase,e.weaponProgress)
         lowCanvas.restore()
         val cx=w/2f;val cy=horizon
         brush.color=if(e.targetHint()!=null)Color.rgb(255,203,88) else Color.argb(160,240,237,213)
@@ -125,10 +127,12 @@ internal class DoomView(context:Context):View(context){
         lowCanvas.drawRect(cx,cy-7,cx+1,cy-3,brush);lowCanvas.drawRect(cx,cy+4,cx+1,cy+8,brush)
         if(e.targetHint()!=null){lowCanvas.drawRect(cx-1,cy-1,cx+2,cy+2,brush)}
         if(e.hurtFlash>0f){brush.color=Color.argb((e.hurtFlash*480).toInt().coerceIn(0,100),180,12,8);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
+        if(e.blastFlash>0f){brush.color=Color.argb((e.blastFlash*240).toInt().coerceIn(0,64),255,151,59);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
+        if(e.pickupFlash>0f){brush.color=Color.argb((e.pickupFlash*125).toInt().coerceIn(0,22),220,200,85);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
         target.set(0,0,width,height);brush.color=Color.WHITE
         canvas.drawBitmap(bitmap,null,target,brush)
     }
-    private fun drawGun(c:Canvas,weapon:DoomWeapon,fire:Boolean){
+    private fun drawGun(c:Canvas,weapon:DoomWeapon,fire:Boolean,phase:DoomWeaponPhase,progress:Float){
         fun rect(l:Float,t:Float,r:Float,b:Float,color:Int){brush.color=color or 0xff000000.toInt();c.drawRect(l,t,r,b,brush)}
         fun poly(color:Int,vararg p:Float){val path=Path();path.moveTo(p[0],p[1]);for(i in 2 until p.size step 2)path.lineTo(p[i],p[i+1]);path.close();brush.color=color or 0xff000000.toInt();c.drawPath(path,brush)}
         val a=when(weapon){DoomWeapon.PISTOL->13f;DoomWeapon.SHOTGUN->26f;DoomWeapon.PLASMA->32f}
@@ -152,12 +156,25 @@ internal class DoomView(context:Context):View(context){
                 rect(-a+6,n+4,-3f,-18f,0x303136);rect(3f,n+4,a-6,-18f,0x303136)
                 rect(-a+7,n+5,-a+10,-22f,0x92928f);rect(4f,n+5,7f,-22f,0x92928f)
                 rect(-2f,n-1,2f,-14f,0x18191a);rect(-a+5,-20f,a-5,-6f,0x714429)
-                for(k in 0..4)rect(-a+7,-18f+k*2,a-7,-17f+k*2,0xa46839)
+                val pump=if(phase==DoomWeaponPhase.PUMPING||phase==DoomWeaponPhase.RELOADING)sin(progress*PI.toFloat())*13f else 0f
+                rect(-a+5,-26f+pump,a-5,-12f+pump,0x52331f)
+                for(k in 0..5)rect(-a+7,-25f+k*2+pump,a-7,-24f+k*2+pump,0xa46839)
             }
             DoomWeapon.PLASMA->{
                 rect(-a+4,-43f,-a+8,-17f,0x65fff2);rect(a-8,-43f,a-4,-17f,0x65fff2)
                 for(k in 0..5){rect(-a+9,-48f+k*6,-a+13,-45f+k*6,0x67a9a0);rect(a-13,-48f+k*6,a-9,-45f+k*6,0x67a9a0)}
                 rect(-7f,n-4,7f,n+3,0x367b76);rect(-4f,n-5,4f,n+1,0xa3fff0)
+            }
+        }
+        if(phase==DoomWeaponPhase.RELOADING&&progress in .20f.. .82f){
+            val slide=sin(progress*PI.toFloat())*21f
+            // Left hand reaches in with a fresh magazine/shell/cell.
+            poly(0x37241c,-69f,0f,-55f,-12f-slide,-39f,-25f-slide,-25f,-20f-slide,-19f,-6f,-28f,0f)
+            poly(0xb67b4f,-63f,0f,-51f,-12f-slide,-39f,-19f-slide,-28f,-16f-slide,-26f,-8f,-35f,0f)
+            when(weapon){
+                DoomWeapon.PISTOL->{rect(-36f,-29f-slide,-25f,-8f-slide,0x31343b);rect(-34f,-30f-slide,-28f,-27f-slide,0xb7a77d)}
+                DoomWeapon.SHOTGUN->{rect(-36f,-28f-slide,-29f,-13f-slide,0x983e26);rect(-36f,-16f-slide,-29f,-13f-slide,0xd6aa60)}
+                DoomWeapon.PLASMA->{rect(-41f,-27f-slide,-27f,-10f-slide,0x254e58);rect(-38f,-25f-slide,-30f,-12f-slide,0x6bd4be)}
             }
         }
         if(fire){poly(if(weapon==DoomWeapon.PLASMA)0x299ad1 else 0xf26b21,-30f,n-1,-13f,n-18,-24f,n-27,-5f,n-24,4f,n-44,13f,n-24,30f,n-27,20f,n-10,32f,n-1);poly(if(weapon==DoomWeapon.PLASMA)0x82f7ed else 0xffd65a,-19f,n,-7f,n-15,3f,n-32,10f,n-13,20f,n);poly(0xfff8c4,-8f,n,1f,n-18,9f,n)}
@@ -235,6 +252,33 @@ private class DoomArt{
             box(20,12,44,33,0x292027);oval(23,14,41,33,0xa32624);oval(26,17,38,30,0xff6f35);oval(30,20,35,26,0xffedac)
             box(17,38,47,45,0x202328);for(i in 0..4)box(20+i*6,39,23+i*6,43,0xffb33c)
             box(12,50,26,61,0x383337);box(38,50,52,61,0x383337);box(7,59,28,64,0x6b605a);box(36,59,57,64,0x6b605a)
+        },
+        sprite{
+            oval(9,57,55,64,0x242022);box(12,42,27,61,0x303535);box(36,42,52,61,0x303535)
+            box(10,57,28,63,0x7b6e52);box(36,57,54,63,0x7b6e52)
+            poly(0x292628,8,21,16,16,48,16,56,23,50,46,14,46)
+            poly(0x987c4e,15,21,48,21,46,39,20,42,13,33);box(19,25,45,30,0xb39c65)
+            box(21,6,43,19,0x6d6861);box(23,10,41,15,0x201c20);box(24,11,30,14,0xf5c05d);box(34,11,40,14,0xf5c05d)
+            box(7,28,15,44,0x746749);box(49,26,57,41,0x746749)
+            box(5,33,58,40,0x1f2427);box(8,32,55,35,0x909390);box(21,40,47,44,0x594132);box(50,31,61,38,0x34363a)
+        },
+        sprite{
+            oval(1,57,63,64,0x211e22);box(9,43,28,61,0x2c2b31);box(36,43,56,61,0x2c2b31)
+            box(5,54,29,63,0x6b7770);box(35,54,59,63,0x6b7770)
+            poly(0x24282d,2,20,15,10,49,10,62,22,54,46,10,46)
+            poly(0x697d77,7,22,17,14,47,14,57,23,50,40,14,40)
+            box(18,22,46,35,0x33393a);box(21,26,43,32,0x9e4328)
+            box(22,4,42,19,0x7e8881);box(24,10,40,15,0x242527);box(26,11,38,14,0xff5d31)
+            box(2,27,17,44,0x32363a);box(47,27,62,44,0x32363a)
+            box(4,33,16,48,0x8b8b81);box(48,33,60,48,0x8b8b81);box(6,37,14,44,0x2d252a);box(50,37,58,44,0x2d252a)
+        },
+        sprite{
+            oval(6,51,58,63,0x251d1b);poly(0x322826,4,37,12,16,46,11,60,36,54,53,13,53)
+            poly(0xb4472a,10,32,17,19,44,15,54,32,50,49,15,49)
+            box(19,22,43,39,0x242628);box(22,25,40,35,0xfab543);box(26,27,37,32,0xffe5a7)
+            box(6,44,18,59,0x464446);box(46,44,58,59,0x464446)
+            for(i in 0..3){box(10,46+i*3,17,47+i*3,0x888075);box(47,46+i*3,54,47+i*3,0x888075)}
+            box(28,6,35,14,0xe45c39);box(30,7,33,11,0xffeba0)
         })
     val loot=Array(DoomLootKind.entries.size){i->sprite{
         when(DoomLootKind.entries[i]){
@@ -278,6 +322,39 @@ private class DoomArt{
         return out
     }
     val enemyFrames=Array(enemies.size){kind->Array(4){frame->detail(enemies[kind],frame,kind)}}
+    val enemyAttack=Array(enemies.size){kind->detail(enemies[kind],0,kind).also{a->
+        val cx=when(kind){0->7;1->32;2->32;3->53;4->50;else->32}
+        val cy=when(kind){0->35;1->30;2->28;3->35;4->42;else->27}
+        for(y in (cy-7).coerceAtLeast(0)..(cy+7).coerceAtMost(63))for(x in (cx-7).coerceAtLeast(0)..(cx+7).coerceAtMost(63)){
+            val d=abs(x-cx)+abs(y-cy)
+            if(d<9)a[y*64+x]=if(d<4)0xffffe6a0.toInt()else 0xffef7035.toInt()
+        }
+    }}
+    val explosive=arrayOf(
+        sprite{
+            oval(10,53,54,64,0x282021);box(13,13,51,58,0x382624);box(16,15,48,55,0x8c3526)
+            box(17,16,23,53,0xcc6541);box(44,16,49,55,0x5a2723);oval(13,5,51,20,0x4a302b);oval(17,7,47,17,0xa36a50)
+            box(14,20,50,24,0x38312b);box(14,49,50,53,0x38312b);box(19,29,45,45,0xe7b54a)
+            poly(0x322924,32,30,42,42,22,42);box(31,34,33,39,0xffd15b)
+        },
+        sprite{
+            box(4,16,60,62,0x2b2322);box(7,19,57,59,0x843e2c);box(9,21,55,25,0xca7250)
+            box(9,54,55,58,0x472923);box(10,26,54,51,0x47312a)
+            for(i in 0..5)poly(if(i%2==0)0xcda448 else 0x2e2825,10+i*7,27,16+i*7,27,22+i*7,49,16+i*7,49)
+            box(20,31,45,46,0xb1462b);box(29,33,34,40,0xffe2a0);box(29,42,34,44,0xffe2a0)
+        })
+    val explosion=Array(6){frame->IntArray(4096){i->
+        val x=i%64-32;val y=i/64-32
+        val d=hypot(x.toFloat(),y.toFloat());val edge=14+frame*3+((x*17+y*11) and 7)
+        val n=((x*19+y*31+frame*53) and 15)
+        when{
+            d>edge->0
+            frame>=4->if(n<4+frame)0 else rgb(94+n*4,78+n*3,65+n*2)
+            d<edge*.35f->rgb(255,235-n*3,158-n*4)
+            d<edge*.67f->rgb(255,164-n*4,35+n)
+            else->rgb(174+n*5,48+n*2,12+n)
+        }
+    }}
     val decor=arrayOf(
         sprite{
             oval(11,46,53,63,0x1e2120);box(13,13,51,55,0x292e27)
