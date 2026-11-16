@@ -89,16 +89,17 @@ internal class DoomView(context:Context):View(context){
         for(a in e.enemies){
             if(a.hp>0){
                 val phase=if(a.alert)((e.elapsed*6+a.id*.4f).toInt() and 3)else 0
-                val size=when(a.kind){DoomKind.BOSS->1.33f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
+                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
                 val pose=if(a.attackFlash>0f)art.enemyAttack[a.kind.ordinal] else art.enemyFrames[a.kind.ordinal][phase]
                 sprites+=Sprite(a.x,a.y,size,pose,a.flash>0f,if(a.kind==DoomKind.DRONE).25f+sin(e.elapsed*4+a.id)*.07f else 0f)
             }else{
                 val frame=(a.deathAge/.12f).toInt().coerceIn(0,5)
-                val size=when(a.kind){DoomKind.BOSS->1.33f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
+                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
                 sprites+=Sprite(a.x,a.y,size,art.enemyDeath[a.kind.ordinal][frame],frame==0,if(a.kind==DoomKind.DRONE)(.25f*(1f-a.deathAge/.55f)).coerceAtLeast(0f)else 0f)
             }
         }
         for(b in e.bolts)sprites+=Sprite(b.x,b.y,.23f,art.bolt,false,.43f)
+        for(b in e.rockets)sprites+=Sprite(b.x,b.y,.32f,art.rocket,false,.38f)
         sprites.sortByDescending{(it.x-e.x)*(it.x-e.x)+(it.y-e.y)*(it.y-e.y)}
         for(s in sprites){
             val dx=s.x-e.x;val dy=s.y-e.y;val z=dx*ca+dy*sa
@@ -139,7 +140,7 @@ internal class DoomView(context:Context):View(context){
     private fun drawGun(c:Canvas,weapon:DoomWeapon,fire:Boolean,phase:DoomWeaponPhase,progress:Float){
         fun rect(l:Float,t:Float,r:Float,b:Float,color:Int){brush.color=color or 0xff000000.toInt();c.drawRect(l,t,r,b,brush)}
         fun poly(color:Int,vararg p:Float){val path=Path();path.moveTo(p[0],p[1]);for(i in 2 until p.size step 2)path.lineTo(p[i],p[i+1]);path.close();brush.color=color or 0xff000000.toInt();c.drawPath(path,brush)}
-        val a=when(weapon){DoomWeapon.PISTOL->13f;DoomWeapon.SHOTGUN->26f;DoomWeapon.PLASMA->32f}
+        val a=when(weapon){DoomWeapon.PISTOL->13f;DoomWeapon.SHOTGUN->26f;DoomWeapon.PLASMA->32f;DoomWeapon.MINIGUN->38f;DoomWeapon.ROCKET->30f}
         val n=if(weapon==DoomWeapon.PISTOL)-51f else -64f
         poly(0x442e25,-59f,0f,-45f,-29f,-24f,-36f,-8f,-10f,8f,-10f,24f,-36f,45f,-29f,59f,0f)
         poly(0xc18a64,-54f,0f,-42f,-24f,-24f,-29f,-14f,-6f,14f,-6f,24f,-29f,42f,-24f,54f,0f)
@@ -169,6 +170,24 @@ internal class DoomView(context:Context):View(context){
                 for(k in 0..5){rect(-a+9,-48f+k*6,-a+13,-45f+k*6,0x67a9a0);rect(a-13,-48f+k*6,a-9,-45f+k*6,0x67a9a0)}
                 rect(-7f,n-4,7f,n+3,0x367b76);rect(-4f,n-5,4f,n+1,0xa3fff0)
             }
+            DoomWeapon.MINIGUN->{
+                rect(-33f,-28f,33f,-4f,0x494b42)
+                for(k in 0..4){val x=-24f+k*12f;val active=fire&&(k+(progress*5).toInt())%2==0
+                    rect(x-4f,n-7f,x+4f,-26f,0x1b1d1d)
+                    rect(x-3f,n-5f,x,-29f,if(active)0xd1aa65 else 0x939894)
+                    rect(x+1f,n-5f,x+4f,-29f,0x494d4c)
+                    rect(x-4f,n-7f,x+4f,n-2f,0x171919)
+                }
+                rect(-34f,-37f,34f,-30f,0x71756b);rect(-27f,-19f,27f,-12f,0x292b29)
+                for(k in 0..5)rect(23f,-25f+k*4,35f,-22f+k*4,0xb08a43)
+            }
+            DoomWeapon.ROCKET->{
+                poly(0x292b21,-29f,-5f,-27f,-36f,-21f,n-8f,21f,n-8f,27f,-36f,29f,-5f)
+                poly(0x71764a,-23f,-10f,-20f,n-5f,20f,n-5f,23f,-10f)
+                rect(-16f,n-10f,16f,n+6f,0x1c211a);rect(-11f,n-7f,11f,n+2f,0x35392d)
+                rect(-25f,-39f,25f,-32f,0xa39b66);rect(-26f,-24f,26f,-19f,0x353729)
+                rect(17f,-53f,26f,-44f,0x9d6431);rect(-4f,n-13f,4f,n-8f,0xadb281)
+            }
         }
         if(phase==DoomWeaponPhase.RELOADING&&progress in .20f.. .82f){
             val slide=sin(progress*PI.toFloat())*21f
@@ -179,6 +198,8 @@ internal class DoomView(context:Context):View(context){
                 DoomWeapon.PISTOL->{rect(-36f,-29f-slide,-25f,-8f-slide,0x31343b);rect(-34f,-30f-slide,-28f,-27f-slide,0xb7a77d)}
                 DoomWeapon.SHOTGUN->{rect(-36f,-28f-slide,-29f,-13f-slide,0x983e26);rect(-36f,-16f-slide,-29f,-13f-slide,0xd6aa60)}
                 DoomWeapon.PLASMA->{rect(-41f,-27f-slide,-27f,-10f-slide,0x254e58);rect(-38f,-25f-slide,-30f,-12f-slide,0x6bd4be)}
+                DoomWeapon.MINIGUN->{rect(-42f,-28f-slide,-24f,-8f-slide,0x5a503a);for(k in 0..3)rect(-41f+k*4,-30f-slide,-38f+k*4,-14f-slide,0xc5a253)}
+                DoomWeapon.ROCKET->{rect(-39f,-30f-slide,-27f,-8f-slide,0x797c56);poly(0xc3a96e,-39f,-30f-slide,-33f,-38f-slide,-27f,-30f-slide)}
             }
         }
         if(fire){poly(if(weapon==DoomWeapon.PLASMA)0x299ad1 else 0xf26b21,-30f,n-1,-13f,n-18,-24f,n-27,-5f,n-24,4f,n-44,13f,n-24,30f,n-27,20f,n-10,32f,n-1);poly(if(weapon==DoomWeapon.PLASMA)0x82f7ed else 0xffd65a,-19f,n,-7f,n-15,3f,n-32,10f,n-13,20f,n);poly(0xfff8c4,-8f,n,1f,n-18,9f,n)}
@@ -290,6 +311,10 @@ private class DoomArt{
             DoomLootKind.MEDKIT->{box(7,28,57,60,0x303333);box(9,25,55,55,0xbbc3b7);box(25,29,39,51,0xbd372b);box(19,35,45,45,0xbd372b)}
             DoomLootKind.ARMOR->{poly(0x293c3b,9,13,22,6,42,6,55,13,48,53,32,61,16,53);poly(0x67a5a4,12,15,23,10,41,10,52,15,45,50,32,56,19,50);box(26,18,38,46,0x355757)}
             DoomLootKind.KEY->{box(7,18,57,49,0x97721e);box(10,16,55,43,0xf5c955);box(14,20,26,32,0x554626);box(32,21,50,26,0xfbf0b4);box(32,32,48,36,0x776027)}
+            DoomLootKind.MINIGUN->{box(5,30,57,45,0x303333);for(k in 0..3)box(24,21+k*4,61,24+k*4,0x9b9b86);box(9,42,26,56,0x735b35);for(k in 0..4)box(13+k*7,42,17+k*7,52,0xc6a158)}
+            DoomLootKind.ROCKET->{poly(0x4c5140,4,36,20,24,59,12,63,26,29,39,13,49);box(24,24,53,30,0x9b9a69);box(6,35,22,45,0x3a3a31)}
+            DoomLootKind.ROCKET_AMMO->{for(k in 0..2){val x=11+k*16;box(x,27,x+10,57,0x747a49);poly(0xb5ad79,x,27,x+5,13,x+10,27);box(x,46,x+10,51,0x97502f)}}
+            DoomLootKind.BELT->{box(7,34,58,59,0x50462e);for(k in 0..5){box(9+k*8,21,15+k*8,48,0xb99a4c);box(9+k*8,20,15+k*8,24,0xe4cc85)}}
             DoomLootKind.SHOTGUN,DoomLootKind.PLASMA->{poly(0x27252a,5,35,26,20,61,14,61,26,27,36,15,49,7,48);box(26,18,59,25,0xb3b5b0);box(6,36,26,45,0x804a2d);if(i==DoomLootKind.PLASMA.ordinal)box(29,25,52,31,0x64e9d7)}
             else->{val color=when(i){DoomLootKind.SHELLS.ordinal->0xb34131;DoomLootKind.CELL.ordinal->0x4bb9ae;else->0xa69146};box(8,32,56,60,0x292a26);box(10,29,54,55,color);for(k in 0..4){box(13+k*8,25,18+k*8,47,color);box(13+k*8,23,18+k*8,28,0xe9cd86)}}
         }
@@ -410,6 +435,7 @@ private class DoomArt{
         sprite{
             oval(2,51,62,62,0x212223);poly(0x30353a,5,41,18,25,43,24,57,38,62,54,4,54);poly(0x4e585b,10,39,20,28,40,27,51,39,49,48,12,48);box(21,29,39,37,0x202b30);box(8,43,15,49,0x8a7554);box(49,43,56,49,0x803a2c);box(10,53,22,61,0x252526);box(43,53,55,61,0x252526)
         })
+    val rocket=sprite{oval(10,10,54,54,0x963624);oval(16,16,48,48,0xff9440);oval(25,25,39,39,0xffedb0)}
     val bolt=sprite{oval(7,7,57,57,0x952b23);oval(15,15,49,49,0xff6728);oval(23,23,41,41,0xffeeac)}
     val wreck=sprite{poly(0x333133,0,52,16,40,31,47,43,37,63,51,58,61,5,61);box(18,47,33,55,0x7a7770);box(39,45,44,49,0x9a3929)}
 }
