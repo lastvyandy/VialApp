@@ -166,9 +166,9 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     }
     Column(Modifier.fillMaxSize().background(Dark).padding(horizontal=5.dp,vertical=3.dp)){
         Row(Modifier.fillMaxWidth().height(34.dp),verticalAlignment=Alignment.CenterVertically){
-            TextButton(onClick={clear();paused=true;exit=true},contentPadding=PaddingValues(horizontal=6.dp)){Text("SALIR",color=White,fontSize=11.sp)}
+            TextButton(onClick={if(finished&&!saving)onMenu()else if(!finished){clear();paused=true;exit=true}},enabled=!saving,contentPadding=PaddingValues(horizontal=6.dp)){Text("SALIR",color=White,fontSize=11.sp)}
             Text("SECTOR 01  /  "+e.kills+"/"+e.enemies.size+" ROBOTS",color=Gold,fontWeight=FontWeight.Bold,fontSize=11.sp,modifier=Modifier.weight(1f))
-            TextButton(onClick={audio?.setEffectsEnabled(audio.enabled.not())},contentPadding=PaddingValues(horizontal=5.dp)){
+            TextButton(onClick={audio?.let{it.setEffectsEnabled(!it.enabled)}},contentPadding=PaddingValues(horizontal=5.dp)){
                 Text(if(audio?.enabled==true)"SFX ON" else "SFX OFF",color=White,fontSize=10.sp)
             }
             TextButton(onClick={clear();paused=!paused},enabled=!finished&&challenge==null,contentPadding=PaddingValues(horizontal=6.dp)){Text(if(paused)"SEGUIR" else "PAUSA",color=Gold,fontSize=11.sp)}
@@ -195,7 +195,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                         }
                     }
                 }
-                DoomMap(e,Modifier.align(Alignment.TopEnd).padding(7.dp).size(87.dp,67.dp))
+                DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(7.dp).size(87.dp,67.dp))
             }
             if(paused&&!exit&&!finished&&challenge==null){
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.75f)),contentAlignment=Alignment.Center){
@@ -272,8 +272,9 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
         Text(label,color=White,fontWeight=FontWeight.Bold,fontSize=8.sp,maxLines=1)
     }
 }
-@Composable private fun DoomMap(e:DoomEngine,modifier:Modifier){
+@Composable private fun DoomMap(e:DoomEngine,revision:Int,modifier:Modifier){
     Canvas(modifier.background(Dark.copy(alpha=.84f)).padding(3.dp)){
+        if(revision<0)return@Canvas
         val sx=size.width/e.width;val sy=size.height/e.height
         for(y in 0 until e.height)for(x in 0 until e.width){
             val c=e.cell(x,y)

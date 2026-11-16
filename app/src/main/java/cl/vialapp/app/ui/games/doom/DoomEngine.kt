@@ -180,7 +180,8 @@ internal class DoomEngine(seed:Int=19){
         angle=(angle+input.turn.coerceIn(-1f,1f)*2.65f*d)%(2*PI.toFloat())
         val f=input.forward.coerceIn(-1f,1f);val s=input.strafe.coerceIn(-1f,1f);val norm=hypot(f,s).coerceAtLeast(1f)
         val dx=(cos(angle)*f-sin(angle)*s)*d*2.8f/norm;val dy=(sin(angle)*f+cos(angle)*s)*d*2.8f/norm
-        if(!solid(x+dx,y))x+=dx;if(!solid(x,y+dy))y+=dy
+        if(!solid(x+dx,y)&&enemies.none{it.hp>0&&hypot(it.x-x-dx,it.y-y)<.36f})x+=dx
+        if(!solid(x,y+dy)&&enemies.none{it.hp>0&&hypot(it.x-x,it.y-y-dy)<.36f})y+=dy
         if(abs(dx)+abs(dy)>.001f)walk+=d*9f
         collect();if(input.fire)shoot()
         for(e in enemies){
@@ -190,7 +191,7 @@ internal class DoomEngine(seed:Int=19){
             val sees=distance<8f&&visible(e.x,e.y,x,y)
             if(sees)e.alert=true
             if(!sees||!e.alert)continue
-            if(distance>if(e.kind==DoomKind.DRONE)2.5f else 1.35f){
+            if(distance>(if(e.kind==DoomKind.DRONE)2.5f else 1.35f)){
                 val vx=(x-e.x)/distance*e.kind.speed*d;val vy=(y-e.y)/distance*e.kind.speed*d
                 if(!solid(e.x+vx,e.y,.20f)&&enemies.none{it!==e&&it.hp>0&&hypot(it.x-e.x-vx,it.y-e.y)<.42f})e.x+=vx
                 if(!solid(e.x,e.y+vy,.20f)&&enemies.none{it!==e&&it.hp>0&&hypot(it.x-e.x,it.y-e.y-vy)<.42f})e.y+=vy
