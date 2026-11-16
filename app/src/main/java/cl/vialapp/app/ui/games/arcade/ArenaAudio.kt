@@ -63,7 +63,13 @@ internal class ArenaAudio(context:Context){
             "doom_switch" to pool.load(context,R.raw.doom_switch,1),
             "doom_explosion" to pool.load(context,R.raw.doom_explosion,1),
             "doom_reload" to pool.load(context,R.raw.doom_reload,1),
-            "doom_enemy" to pool.load(context,R.raw.doom_enemy,1))
+            "doom_enemy" to pool.load(context,R.raw.doom_enemy,1),
+            "doom_death" to pool.load(context,R.raw.doom_death,1),
+            "doom_machine_death" to pool.load(context,R.raw.doom_machine_death,1),
+            "doom_player_death" to pool.load(context,R.raw.doom_player_death,1),
+            "doom_correct" to pool.load(context,R.raw.doom_correct,1),
+            "doom_wrong" to pool.load(context,R.raw.doom_wrong,1),
+            "doom_exit" to pool.load(context,R.raw.doom_exit,1))
     }
     fun setEffectsEnabled(value:Boolean){
         enabled=value
@@ -78,11 +84,11 @@ internal class ArenaAudio(context:Context){
         val id=ids[name]?:return
         if(closed||!enabled||!foreground||!loaded.contains(id)||name=="engine")return
         val now=SystemClock.elapsedRealtime()
-        val interval=when(name){"coin"->65L;"hit","heavy","doom_shot","doom_blast","doom_plasma"->75L;"correct","signal","tool"->180L;else->220L}
+        val interval=when(name){"coin"->65L;"hit","heavy","doom_shot","doom_blast","doom_plasma","doom_death","doom_machine_death"->75L;"correct","signal","tool"->180L;else->220L}
         if(now-(lastPlayed[name]?:-10000L)<interval)return
         lastPlayed[name]=now
         streams.remove(name)?.let{pool.stop(it)}
-        val volume=when(name){"doom_shot"->.48f;"doom_blast"->.62f;"doom_plasma"->.40f;"doom_door"->.43f;"doom_hit"->.24f;"doom_hurt"->.44f;"doom_pickup","doom_switch"->.40f;"doom_explosion"->.68f;"doom_reload"->.42f;"doom_enemy"->.22f;"horn"->.58f;"crash"->.55f;"coin","reward"->.68f;"signal"->.38f;else->.61f}
+        val volume=when(name){"doom_shot"->.48f;"doom_blast"->.62f;"doom_plasma"->.40f;"doom_door"->.43f;"doom_hit"->.24f;"doom_hurt"->.44f;"doom_pickup","doom_switch"->.40f;"doom_explosion"->.68f;"doom_reload"->.42f;"doom_enemy"->.26f;"doom_death","doom_machine_death"->.48f;"doom_player_death"->.59f;"doom_correct","doom_wrong","doom_exit"->.43f;"horn"->.58f;"crash"->.55f;"coin","reward"->.68f;"signal"->.38f;else->.61f}
         val stream=pool.play(id,volume,volume,1,0,1f)
         if(stream!=0)streams[name]=stream
     }

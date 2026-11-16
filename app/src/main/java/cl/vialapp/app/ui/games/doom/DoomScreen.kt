@@ -452,7 +452,7 @@ private val hudDigits=arrayOf(
                 var sample=1
                 while(max(bounds.outWidth,bounds.outHeight)/sample>256)sample*=2
                 val image=BitmapFactory.decodeResource(context.resources,id,BitmapFactory.Options().apply{inSampleSize=sample;inScaled=false})
-                image.asImageBitmap()
+                (image?:android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888)).asImageBitmap()
             }
         }
     }

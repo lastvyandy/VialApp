@@ -22,7 +22,26 @@ fun main(){
     repeat(100){combat.step(.025f,DoomInput(fire=true))}
     check(guard.hp==0){"Pistol failed to defeat initial guard"}
     check(combat.kills>=1&&combat.ammunition<44)
-    check(combat.drainEvents().contains(DoomEvent.SHOT))
+    val combatEvents=combat.drainEvents()
+    check(combatEvents.contains(DoomEvent.SHOT)&&combatEvents.contains(DoomEvent.ENEMY_DEATH))
+    check(guard.deathAge in 0f.. .72f)
+    combat.advanceDeathAnimations(.8f);check(guard.deathAge==.72f)
+    check(doomFaceState(100,0,false,false)==DoomFaceState.NORMAL)
+    check(doomFaceState(100,-1,false,false)==DoomFaceState.LEFT)
+    check(doomFaceState(100,1,false,false)==DoomFaceState.RIGHT)
+    check(doomFaceState(100,0,true,false)==DoomFaceState.ANGRY)
+    check(doomFaceState(50,-1,false,false)==DoomFaceState.HURT_LEFT)
+    check(doomFaceState(50,1,false,false)==DoomFaceState.HURT_RIGHT)
+    check(doomFaceState(50,0,true,false)==DoomFaceState.HURT)
+    check(doomFaceState(15,-1,false,false)==DoomFaceState.CRITICAL_LEFT)
+    check(doomFaceState(15,1,false,false)==DoomFaceState.CRITICAL_RIGHT)
+    check(doomFaceState(0,1,false,true)==DoomFaceState.CRITICAL)
+    check(doomFaceState(100,0,false,true)==DoomFaceState.BERSERK_HEALTHY)
+    check(doomFaceState(40,0,false,true)==DoomFaceState.BERSERK_HURT)
+    val face=DoomEngine()
+    face.look(.1f);check(face.faceState==DoomFaceState.RIGHT)
+    face.look(-.1f);check(face.faceState==DoomFaceState.LEFT)
+    face.step(.025f,DoomInput(fire=true));check(face.faceState==DoomFaceState.BERSERK_HEALTHY)
     // Independent route fixture: isolate navigation and educational gates from combat.
     val e=DoomEngine()
     e.enemies.forEach{it.hp=0}
@@ -45,6 +64,7 @@ fun main(){
     val hp=e.hp;e.answer(0);check(e.hp<hp&&!e.doors[1].open)
     check(e.touchInteract(0f));val elapsed=e.elapsed;e.step(.05f,DoomInput(1f));check(e.elapsed==elapsed)
     e.answer(1);check(e.doors[1].open&&e.pending==null)
+    check(e.questionsAnswered==3&&e.questionsCorrect==2)
     walk(e,11.5f,8.5f);walk(e,11.5f,11.5f);walk(e,14.5f,11.5f)
     e.interact();check(!e.doors[3].open&&!e.hasKey)
     walk(e,9.5f,11.5f);e.interact();check(e.doors[2].open)
@@ -71,5 +91,5 @@ fun main(){
     blast.reload();check(blast.weaponPhase==DoomWeaponPhase.RELOADING)
     repeat(30){blast.step(.025f)}
     check(blast.ammunition==reserve&&blast.magazineAmmo==min(reserve,10))
-    println("DOOM smoke OK: combat, three weapons, coins, touch-ray doors, classroom gates, secret, credential, exit.")
+    println("DOOM smoke OK: combat, three weapons, coins, touch-ray doors, classroom gates, secret, credential, exit, all 12 face states, enemy deaths, reload and chain explosions.")
 }
