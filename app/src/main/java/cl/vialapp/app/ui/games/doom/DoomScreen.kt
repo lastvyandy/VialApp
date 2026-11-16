@@ -208,15 +208,11 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     }
     Column(Modifier.fillMaxSize().background(Dark).padding(horizontal=5.dp,vertical=3.dp)){
         Row(Modifier.fillMaxWidth().height(34.dp),verticalAlignment=Alignment.CenterVertically){
-            TextButton(onClick={if(finished&&!saving)onMenu()else if(!finished){clear();paused=true;exit=true}},enabled=!saving,contentPadding=PaddingValues(horizontal=6.dp)){Text("SALIR",color=White,fontSize=11.sp)}
+            DoomUtilityIcon("Salir",UtilityGlyph.EXIT,!saving){if(finished&&!saving)onMenu()else if(!finished){clear();paused=true;exit=true}}
             Text("SECTOR 01  /  "+e.kills+"/"+e.enemies.size+" ROBOTS",color=Gold,fontWeight=FontWeight.Bold,fontSize=11.sp,modifier=Modifier.weight(1f))
-            TextButton(onClick={audio?.let{it.setEffectsEnabled(!it.enabled)}},contentPadding=PaddingValues(horizontal=5.dp)){
-                Text(if(audio?.enabled==true)"SFX ON" else "SFX OFF",color=White,fontSize=10.sp)
-            }
-            if(music!=null)TextButton(onClick={musicEnabled=!musicEnabled;musicPrefs.edit().putBoolean("doom_music_enabled",musicEnabled).apply()},contentPadding=PaddingValues(horizontal=5.dp)){
-                Text(if(musicEnabled)"MÚSICA ON" else "MÚSICA OFF",color=White,fontSize=10.sp)
-            }
-            TextButton(onClick={clear();paused=!paused},enabled=!finished&&challenge==null,contentPadding=PaddingValues(horizontal=6.dp)){Text(if(paused)"SEGUIR" else "PAUSA",color=Gold,fontSize=11.sp)}
+            DoomUtilityIcon("Efectos de sonido",UtilityGlyph.SOUND,true,audio?.enabled==true){audio?.let{it.setEffectsEnabled(!it.enabled)}}
+            if(music!=null)DoomUtilityIcon("Música",UtilityGlyph.MUSIC,true,musicEnabled){musicEnabled=!musicEnabled;musicPrefs.edit().putBoolean("doom_music_enabled",musicEnabled).apply()}
+            DoomUtilityIcon(if(paused)"Continuar" else "Pausa",if(paused)UtilityGlyph.PLAY else UtilityGlyph.PAUSE,!finished&&challenge==null){clear();paused=!paused}
         }
         Box(Modifier.weight(1f).fillMaxWidth().border(2.dp,Color(0xFF69645B))){
             AndroidView(factory={DoomView(it).apply{engine=e}},update={view->view.engine=e;if(tick>=0)view.invalidate()},modifier=Modifier.fillMaxSize())
@@ -290,9 +286,6 @@ private fun touchLayout(w:Float,h:Float):TouchLayout{
     var stick by remember{mutableStateOf(Offset.Zero)}
     var anchor by remember{mutableStateOf<Offset?>(null)}
     var firing by remember{mutableStateOf(false)}
-    val labelPaint=remember{android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply{
-        color=android.graphics.Color.WHITE;textAlign=android.graphics.Paint.Align.CENTER;typeface=android.graphics.Typeface.create("sans-serif-condensed",android.graphics.Typeface.BOLD)
-    }}
     Canvas(modifier.pointerInput(Unit){
         val contacts=mutableMapOf<PointerId,TouchContact>()
         fun publish(l:TouchLayout){
@@ -345,18 +338,78 @@ private fun touchLayout(w:Float,h:Float):TouchLayout{
         drawCircle(Color.Black.copy(alpha=.20f),r*.87f,origin)
         drawCircle(White.copy(alpha=.24f),r*.87f,origin,style=Stroke(1.5.dp.toPx()))
         drawCircle(White.copy(alpha=.36f),r*.29f,origin+stick*r*.60f)
-        fun pad(p:Offset,radius:Float,label:String,active:Boolean=false){
-            val corner=androidx.compose.ui.geometry.CornerRadius(radius*.23f)
-            val pos=p-Offset(radius*.83f,radius*.72f)
-            val box=Size(radius*1.66f,radius*1.44f)
-            drawRoundRect(if(active)Red.copy(alpha=.74f) else Color.Black.copy(alpha=.28f),pos,box,corner)
-            drawRoundRect((if(active)Gold else White).copy(alpha=.38f),pos,box,corner,style=Stroke(1.dp.toPx()))
-            labelPaint.textSize=radius*.42f
-            drawIntoCanvas{it.nativeCanvas.drawText(label,p.x,p.y-(labelPaint.ascent()+labelPaint.descent())*.5f,labelPaint)}
+        fun pad(p:Offset,radius:Float,role:TouchRole,active:Boolean=false){
+            val tint=when(role){TouchRole.FIRE->Color(0xFFAF4837);TouchRole.USE->Color(0xFFB59A60);else->Color(0xFF9CADA7)}
+            drawCircle(Color.Black.copy(alpha=.58f),radius,p)
+            drawCircle(tint.copy(alpha=if(active).79f else .23f),radius*.87f,p)
+            drawCircle(tint.copy(alpha=.79f),radius*.96f,p,style=Stroke(1.5.dp.toPx()))
+            drawCircle(White.copy(alpha=.24f),radius*.78f,p,style=Stroke(.7.dp.toPx()))
+            drawRetroSymbol(role,p,radius*.55f,White.copy(alpha=.90f))
         }
-        pad(l.gun,r*.86f,"FIRE",firing);pad(l.use,r*.49f,"USAR");pad(l.weapon,r*.46f,"ARMA")
+        pad(l.gun,r*.86f,TouchRole.FIRE,firing);pad(l.use,r*.55f,TouchRole.USE);pad(l.weapon,r*.54f,TouchRole.WEAPON)
     }
 }
+private enum class UtilityGlyph{ EXIT,SOUND,MUSIC,PAUSE,PLAY }
+@Composable private fun DoomUtilityIcon(label:String,glyph:UtilityGlyph,enabled:Boolean,active:Boolean=true,action:()->Unit){
+    Box(Modifier.size(40.dp,34.dp).clickable(enabled=enabled,onClickLabel=label,onClick=action),contentAlignment=Alignment.Center){
+        Canvas(Modifier.size(24.dp)){
+            val p=center;val r=size.minDimension*.32f
+            val c=if(enabled&&active)Gold else White.copy(alpha=.36f)
+            drawCircle(Color(0xFF35332E),size.minDimension*.48f,p)
+            drawCircle(c.copy(alpha=.55f),size.minDimension*.46f,p,style=Stroke(1.dp.toPx()))
+            fun pt(x:Float,y:Float)=p+Offset(r*x,r*y)
+            fun ln(x:Float,y:Float,X:Float,Y:Float){drawLine(c,pt(x,y),pt(X,Y),r*.16f)}
+            fun rc(x:Float,y:Float,w:Float,h:Float){drawRect(c,pt(x,y),Size(r*w,r*h))}
+            when(glyph){
+                UtilityGlyph.PAUSE->{rc(-.60f,-.75f,.37f,1.5f);rc(.23f,-.75f,.37f,1.5f)}
+                UtilityGlyph.PLAY->{val path=androidx.compose.ui.graphics.Path().apply{moveTo(pt(-.52f,-.75f).x,pt(-.52f,-.75f).y);lineTo(pt(.75f,0f).x,pt(.75f,0f).y);lineTo(pt(-.52f,.75f).x,pt(-.52f,.75f).y);close()};drawPath(path,c)}
+                UtilityGlyph.EXIT->{ln(.68f,-.73f,-.42f,-.73f);ln(.68f,-.73f,.68f,.73f);ln(.68f,.73f,-.42f,.73f);ln(-.84f,0f,.32f,0f);ln(-.84f,0f,-.43f,-.39f);ln(-.84f,0f,-.43f,.39f)}
+                UtilityGlyph.SOUND->{rc(-.82f,-.31f,.45f,.62f);ln(-.46f,-.31f,.10f,-.68f);ln(.10f,-.68f,.10f,.68f);ln(.10f,.68f,-.46f,.31f);ln(.38f,-.38f,.65f,0f);ln(.65f,0f,.38f,.38f)}
+                UtilityGlyph.MUSIC->{rc(-.02f,-.77f,.23f,1.21f);rc(.10f,-.77f,.62f,.23f);drawCircle(c,r*.29f,pt(-.22f,.46f))}
+            }
+            if(!active)ln(-.87f,.87f,.87f,-.87f)
+        }
+    }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRetroSymbol(role:TouchRole,p:Offset,r:Float,c:Color){
+    fun point(x:Float,y:Float)=p+Offset(x*r,y*r)
+    fun line(x1:Float,y1:Float,x2:Float,y2:Float){drawLine(c,point(x1,y1),point(x2,y2),r*.15f)}
+    fun rect(x:Float,y:Float,w:Float,h:Float){drawRect(c,point(x,y),Size(w*r,h*r))}
+    when(role){
+        TouchRole.FIRE->{
+            drawCircle(c,r*.51f,p,style=Stroke(r*.12f))
+            line(-.94f,0f,-.44f,0f);line(.44f,0f,.94f,0f)
+            line(0f,-.94f,0f,-.44f);line(0f,.44f,0f,.94f)
+            drawCircle(c,r*.10f,p)
+        }
+        TouchRole.USE->{
+            line(-.67f,-.82f,.55f,-.82f);line(-.67f,-.82f,-.67f,.83f);line(-.67f,.83f,.55f,.83f)
+            val door=androidx.compose.ui.graphics.Path().apply{
+                moveTo(point(-.47f,-.77f).x,point(-.47f,-.77f).y)
+                lineTo(point(.20f,-.54f).x,point(.20f,-.54f).y)
+                lineTo(point(.20f,.60f).x,point(.20f,.60f).y)
+                lineTo(point(-.47f,.81f).x,point(-.47f,.81f).y);close()
+            }
+            drawPath(door,c.copy(alpha=.80f))
+            drawCircle(Color(0xFF3A352C),r*.09f,point(.02f,.03f))
+            line(.32f,0f,.91f,0f);line(.65f,-.25f,.91f,0f);line(.65f,.25f,.91f,0f)
+        }
+        TouchRole.WEAPON->{
+            rect(-.90f,-.55f,1.52f,.39f);rect(-.72f,-.14f,1.07f,.22f)
+            val grip=androidx.compose.ui.graphics.Path().apply{
+                moveTo(point(-.57f,-.08f).x,point(-.57f,-.08f).y)
+                lineTo(point(-.12f,-.08f).x,point(-.12f,-.08f).y)
+                lineTo(point(-.38f,.65f).x,point(-.38f,.65f).y)
+                lineTo(point(-.83f,.65f).x,point(-.83f,.65f).y);close()
+            }
+            drawPath(grip,c);rect(.62f,-.48f,.20f,.20f)
+            line(.05f,.52f,.89f,.52f);line(.60f,.28f,.89f,.52f);line(.60f,.76f,.89f,.52f)
+        }
+        else->Unit
+    }
+}
+
 // Pixel display glyphs, drawn rather than relying on a device font.
 private val hudDigits=arrayOf(
     arrayOf("111","101","101","101","111"),arrayOf("010","110","010","010","111"),
@@ -364,7 +417,7 @@ private val hudDigits=arrayOf(
     arrayOf("101","101","111","001","001"),arrayOf("111","100","111","001","111"),
     arrayOf("111","100","111","101","111"),arrayOf("111","001","010","010","010"),
     arrayOf("111","101","111","101","111"),arrayOf("111","101","111","001","111"))
-@Composable private fun PixelNumber(value:Int,color:Color,modifier:Modifier=Modifier){
+@Composable internal fun PixelNumber(value:Int,color:Color,modifier:Modifier=Modifier){
     val digits=value.coerceAtLeast(0).toString()
     Canvas(modifier){
         val unit=min(size.height/5f,size.width/(digits.length*4-1))
@@ -443,7 +496,7 @@ private val hudDigits=arrayOf(
         // PNG and WebP have the same resource ID. Missing portraits never break the build.
         val fallback=context.resources.getIdentifier("doom_face_02_normal_frente","drawable",context.packageName)
         val default=if(fallback!=0)fallback else R.drawable.mascot_mister_pelao
-        val cache=mutableMapOf<Int,androidx.compose.ui.graphics.ImageBitmap>()
+        val cache=mutableMapOf<Int,Pair<androidx.compose.ui.graphics.ImageBitmap,Color>>()
         DoomFaceState.entries.associateWith{face->
             val id=context.resources.getIdentifier("doom_face_"+face.asset,"drawable",context.packageName).let{if(it!=0)it else default}
             cache.getOrPut(id){
@@ -452,82 +505,34 @@ private val hudDigits=arrayOf(
                 var sample=1
                 while(max(bounds.outWidth,bounds.outHeight)/sample>256)sample*=2
                 val image=BitmapFactory.decodeResource(context.resources,id,BitmapFactory.Options().apply{inSampleSize=sample;inScaled=false})
-                (image?:android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888)).asImageBitmap()
+                val bitmap=image?:android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888)
+                val patches=ArrayList<Int>()
+                val edge=max(1,min(bitmap.width,bitmap.height)/12)
+                for(y in 0 until edge)for(x in 0 until edge){
+                    for(px in listOf(bitmap.getPixel(x,y),bitmap.getPixel(bitmap.width-1-x,y),bitmap.getPixel(x,bitmap.height-1-y),bitmap.getPixel(bitmap.width-1-x,bitmap.height-1-y))){
+                        val red=(px ushr 16)and 255;val green=(px ushr 8)and 255;val blue=px and 255
+                        if(px ushr 24>=235&&max(red,max(green,blue))-min(red,min(green,blue))<=22)patches+=px
+                    }
+                }
+                val gray=if(patches.isEmpty())Color(0xFF828282)else{
+                    fun median(shift:Int)=patches.map{(it ushr shift)and 255}.sorted()[patches.size/2]
+                    Color(red=median(16),green=median(8),blue=median(0))
+                }
+                bitmap.asImageBitmap() to gray
             }
         }
     }
-    Box(modifier.background(Color(0xFF191817)).border(2.dp,Color(0xFF8D7F64)).padding(2.dp)){
-        Image(bitmap=bitmaps.getValue(state),contentDescription="Don Pelao",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
-        if(dead)Box(Modifier.fillMaxSize().background(Color(0x66000000)))
+    val (portrait,gray)=bitmaps.getValue(state)
+    Box(modifier.background(gray)){
+        Image(bitmap=portrait,contentDescription="Don Pelao",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
+        if(dead)Box(Modifier.fillMaxSize().background(Color(0x55000000)))
+        Canvas(Modifier.fillMaxSize()){
+            val edge=1.dp.toPx()
+            drawLine(Color(0xFFB2A18A),Offset.Zero,Offset(size.width,0f),edge)
+            drawLine(Color(0xFFB2A18A),Offset.Zero,Offset(0f,size.height),edge)
+            drawLine(Color(0xFF292621),Offset(0f,size.height),Offset(size.width,size.height),edge*2)
+            drawLine(Color(0xFF292621),Offset(size.width,0f),Offset(size.width,size.height),edge*2)
+        }
     }
 }
 
-@Composable private fun DoomIntermission(e:DoomEngine,reward:GameRunResult?,saving:Boolean,onMenu:()->Unit,onRetry:()->Unit){
-    val audio=LocalGameAudio.current
-    var stage by remember{mutableIntStateOf(0)}
-    var tally by remember{mutableFloatStateOf(0f)}
-    val metrics=listOf("ENEMIGOS" to e.kills*100/e.enemies.size.coerceAtLeast(1),
-        "SECRETOS" to e.secrets*100,
-        "OBJETOS" to (e.loot.count{it.taken}*100/e.loot.size.coerceAtLeast(1)),
-        "TRÁNSITO" to if(e.questionsAnswered>0)e.questionsCorrect*100/e.questionsAnswered else 0)
-    LaunchedEffect(Unit){
-        delay(180)
-        for(i in metrics.indices){
-            stage=i;tally=0f
-            repeat(12){step->tally=(step+1)/12f;delay(24)}
-            audio?.play("doom_reload");delay(100)
-        }
-        stage=metrics.size;tally=1f
-    }
-    BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xFF171513))){
-        val short=maxHeight<310.dp
-        Canvas(Modifier.fillMaxSize()){
-            val cell=size.width/100f
-            for(y in 0..(size.height/cell).toInt())for(x in 0..99){
-                val n=((x*79+y*313+x*y*17) xor (x*13+y*7)) and 15
-                val c=if(y%7==0||((x+if((y/7)%2==0)0 else 7)%14==0))Color(0xFF24201D)else Color(0xFF40362D)
-                drawRect(c.copy(alpha=.64f+n*.018f),Offset(x*cell,y*cell),Size(cell+.5f,cell+.5f))
-            }
-            drawRect(Color(0x99100D0B))
-            for(y in listOf(5.dp.toPx(),size.height-6.dp.toPx())){
-                drawLine(Color(0xFF6C5942),Offset(0f,y),Offset(size.width,y),2.dp.toPx())
-                drawLine(Color(0xFF151210),Offset(0f,y+3),Offset(size.width,y+3),2.dp.toPx())
-            }
-        }
-        Column(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=if(short)8.dp else 14.dp),horizontalAlignment=Alignment.CenterHorizontally){
-            Text("E1M1  /  ESTACIONAMIENTO INFERNAL",color=Gold,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Bold,fontSize=if(short)12.sp else 15.sp)
-            Text(if(e.won)"¡SECTOR COMPLETADO!" else "MISIÓN FALLIDA",color=Color(0xFFFF4B30),fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Black,fontSize=if(short)23.sp else 30.sp,lineHeight=if(short)25.sp else 32.sp)
-            Row(Modifier.weight(1f).fillMaxWidth().padding(vertical=4.dp),horizontalArrangement=Arrangement.spacedBy(18.dp),verticalAlignment=Alignment.CenterVertically){
-                Column(Modifier.weight(1.25f),verticalArrangement=Arrangement.spacedBy(if(short)3.dp else 6.dp)){
-                    for((i,m) in metrics.withIndex()){
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
-                            Text(m.first,color=Color(0xFFE7BD77),fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Bold,fontSize=if(short)13.sp else 17.sp)
-                            val v=when{stage>i->m.second;stage==i->(m.second*tally).toInt();else->0}
-                            Row(verticalAlignment=Alignment.CenterVertically){
-                                PixelNumber(v,Color(0xFFE95636),Modifier.width(45.dp).height(if(short)15.dp else 22.dp))
-                                Text("%",color=Red,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Black,fontSize=if(short)13.sp else 17.sp)
-                            }
-                        }
-                    }
-                }
-                Column(Modifier.weight(1f).border(1.dp,Color(0xFF826D50)).background(Color(0xDD211B17)).padding(if(short)5.dp else 9.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(2.dp)){
-                    Text("TIEMPO",color=Gold,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Bold,fontSize=10.sp)
-                    val seconds=e.elapsed.toInt()
-                    Text("%02d:%02d".format(seconds/60,seconds%60),color=White,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Black,fontSize=if(short)20.sp else 27.sp)
-                    Text("PUNTOS",color=Gold,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Bold,fontSize=10.sp)
-                    PixelNumber(e.score,Color(0xFFEDB951),Modifier.fillMaxWidth().height(if(short)17.dp else 24.dp))
-                    Text(if(saving)"GUARDANDO..." else reward?.takeIf{it.syncedWithBackend}?.let{"+${it.xpAwarded} XP  +${it.coinsAwarded} MONEDAS"}?:"RÉCORD LOCAL",color=Gold,fontFamily=FontFamily.Monospace,fontSize=9.sp,textAlign=TextAlign.Center)
-                }
-            }
-            Row(horizontalArrangement=Arrangement.spacedBy(15.dp)){
-                RetroResultButton("REINTENTAR",!saving,onRetry)
-                RetroResultButton("MENÚ",!saving,onMenu)
-            }
-        }
-    }
-}
-@Composable private fun RetroResultButton(label:String,enabled:Boolean,action:()->Unit){
-    Box(Modifier.width(132.dp).height(34.dp).background(Color(0xFF3B2F25)).border(2.dp,Color(0xFF967951)).clickable(enabled=enabled,onClick=action),contentAlignment=Alignment.Center){
-        Text("› "+label,color=if(enabled)Gold else Color.Gray,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Black,fontSize=13.sp)
-    }
-}
