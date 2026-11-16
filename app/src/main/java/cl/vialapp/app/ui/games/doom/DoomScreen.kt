@@ -154,7 +154,9 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
         when{
             e.finished&&!saving->onMenu()
             challenge!=null->change{e.dismissChallenge()}
-            else->{clear();paused=true;exit=true}
+            exit->{exit=false}
+            paused->{clear();paused=false}
+            else->{clear();paused=true}
         }
     }
     LaunchedEffect(e,ready,paused,challenge,finished){
@@ -207,7 +209,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             Text("SECTOR 01  /  "+e.kills+"/"+e.enemies.size+" ROBOTS",color=Gold,fontWeight=FontWeight.Bold,fontSize=11.sp,modifier=Modifier.weight(1f))
             DoomUtilityIcon("Efectos de sonido",UtilityGlyph.SOUND,true,audio?.enabled==true){audio?.let{it.setEffectsEnabled(!it.enabled)}}
             if(music!=null)DoomUtilityIcon("Música",UtilityGlyph.MUSIC,true,musicEnabled){musicEnabled=!musicEnabled;musicPrefs.edit().putBoolean("doom_music_enabled",musicEnabled).apply()}
-            DoomUtilityIcon(if(paused)"Continuar" else "Pausa",if(paused)UtilityGlyph.PLAY else UtilityGlyph.PAUSE,!finished&&challenge==null){clear();paused=!paused}
+            DoomUtilityIcon(if(paused)"Continuar" else "Pausa",if(paused)UtilityGlyph.PLAY else UtilityGlyph.PAUSE,!finished&&challenge==null&&!exit){clear();paused=!paused}
         }
         Box(Modifier.weight(1f).fillMaxWidth().border(2.dp,Color(0xFF69645B))){
             AndroidView(factory={DoomView(it).apply{engine=e}},update={view->view.engine=e;if(tick>=0)view.invalidate()},modifier=Modifier.fillMaxSize())
@@ -229,10 +231,12 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                 }
                 DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(5.dp).size(72.dp,54.dp))
             }
-            if(paused&&!exit&&!finished&&challenge==null){
-                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.75f)),contentAlignment=Alignment.Center){
-                    Button(onClick={paused=false}){Text("CONTINUAR")}
-                }
+            if(paused&&!finished&&challenge==null){
+                DoomPauseMenu(confirmExit=exit,
+                    onContinue={clear();exit=false;paused=false},
+                    onExit={clear();exit=true},
+                    onCancelExit={exit=false},
+                    onConfirmExit=onMenu)
             }
 
         }
@@ -254,8 +258,6 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                 }
             }else challenge.answers.forEachIndexed{i,label->Button(onClick={change{e.answer(i)}},modifier=Modifier.fillMaxWidth()){Text(label)}}
         }},confirmButton={},dismissButton={TextButton(onClick={change{e.dismissChallenge()}}){Text("VOLVER",color=White)}})
-    if(exit)AlertDialog(onDismissRequest={exit=false;paused=false},title={Text("¿Abandonar operación?")},text={Text("Se perderá el avance de este intento.")},
-        confirmButton={TextButton(onClick=onMenu){Text("SALIR")}},dismissButton={TextButton(onClick={exit=false;paused=false}){Text("SEGUIR")}})
 }
 
 // A single gesture surface owns all pointers. Each thumb has an independent role.

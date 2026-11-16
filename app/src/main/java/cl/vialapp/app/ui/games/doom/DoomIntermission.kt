@@ -3,6 +3,7 @@ package cl.vialapp.app.ui.games.doom
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -155,5 +156,62 @@ private fun DrawScope.pixelText(text:String,x:Float,y:Float,unit:Float,color:Col
         val p=Offset(size.width*.5f,(size.height-u*7)/2f)
         drawRect(Color(0xFF241A15).copy(alpha=.86f))
         pixelText(text,p.x,p.y,u,if(enabled)ochre else Color(0xFF77736C),true)
+    }
+}
+
+/** In-game pause overlay using the same hand-drawn bitmap alphabet as the intermission. */
+@Composable internal fun DoomPauseMenu(
+    confirmExit:Boolean,
+    onContinue:()->Unit,
+    onExit:()->Unit,
+    onCancelExit:()->Unit,
+    onConfirmExit:()->Unit
+){
+    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.76f)),contentAlignment=Alignment.Center){
+        val compact=maxHeight<158.dp
+        Column(
+            Modifier.widthIn(max=360.dp).fillMaxWidth(.82f),
+            horizontalAlignment=Alignment.CenterHorizontally,
+            verticalArrangement=Arrangement.spacedBy(if(compact)2.dp else 5.dp)
+        ){
+            PauseTitle(if(confirmExit)"ABANDONAR" else "PAUSA",Modifier.fillMaxWidth().height(if(compact)30.dp else 43.dp))
+            if(confirmExit)PauseCaption("PERDERAS EL AVANCE",Modifier.fillMaxWidth().height(if(compact)12.dp else 20.dp))
+            PauseOption(if(confirmExit)"VOLVER" else "CONTINUAR",true,Modifier.fillMaxWidth().height(if(compact)34.dp else 42.dp),if(confirmExit)onCancelExit else onContinue)
+            PauseOption(if(confirmExit)"SALIR" else "ABANDONAR",false,Modifier.fillMaxWidth().height(if(compact)34.dp else 42.dp),if(confirmExit)onConfirmExit else onExit)
+        }
+    }
+}
+
+@Composable private fun PauseTitle(label:String,modifier:Modifier){
+    Canvas(modifier.semantics{contentDescription=label}){
+        val u=min(size.width/(label.length*6f+3f),size.height/9f)
+        val y=(size.height-u*7f)*.5f
+        pixelText(label,size.width*.5f,y,u,red,true)
+    }
+}
+
+@Composable private fun PauseCaption(label:String,modifier:Modifier){
+    Canvas(modifier.semantics{contentDescription=label}){
+        val u=min(size.width/(label.length*6f+2f),size.height/8f)
+        pixelText(label,size.width*.5f,(size.height-u*7f)*.5f,u,ivory,true)
+    }
+}
+
+@Composable private fun PauseOption(label:String,selected:Boolean,modifier:Modifier,action:()->Unit){
+    val interaction=remember{MutableInteractionSource()}
+    Canvas(modifier.clickable(interactionSource=interaction,indication=null,onClickLabel=label,onClick=action)
+        .semantics{contentDescription=label}){
+        val u=min(size.width/(12f*6f+7f),size.height/10f)
+        val x=(size.width-12f*6f*u)/2f+u*6f
+        val y=(size.height-u*7f)/2f
+        if(selected){
+            val p=Offset(x-u*7f,y+u)
+            // Original red triangular menu cursor, in chunky pixels.
+            for(i in 0..4){
+                val length=5-abs(2-i)
+                drawRect(red,p+Offset(0f,i*u),Size(length*u,u))
+            }
+        }
+        pixelText(label,x,y,u,if(selected)ochre else ivory)
     }
 }
