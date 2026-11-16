@@ -17,7 +17,7 @@ internal data class DoomChallenge(val prompt:String,val answers:List<String>,val
 internal data class DoomDoor(val x:Int,val y:Int,val kind:Int,val question:DoomChallenge?=null,var open:Boolean=false)
 internal data class DoomRay(val distance:Float,val cell:Int,val u:Float,val side:Int,val mapX:Int=-1,val mapY:Int=-1)
 internal data class DoomInput(val forward:Float=0f,val strafe:Float=0f,val turn:Float=0f,val fire:Boolean=false)
-internal enum class DoomEvent { SHOT, BLAST, PLASMA, HIT, HURT, COIN, LOOT, DOOR, CORRECT, WRONG, VICTORY, DEFEAT, SECRET }
+internal enum class DoomEvent { SHOT, BLAST, PLASMA, HIT, HURT, COIN, LOOT, SWITCH, DOOR, CORRECT, WRONG, VICTORY, DEFEAT, SECRET }
 internal class DoomEngine(seed:Int=19){
     val width=22
     val height=17
@@ -114,7 +114,7 @@ internal class DoomEngine(seed:Int=19){
     }
     fun drainEvents():List<DoomEvent> = events.toList().also{events.clear()}
     private fun tell(s:String){message=s;messageTime=3.5f}
-    fun cycleWeapon(){if(finished||pending!=null)return;val available=weapons;weapon=available[(available.indexOf(weapon)+1)%available.size]}
+    fun cycleWeapon(){if(finished||pending!=null)return;val available=weapons;val next=available[(available.indexOf(weapon)+1)%available.size];if(next!=weapon){weapon=next;events+=DoomEvent.SWITCH}}
     fun look(delta:Float){
         if(!finished&&pending==null&&delta.isFinite())angle=(angle+delta.coerceIn(-1.2f,1.2f))%(2*PI.toFloat())
     }
@@ -131,10 +131,10 @@ internal class DoomEngine(seed:Int=19){
         val door=doors.firstOrNull{!it.open&&it.x==hit.mapX&&it.y==hit.mapY}?:return null
         return when{door.kind==2&&!hasKey->"REQUIERE CREDENCIAL";door.question!=null->"TOCA EL TERMINAL";else->"TOCA PARA ABRIR"}
     }
-    fun touchInteract(horizontal:Float):Boolean{
+    fun touchInteract(horizontal:Float,vertical:Float=0f):Boolean{
         if(finished||pending!=null)return false
         val hit=screenRay(horizontal)
-        if(hit.distance>1.7f)return false
+        if(hit.distance>1.7f||abs(vertical)>.5f/(1.32f*hit.distance)+.03f)return false
         if(hit.cell==6){interactExit();return true}
         val door=doors.firstOrNull{!it.open&&it.x==hit.mapX&&it.y==hit.mapY&&hit.cell==5}?:return false
         openDoor(door);return true

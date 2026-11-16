@@ -27,15 +27,23 @@ fun main(){
     val e=DoomEngine()
     e.enemies.forEach{it.hp=0}
     walk(e,4.4f,3.5f);check(e.coins==1)
-    walk(e,7.4f,3.5f);e.interact();check(e.doors[0].open)
+    check(!e.touchInteract(0f)){"Distant doors must not open"}
+    walk(e,7.4f,3.5f)
+    check(e.targetHint()=="TOCA PARA ABRIR")
+    e.look(1.0f);check(!e.touchInteract(0f)){"Looking away must not open the nearby door"}
+    e.look(-1.0f)
+    check(!e.touchInteract(0f,1.2f)){"A tap outside the projected door must not open it"}
+    check(e.touchInteract(0f));check(e.doors[0].open)
     walk(e,9.6f,3.5f);check(e.weapon==DoomWeapon.SHOTGUN)
     walk(e,14.4f,4.5f);e.interact();check(e.pending?.kind==3)
     e.answer(0);check(e.secrets==1&&e.doors[4].open)
     walk(e,16.5f,4.5f);walk(e,19.4f,4.5f);check(e.weapon==DoomWeapon.PLASMA)
     walk(e,15.5f,4.5f);walk(e,11.5f,4.5f);walk(e,11.5f,6.4f)
-    e.interact();check(e.pending?.kind==1)
+    e.look(1.2f);e.look((PI/2).toFloat()-1.2f)
+    check(e.targetHint()=="TOCA EL TERMINAL")
+    check(e.touchInteract(0f));check(e.pending?.kind==1)
     val hp=e.hp;e.answer(0);check(e.hp<hp&&!e.doors[1].open)
-    e.interact();val elapsed=e.elapsed;e.step(.05f,DoomInput(1f));check(e.elapsed==elapsed)
+    check(e.touchInteract(0f));val elapsed=e.elapsed;e.step(.05f,DoomInput(1f));check(e.elapsed==elapsed)
     e.answer(1);check(e.doors[1].open&&e.pending==null)
     walk(e,11.5f,8.5f);walk(e,11.5f,11.5f);walk(e,14.5f,11.5f)
     e.interact();check(!e.doors[3].open&&!e.hasKey)
@@ -45,5 +53,5 @@ fun main(){
     e.interact();check(e.doors[3].open)
     walk(e,16.5f,11.5f);walk(e,18.5f,11.5f);walk(e,19.5f,13.5f)
     e.interact();check(e.won&&e.finished)
-    println("DOOM smoke OK: combat, three weapons, coins, classroom gates, secret, credential, exit.")
+    println("DOOM smoke OK: combat, three weapons, coins, touch-ray doors, classroom gates, secret, credential, exit.")
 }

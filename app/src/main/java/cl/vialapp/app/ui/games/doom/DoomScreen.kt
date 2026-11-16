@@ -108,8 +108,8 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
         for(event in e.drainEvents()){
             audio?.play(when(event){
                 DoomEvent.SHOT->"doom_shot";DoomEvent.BLAST->"doom_blast";DoomEvent.PLASMA->"doom_plasma"
-                DoomEvent.HIT->"hit";DoomEvent.HURT->"heavy";DoomEvent.COIN->"coin";DoomEvent.LOOT->"reward"
-                DoomEvent.DOOR->"doom_door";DoomEvent.CORRECT->"correct";DoomEvent.WRONG->"wrong"
+                DoomEvent.HIT->"doom_hit";DoomEvent.HURT->"doom_hurt";DoomEvent.COIN->"coin";DoomEvent.LOOT->"doom_pickup"
+                DoomEvent.SWITCH->"doom_switch";DoomEvent.DOOR->"doom_door";DoomEvent.CORRECT->"correct";DoomEvent.WRONG->"wrong"
                 DoomEvent.VICTORY->"victory";DoomEvent.DEFEAT->"wrong";DoomEvent.SECRET->"xp"
             })
         }
@@ -191,7 +191,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                     modifier=Modifier.fillMaxSize(),
                     onInput={drive=it},
                     onLook={delta->if(!paused&&!e.finished&&e.pending==null){e.look(delta);revision++}},
-                    onTap={horizontal->if(!paused&&!e.finished&&e.pending==null&&e.touchInteract(horizontal)){clear();drain();revision++}},
+                    onTap={horizontal,vertical->if(!paused&&!e.finished&&e.pending==null&&e.touchInteract(horizontal,vertical)){clear();drain();revision++}},
                     onUse={clear();change{e.interact()}},
                     onWeapon={change{e.cycleWeapon()}}
                 )
@@ -264,7 +264,7 @@ private fun touchLayout(w:Float,h:Float):TouchLayout{
     return TouchLayout(Offset(r*1.35f,h-r*1.20f),Offset(w-r*1.04f,h-r*1.15f),
         Offset(w-r*1.05f,h-r*2.62f),Offset(w-r*2.45f,h-r*.67f),r,w,h)
 }
-@Composable private fun DoomTouchControls(modifier:Modifier,onInput:(DoomInput)->Unit,onLook:(Float)->Unit,onTap:(Float)->Unit,onUse:()->Unit,onWeapon:()->Unit){
+@Composable private fun DoomTouchControls(modifier:Modifier,onInput:(DoomInput)->Unit,onLook:(Float)->Unit,onTap:(Float,Float)->Unit,onUse:()->Unit,onWeapon:()->Unit){
     val input by rememberUpdatedState(onInput);val look by rememberUpdatedState(onLook);val tap by rememberUpdatedState(onTap)
     val use by rememberUpdatedState(onUse);val weapon by rememberUpdatedState(onWeapon)
     var stick by remember{mutableStateOf(Offset.Zero)}
@@ -305,7 +305,8 @@ private fun touchLayout(w:Float,h:Float):TouchLayout{
                         if(!c.pressed){
                             contacts.remove(c.id)
                             if(t.travel<l.radius*.16f)when(t.role){
-                                TouchRole.LOOK->tap((c.position.x/l.w*2f-1f).coerceIn(-1f,1f))
+                                TouchRole.LOOK->tap((c.position.x/l.w*2f-1f).coerceIn(-1f,1f),(c.position.y-l.h*.5f)/l.w)
+                                TouchRole.MOVE->if((t.origin-l.move).getDistance()>l.radius*.95f)tap((c.position.x/l.w*2f-1f).coerceIn(-1f,1f),(c.position.y-l.h*.5f)/l.w)
                                 TouchRole.USE->use()
                                 TouchRole.WEAPON->weapon()
                                 else->Unit

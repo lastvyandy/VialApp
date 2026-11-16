@@ -27,7 +27,7 @@ internal class DoomView(context:Context):View(context){
         val next=(w*height.toFloat()/width).roundToInt().coerceIn(112,300)
         if(next==h)return
         h=next;pixels=IntArray(w*h)
-        bitmap.recycle();bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);lowCanvas=Canvas(bitmap)
+        bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);lowCanvas=Canvas(bitmap)
     }
     private val brush=Paint().apply{isAntiAlias=false;isFilterBitmap=false}
     private val target=Rect()
