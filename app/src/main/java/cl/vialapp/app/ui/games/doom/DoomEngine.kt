@@ -231,6 +231,8 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         gate(14,15,1,DoomChallenge("Si escuchas una ambulancia de emergencia acercándose, ¿qué haces?",listOf("Competir con ella","Facilitar su paso sin maniobras peligrosas","Detenerme en cualquier lugar"),1,"Facilita el paso de vehículos de emergencia de forma segura."))
         gate(7,19,3,DoomChallenge("¿Qué debes hacer antes de cambiar de pista?",listOf("Señalizar y comprobar espejos y punto ciego","Solo tocar la bocina","Girar inmediatamente"),0,"Comprueba espejos y punto ciego y señaliza antes de cambiar de pista."))
         gate(20,19,2)
+        // Reinforced cover islands separate the warehouse and final arena into firing lanes.
+        for((xx,yy) in listOf(11 to 2,11 to 1,16 to 5,16 to 6,12 to 8,12 to 9,12 to 10,17 to 14,17 to 13,24 to 9,24 to 8,24 to 16,24 to 17,24 to 20))grid[yy*width+xx]=4
         for((xx,yy) in listOf(4 to 2,9 to 2,12 to 5,17 to 4,22 to 2,26 to 5,9 to 9,11 to 13,16 to 9,18 to 13,23 to 9,26 to 12,3 to 17,5 to 21,9 to 17,12 to 20,17 to 17,22 to 17,26 to 17,23 to 21,27 to 21))grid[yy*width+xx]=2
         fun foe(k:DoomKind,xx:Float,yy:Float){
             val life=if(k==DoomKind.BOSS)bossMaxHp else (k.hp*1.13f).roundToInt()

@@ -57,7 +57,8 @@ internal class DoomView(context:Context):View(context){
                 val tx=(fx*64).toInt() and 63;val ty=(fy*64).toInt() and 63
                 val cx=floor(fx).toInt();val cy=floor(fy).toInt()
                 val stripe=isFloor&&((cx in 1..7&&cy==3)||(cx in 9..14&&cy==11))&&ty in 29..32
-                val color=if(stripe)0xffad8d38.toInt() else if(isFloor&&cx>=16&&cy>=8&&((tx in 5..8)||(ty in 5..8)))0xff553630.toInt() else if(isFloor&&cx>=9&&cy<7&&cx<=14&&ty in 1..3)0xff627064.toInt() else tex[ty*64+tx]
+                val fortressStripe=e.level==3&&isFloor&&(cx==14||cy==19)&&ty in 28..33
+                val color=if(fortressStripe)0xffbc8234.toInt() else if(e.level==3&&isFloor&&cx>=21&&cy>=16&&((tx in 1..4)||(ty in 1..4)))0xff8d3e24.toInt() else if(stripe)0xffad8d38.toInt() else if(isFloor&&cx>=16&&cy>=8&&((tx in 5..8)||(ty in 5..8)))0xff553630.toInt() else if(isFloor&&cx>=9&&cy<7&&cx<=14&&ty in 1..3)0xff627064.toInt() else tex[ty*64+tx]
                 val edge=.83f+.17f*(1f-abs(x-w*.5f)/(w*.5f))
                 pixels[y*w+x]=shade(color,light*edge)
                 fx+=sx;fy+=sy
