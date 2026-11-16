@@ -1,5 +1,11 @@
 package cl.vialapp.app.ui.rewards
 
+import cl.vialapp.app.ui.games.arcade.ArenaAudio
+import cl.vialapp.app.ui.games.arcade.LocalGameAudio
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -52,12 +58,29 @@ internal val LocalRewards=compositionLocalOf<RewardController>{RewardController(
 @Composable
 internal fun RewardHost(content:@Composable ()->Unit){
     val controller=remember{RewardController()}
-    CompositionLocalProvider(LocalRewards provides controller){
+    val context=LocalContext.current
+    val audio=remember(context){runCatching{ArenaAudio(context.applicationContext)}.getOrNull()}
+    DisposableEffect(context,audio){
+        var owner=context
+        while(owner is android.content.ContextWrapper&&owner !is LifecycleOwner)owner=owner.baseContext
+        val lifecycle=(owner as? LifecycleOwner)?.lifecycle
+        val observer=LifecycleEventObserver{_,event->when(event){
+            Lifecycle.Event.ON_PAUSE,Lifecycle.Event.ON_STOP->audio?.setForeground(false)
+            Lifecycle.Event.ON_RESUME->audio?.setForeground(true)
+            else->Unit
+        }}
+        lifecycle?.addObserver(observer)
+        onDispose{lifecycle?.removeObserver(observer);audio?.close()}
+    }
+    CompositionLocalProvider(LocalRewards provides controller,LocalGameAudio provides audio){
         Box(Modifier.fillMaxSize()){
             content()
             val active=controller.notice
             if(active!=null)key(active.serial){
-                LaunchedEffect(active.serial){delay(2300);controller.dismiss(active.serial)}
+                LaunchedEffect(active.serial){
+                    audio?.play(if(active.coins>0)"reward" else "xp")
+                    delay(2300);controller.dismiss(active.serial)
+                }
                 RewardToast(active,Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(horizontal=16.dp,vertical=10.dp))
             }
         }

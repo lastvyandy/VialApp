@@ -29,7 +29,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import cl.vialapp.app.ui.games.arcade.ArenaAudio
+import cl.vialapp.app.ui.games.arcade.LocalGameAudio
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -171,13 +171,27 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
     val context=LocalContext.current
     RallyLandscape()
     val haptic=LocalHapticFeedback.current
-    val audio=remember(context){runCatching{ArenaAudio(context)}.getOrNull()}
-    var sounds by remember{mutableStateOf(true)}
+    val audio=LocalGameAudio.current
+    val sounds=audio?.enabled==true
+    val motorOwner=remember(engine){Any()}
+    var previousCoins by remember(engine){mutableIntStateOf(0)}
+    var previousAir by remember(engine){mutableStateOf(false)}
+    var previousCountdown by remember(engine){mutableStateOf(f.countdown>0f)}
     var previousContacts by remember(engine){mutableIntStateOf(0)}
-    DisposableEffect(audio){onDispose{audio?.close()}}
-    LaunchedEffect(f.contacts){if(f.contacts>previousContacts){haptic.performHapticFeedback(HapticFeedbackType.LongPress);if(sounds)audio?.play("heavy")};previousContacts=f.contacts}
-    LaunchedEffect(f.item){if(f.item!=null&&sounds)audio?.play("block")}
-    LaunchedEffect(f.nitro>0f||f.boost>0f){if((f.nitro>0f||f.boost>0f)&&sounds)audio?.play("power")}
+    DisposableEffect(audio,motorOwner){onDispose{audio?.stopDrive(motorOwner)}}
+    LaunchedEffect(f.collected){if(f.collected>previousCoins)audio?.play("coin");previousCoins=f.collected}
+    LaunchedEffect(f.air.airborne){
+        if(f.air.airborne!=previousAir)audio?.play(if(f.air.airborne)"jump" else "land")
+        previousAir=f.air.airborne
+    }
+    LaunchedEffect(f.countdown>0f){
+        if(previousCountdown&&f.countdown<=0f)audio?.play("start")
+        previousCountdown=f.countdown>0f
+    }
+    LaunchedEffect(kotlin.math.abs(f.drift)>.12f){if(kotlin.math.abs(f.drift)>.12f)audio?.play("drift")}
+    LaunchedEffect(f.contacts){if(f.contacts>previousContacts){haptic.performHapticFeedback(HapticFeedbackType.LongPress);if(sounds)audio?.play("crash")};previousContacts=f.contacts}
+    LaunchedEffect(f.item){if(f.item!=null&&sounds)audio?.play("signal")}
+    LaunchedEffect(f.nitro>0f||f.boost>0f){if((f.nitro>0f||f.boost>0f)&&sounds)audio?.play("turbo")}
     fun clearInputs(){left=false;right=false;gas=false;brake=false}
     fun leave(){if(f.finished&&!saving)onMenu()else if(!f.finished){clearInputs();paused=true;exit=true}}
     BackHandler {leave()}
@@ -191,6 +205,11 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
     }
     val configuration=LocalConfiguration.current
     val landscapeReady=configuration.screenWidthDp>=configuration.screenHeightDp
+    val rpm=(kotlin.math.abs(f.speed)/12f).toInt()
+    LaunchedEffect(rpm,gas,paused,f.finished,f.countdown>0f,landscapeReady,sounds){
+        audio?.drive(motorOwner,landscapeReady&&!paused&&!f.finished&&f.countdown<=0f&&sounds,
+            (.59f+rpm*.086f).coerceAtMost(1.95f),if(gas).14f else .075f)
+    }
     LaunchedEffect(engine,paused,f.finished,landscapeReady){
         if(paused||f.finished||!landscapeReady)return@LaunchedEffect
         var last=withFrameNanos{it};var carry=0f
@@ -206,6 +225,8 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
     }
     LaunchedEffect(f.finished){
         if(f.finished){
+            audio?.stopDrive(motorOwner)
+            audio?.play("victory")
             saving=true
             val key="v3_"+engine.track.id+"_"+engine.mode.name
             val ms=(f.elapsed*1000).roundToInt().coerceAtLeast(1)
@@ -246,7 +267,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                 Column(horizontalAlignment=Alignment.End){
                     FilledTonalButton(onClick=::leave,modifier=Modifier.height(36.dp),contentPadding=PaddingValues(horizontal=13.dp)){Text("Salir",fontSize=12.sp)}
                     if(!f.finished)FilledTonalButton(onClick={clearInputs();paused=!paused},modifier=Modifier.height(36.dp),contentPadding=PaddingValues(horizontal=13.dp)){Text(if(paused)"Seguir" else "Pausa",fontSize=12.sp)}
-                    TextButton(onClick={sounds=!sounds},modifier=Modifier.height(30.dp),contentPadding=PaddingValues(horizontal=4.dp)){Text(if(sounds)"Sonido ON" else "Sonido OFF",color=Color.White,fontSize=10.sp)}
+                    TextButton(onClick={audio?.setEnabled(!sounds)},modifier=Modifier.height(30.dp),contentPadding=PaddingValues(horizontal=4.dp)){Text(if(sounds)"Sonido ON" else "Sonido OFF",color=Color.White,fontSize=10.sp)}
                 }
             }
         }

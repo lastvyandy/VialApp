@@ -65,6 +65,44 @@ internal fun <S : ArcadeFrame> ArcadeSession(
     val c = MaterialTheme.colorScheme
     val rewards=LocalRewards.current
     val haptic = LocalHapticFeedback.current
+    val audio=LocalGameAudio.current
+    val motorOwner=remember{Any()}
+    val driving=frame as? DriveFrame
+    val motorEnabled=audio?.enabled==true
+    LaunchedEffect(phase,paused,driving?.stopped,driving?.slow,motorEnabled){
+        audio?.drive(motorOwner,phase==Phase.PLAY&&!paused&&driving!=null&&motorEnabled,
+            if(driving?.stopped==true).60f else if(driving?.slow==true).83f else 1.15f,.10f)
+    }
+    DisposableEffect(audio){onDispose{audio?.stopDrive(motorOwner)}}
+
+    fun soundFor(previous:S,next:S){
+        if(compactCombatHud)return
+        when{
+            previous is DriveFrame&&next is DriveFrame->when{
+                next.lives<previous.lives->audio?.play("crash")
+                next.coins>previous.coins->audio?.play("coin")
+                next.safeStops>previous.safeStops||next.safeZones>previous.safeZones->audio?.play("correct")
+                next.infractions>previous.infractions->audio?.play("wrong")
+                next.stopped!=previous.stopped->audio?.play("signal")
+                else->Unit
+            }
+            previous is WorkshopFrame&&next is WorkshopFrame->when{
+                next.lives<previous.lives->audio?.play("wrong")
+                next.completed>previous.completed->audio?.play("correct")
+                next.repairTime>0f&&previous.repairTime<=0f->audio?.play("tool")
+                next.checking&&!previous.checking->audio?.play("tool")
+                else->Unit
+            }
+            previous is SignFrame&&next is SignFrame->when{
+                next.lives<previous.lives->audio?.play("wrong")
+                next.correct>previous.correct->audio?.play("correct")
+                else->Unit
+            }
+            next.score>previous.score->audio?.play("correct")
+            next.health!=previous.health->audio?.play("wrong")
+            else->Unit
+        }
+    }
 
     fun start() {
         engine = create()
@@ -74,6 +112,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
         reward = null
         saving = false
         phase = Phase.PLAY
+        audio?.play(if(gameId==GameProgressStore.CARVIER_DRIVE)"horn" else "start")
     }
     fun leave() {
         if (phase == Phase.PLAY) { paused = true; exitDialog = true }
@@ -82,6 +121,8 @@ internal fun <S : ArcadeFrame> ArcadeSession(
     fun finishIfOver() {
         if (frame.finished && phase == Phase.PLAY) {
             saving = frame.score > 0
+            audio?.stopDrive(motorOwner)
+            audio?.play(if(frame.won||frame.score>record&&frame.score>0)"victory" else "wrong")
             phase = Phase.RESULT
         }
     }
@@ -89,6 +130,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
         if (phase == Phase.PLAY && !paused) {
             val previous = frame
             frame = engine.act(action)
+            soundFor(previous,frame)
             if (frame.health != previous.health || frame.score > previous.score) {
                 haptic.performHapticFeedback(if (frame.score > previous.score) HapticFeedbackType.TextHandleMove else HapticFeedbackType.LongPress)
             }
@@ -116,6 +158,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
             val now = withFrameNanos { it }
             carry += ((now - last) / 1_000_000_000f).coerceIn(0f, .12f)
             last = now
+            val priorFrame=frame
             val priorScore=frame.score
             val priorHealth=frame.health
             var updated = false
@@ -127,7 +170,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
             if(updated && compactCombatHud && (frame.score>priorScore || frame.health!=priorHealth)){
                 haptic.performHapticFeedback(if(frame.score>priorScore)HapticFeedbackType.TextHandleMove else HapticFeedbackType.LongPress)
             }
-            if (updated) finishIfOver()
+            if (updated){soundFor(priorFrame,frame);finishIfOver()}
         }
     }
 

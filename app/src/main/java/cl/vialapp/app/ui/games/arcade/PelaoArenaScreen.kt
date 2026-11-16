@@ -33,9 +33,8 @@ import kotlin.math.sin
 @Composable
 fun PelaoArenaScreen(userKey:String,onBack:()->Unit){
     val context=LocalContext.current
-    val audio=remember(context){runCatching{ArenaAudio(context)}.getOrNull()}
-    DisposableEffect(audio){onDispose{audio?.close()}}
-    var sound by remember{mutableStateOf(true)}
+    val audio=LocalGameAudio.current
+    val sound=audio?.enabled==true
     var previous by remember{mutableStateOf<ArenaCombatFrame?>(null)}
     @Composable fun Feedback(f:ArenaCombatFrame,enabled:Boolean){
         LaunchedEffect(f.score,f.hp,f.phase,f.rival,f.move,enabled,sound){
@@ -44,7 +43,7 @@ fun PelaoArenaScreen(userKey:String,onBack:()->Unit){
                 when{
                     f.phase==ArenaPhase.SHIELD_BREAK&&old.phase!=f.phase->audio?.play("shield")
                     f.phase==ArenaPhase.ANSWER_IMPACT&&old.phase!=f.phase&&f.answerCorrect->audio?.play("power")
-                    f.phase==ArenaPhase.ANSWER_IMPACT&&f.answerApplied&&!old.answerApplied->audio?.play(if(f.answerCorrect)"shield" else "heavy")
+                    f.phase==ArenaPhase.ANSWER_IMPACT&&f.answerApplied&&!old.answerApplied->audio?.play(if(f.answerCorrect)"correct" else "heavy")
                     f.move==ArenaMove.SPECIAL&&old.move!=f.move->audio?.play("power")
                     f.defendFlash>0f&&f.score>old.score->audio?.play("block")
                     f.hp<old.hp->audio?.play("heavy")
@@ -63,7 +62,7 @@ fun PelaoArenaScreen(userKey:String,onBack:()->Unit){
             if(f.phase==ArenaPhase.KNOWLEDGE && f.question!=null) ArenaKnowledgePanel(f,m,enabled,act)
             else CombatScene(f,m)
         },resultArt={f,m->Feedback(f,true);Canvas(m){val u=minOf(size.width/240f,size.height/240f);translate(size.width/2,size.height*.93f){scale(u,u,pivot=Offset.Zero){drawPelao(f)}}}},
-        controls={f,enabled,act->if(f.phase!=ArenaPhase.KNOWLEDGE) ArenaControls(f,enabled,act,sound){sound=!sound}})
+        controls={f,enabled,act->if(f.phase!=ArenaPhase.KNOWLEDGE) ArenaControls(f,enabled,act,sound){audio?.setEnabled(!sound)}})
 }
 
 @Composable
