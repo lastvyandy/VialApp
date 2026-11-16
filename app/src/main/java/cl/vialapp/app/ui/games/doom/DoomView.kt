@@ -57,7 +57,7 @@ internal class DoomView(context:Context):View(context){
                 val tx=(fx*64).toInt() and 63;val ty=(fy*64).toInt() and 63
                 val cx=floor(fx).toInt();val cy=floor(fy).toInt()
                 val stripe=isFloor&&((cx in 1..7&&cy==3)||(cx in 9..14&&cy==11))&&ty in 29..32
-                val color=if(stripe)0xffad8d38.toInt() else tex[ty*64+tx]
+                val color=if(stripe)0xffad8d38.toInt() else if(isFloor&&cx>=16&&cy>=8&&((tx in 5..8)||(ty in 5..8)))0xff553630.toInt() else if(isFloor&&cx>=9&&cy<7&&cx<=14&&ty in 1..3)0xff627064.toInt() else tex[ty*64+tx]
                 val edge=.83f+.17f*(1f-abs(x-w*.5f)/(w*.5f))
                 pixels[y*w+x]=shade(color,light*edge)
                 fx+=sx;fy+=sy
@@ -82,6 +82,7 @@ internal class DoomView(context:Context):View(context){
             }
         }
         sprites.clear()
+        for(p in e.decor)if(hypot(p.x-e.x,p.y-e.y)>.42f)sprites+=Sprite(p.x,p.y,p.scale,art.decor[p.kind.ordinal],false,p.lift)
         for(l in e.loot)if(!l.taken)sprites+=Sprite(l.x,l.y,.46f,art.loot[l.kind.ordinal])
         for(a in e.enemies){
             if(a.hp>0){
@@ -277,6 +278,33 @@ private class DoomArt{
         return out
     }
     val enemyFrames=Array(enemies.size){kind->Array(4){frame->detail(enemies[kind],frame,kind)}}
+    val decor=arrayOf(
+        sprite{
+            oval(11,46,53,63,0x1e2120);box(13,13,51,55,0x292e27)
+            box(16,13,47,55,0x536343);box(18,16,23,51,0x788060);box(43,15,49,54,0x343d2b)
+            oval(13,5,51,20,0x242922);oval(16,7,48,18,0x838b67);oval(19,9,45,16,0x535d45)
+            box(16,27,48,35,0x967e38);box(16,35,48,37,0x312f1c)
+            box(14,20,50,23,0x292c24);box(14,47,50,51,0x333629);box(18,23,21,27,0x829070)
+        },
+        sprite{
+            box(3,14,61,61,0x252420);box(6,17,58,57,0x5d5643);box(8,19,55,23,0x958363);box(8,52,55,56,0x342f28)
+            for(i in 0..5){box(10+i*7,23,15+i*7,51,0x77654d);box(10+i*7,24,11+i*7,50,0x9c835b)}
+            poly(0x423e34,8,23,14,21,55,47,55,54,49,53,8,29)
+            box(8,22,15,28,0x333631);box(49,48,56,54,0x333631)
+        },
+        sprite{
+            box(10,6,54,63,0x222828);box(13,8,50,62,0x54615b);box(15,10,48,33,0x191e1d)
+            box(18,13,45,30,0x204b39);for(i in 0..3){box(21,15+i*3,40-i*2,17+i*3,0x61a67e)}
+            box(14,36,49,47,0x333d36);for(i in 0..4)box(18+i*6,39,21+i*6,43,0x92968b)
+            box(18,51,45,59,0x2b3230)
+        },
+        sprite{
+            box(14,9,50,48,0x222527);box(18,12,46,45,0x534137);box(21,15,43,42,0x9c5536);box(24,17,40,40,0xf3aa53);box(27,20,37,36,0xffdda0)
+            box(9,8,55,13,0x363733);box(9,44,55,49,0x333630)
+        },
+        sprite{
+            oval(2,51,62,62,0x212223);poly(0x30353a,5,41,18,25,43,24,57,38,62,54,4,54);poly(0x4e585b,10,39,20,28,40,27,51,39,49,48,12,48);box(21,29,39,37,0x202b30);box(8,43,15,49,0x8a7554);box(49,43,56,49,0x803a2c);box(10,53,22,61,0x252526);box(43,53,55,61,0x252526)
+        })
     val bolt=sprite{oval(7,7,57,57,0x952b23);oval(15,15,49,49,0xff6728);oval(23,23,41,41,0xffeeac)}
     val wreck=sprite{poly(0x333133,0,52,16,40,31,47,43,37,63,51,58,61,5,61);box(18,47,33,55,0x7a7770);box(39,45,44,49,0x9a3929)}
 }

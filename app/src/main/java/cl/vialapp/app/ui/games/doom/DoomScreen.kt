@@ -3,6 +3,7 @@ package cl.vialapp.app.ui.games.doom
 import android.app.Activity
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
+import android.media.MediaPlayer
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -120,6 +121,20 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     val finished=e.finished
     val configuration=LocalConfiguration.current
     val ready=configuration.screenWidthDp>=configuration.screenHeightDp
+    val musicPrefs=remember(context){context.getSharedPreferences("vial_audio",android.content.Context.MODE_PRIVATE)}
+    var musicEnabled by remember{mutableStateOf(musicPrefs.getBoolean("doom_music_enabled",true))}
+    val music=remember(context){
+        val id=context.resources.getIdentifier("doom_music","raw",context.packageName)
+        if(id==0)null else runCatching{MediaPlayer.create(context,id)?.apply{isLooping=true;setVolume(.24f,.24f)}}.getOrNull()
+    }
+    DisposableEffect(music){onDispose{runCatching{music?.release()}}}
+    LaunchedEffect(music,musicEnabled,paused,finished,ready,challenge){
+        if(music!=null)runCatching{
+            music.setVolume(if(challenge==null).24f else .12f,if(challenge==null).24f else .12f)
+            if(musicEnabled&&!paused&&!finished&&ready){if(!music.isPlaying)music.start()}
+            else if(music.isPlaying)music.pause()
+        }
+    }
     DisposableEffect(context){
         var ctx=context
         while(ctx is ContextWrapper&&ctx !is Activity)ctx=ctx.baseContext
@@ -177,6 +192,9 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             Text("SECTOR 01  /  "+e.kills+"/"+e.enemies.size+" ROBOTS",color=Gold,fontWeight=FontWeight.Bold,fontSize=11.sp,modifier=Modifier.weight(1f))
             TextButton(onClick={audio?.let{it.setEffectsEnabled(!it.enabled)}},contentPadding=PaddingValues(horizontal=5.dp)){
                 Text(if(audio?.enabled==true)"SFX ON" else "SFX OFF",color=White,fontSize=10.sp)
+            }
+            if(music!=null)TextButton(onClick={musicEnabled=!musicEnabled;musicPrefs.edit().putBoolean("doom_music_enabled",musicEnabled).apply()},contentPadding=PaddingValues(horizontal=5.dp)){
+                Text(if(musicEnabled)"MÚSICA ON" else "MÚSICA OFF",color=White,fontSize=10.sp)
             }
             TextButton(onClick={clear();paused=!paused},enabled=!finished&&challenge==null,contentPadding=PaddingValues(horizontal=6.dp)){Text(if(paused)"SEGUIR" else "PAUSA",color=Gold,fontSize=11.sp)}
         }

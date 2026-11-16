@@ -12,6 +12,8 @@ internal enum class DoomKind(val hp:Int,val speed:Float,val attack:Float,val dam
 internal enum class DoomLootKind { COIN, AMMO, SHELLS, CELL, MEDKIT, ARMOR, SHOTGUN, PLASMA, KEY }
 internal data class DoomEnemy(val id:Int,val kind:DoomKind,var x:Float,var y:Float,var hp:Int=kind.hp,var cooldown:Float=.8f,var flash:Float=0f,var alert:Boolean=false)
 internal data class DoomLoot(val kind:DoomLootKind,val x:Float,val y:Float,var taken:Boolean=false)
+internal enum class DoomDecorKind { BARREL, CRATE, TERMINAL, LAMP, WRECK }
+internal data class DoomDecor(val kind:DoomDecorKind,val x:Float,val y:Float,val scale:Float,val lift:Float=0f)
 internal data class DoomBolt(var x:Float,var y:Float,val vx:Float,val vy:Float,val damage:Int,var life:Float=3f)
 internal data class DoomChallenge(val prompt:String,val answers:List<String>,val correct:Int,val explanation:String)
 internal data class DoomDoor(val x:Int,val y:Int,val kind:Int,val question:DoomChallenge?=null,var open:Boolean=false)
@@ -27,6 +29,7 @@ internal class DoomEngine(seed:Int=19){
     val enemies=mutableListOf<DoomEnemy>()
     val loot=mutableListOf<DoomLoot>()
     val bolts=mutableListOf<DoomBolt>()
+    val decor=mutableListOf<DoomDecor>()
     private val events=ArrayList<DoomEvent>()
     var x=2.5f;private set
     var y=3.5f;private set
@@ -83,6 +86,29 @@ internal class DoomEngine(seed:Int=19){
         item(DoomLootKind.MEDKIT,14.5f,12.5f);item(DoomLootKind.SHELLS,16.4f,11.5f)
         item(DoomLootKind.COIN,18.3f,10.5f)
         grid[13*width+20]=6
+        // Edge-of-room silhouettes give every sector its own identity without blocking the route.
+        decor+=listOf(
+            DoomDecor(DoomDecorKind.CRATE,1.42f,1.45f,.74f),
+            DoomDecor(DoomDecorKind.BARREL,7.48f,1.45f,.63f),
+            DoomDecor(DoomDecorKind.BARREL,7.50f,2.05f,.58f),
+            DoomDecor(DoomDecorKind.WRECK,1.48f,5.65f,.76f),
+            DoomDecor(DoomDecorKind.LAMP,4.4f,1.14f,.39f,.84f),
+            DoomDecor(DoomDecorKind.TERMINAL,9.45f,1.47f,.91f),
+            DoomDecor(DoomDecorKind.CRATE,14.50f,1.52f,.72f),
+            DoomDecor(DoomDecorKind.LAMP,13.8f,1.16f,.4f,.83f),
+            DoomDecor(DoomDecorKind.TERMINAL,16.47f,1.52f,.94f),
+            DoomDecor(DoomDecorKind.CRATE,20.5f,1.5f,.88f),
+            DoomDecor(DoomDecorKind.BARREL,20.5f,5.5f,.68f),
+            DoomDecor(DoomDecorKind.BARREL,1.48f,8.52f,.72f),
+            DoomDecor(DoomDecorKind.CRATE,7.52f,14.52f,.84f),
+            DoomDecor(DoomDecorKind.LAMP,4.2f,8.15f,.43f,.86f),
+            DoomDecor(DoomDecorKind.WRECK,10.4f,8.48f,.75f),
+            DoomDecor(DoomDecorKind.TERMINAL,14.52f,8.52f,.86f),
+            DoomDecor(DoomDecorKind.BARREL,14.48f,15.48f,.62f),
+            DoomDecor(DoomDecorKind.LAMP,17.61f,8.18f,.47f,.84f),
+            DoomDecor(DoomDecorKind.CRATE,20.5f,8.5f,.72f),
+            DoomDecor(DoomDecorKind.BARREL,16.5f,15.5f,.74f)
+        )
     }
     fun cell(cx:Int,cy:Int):Int{
         if(cx !in 0 until width||cy !in 0 until height)return 1
