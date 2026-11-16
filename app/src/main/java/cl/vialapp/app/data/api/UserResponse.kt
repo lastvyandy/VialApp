@@ -30,5 +30,6 @@ data class UserResponse(
     val premiumLicenseClasses: List<String> = emptyList(),
 
     @SerializedName("mascot_id")
-    val mascotId: String? = null
+    val mascotId: String? = null,
+    @SerializedName("google_linked") val googleLinked:Boolean=false
 )

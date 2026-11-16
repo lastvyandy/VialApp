@@ -937,6 +937,8 @@ fun VialAppNavigation(
                     licenseClass = user.licenseClass,
                     onPractice = { navigateTopLevel("practice") },
                     onOpenCollection = { navController.navigate("collection") },
+                    onOpenPremium = { navController.navigate("premium") },
+                    onLinkGoogle = { navController.navigate("google_link") },
                     onOpenLeague = { navController.navigate("leaderboard/weekly") { launchSingleTop = true } }
                 )
             }
@@ -1008,6 +1010,12 @@ fun VialAppNavigation(
                 }
             }
 
+            composable("premium") {
+                cl.vialapp.app.ui.premium.PremiumScreen(user,onUserUpdated,onBack={navController.popBackStack()})
+            }
+            composable("google_link") {
+                cl.vialapp.app.ui.auth.GoogleLinkScreen(user,onUserUpdated,onBack={navController.popBackStack()})
+            }
             composable("collection") {
                 CollectionScreen(user.id, onBack = { navController.popBackStack() })
             }
@@ -1133,7 +1141,9 @@ fun ProfileScreen(
     avatarKey: String? = null,
     avatarLoaded: Boolean = true,
     onAvatarChanged: (String?) -> Unit = {},
-    onOpenCollection: () -> Unit = {}
+    onOpenCollection: () -> Unit = {},
+    onOpenPremium: () -> Unit = {},
+    onLinkGoogle: () -> Unit = {}
 ) {
     val fullName =
         listOfNotNull(
@@ -1363,6 +1373,16 @@ fun ProfileScreen(
         }
 
 
+        item {
+            Button(onClick=onOpenPremium,modifier=Modifier.fillMaxWidth()){
+                Text(if(user.isPremium)"Ver planes y ampliar Premium" else "Obtener VialApp Premium")
+            }
+        }
+        item {
+            OutlinedButton(onClick=onLinkGoogle,modifier=Modifier.fillMaxWidth(),enabled=!user.googleLinked){
+                Text(if(user.googleLinked)"Cuenta Google vinculada" else "Vincular cuenta Google")
+            }
+        }
         item {
 
             Text(
