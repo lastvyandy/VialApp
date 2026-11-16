@@ -1464,6 +1464,8 @@ fun ProfileScreen(
             VialAppearanceSetting()
         }
 
+        item { cl.vialapp.app.ui.games.arcade.GameAudioSetting() }
+
         item {
             Card(
                 onClick = onChangeMascot,

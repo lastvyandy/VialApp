@@ -1,5 +1,6 @@
 package cl.vialapp.app.ui.games
 
+import cl.vialapp.app.ui.games.arcade.GameAudioSetting
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
@@ -154,6 +155,8 @@ fun GamesScreen(
                 lineHeight = 21.sp
             )
         }
+
+        item { GameAudioSetting() }
 
         item { CareerShortcuts(onCareer, onGarage) }
 

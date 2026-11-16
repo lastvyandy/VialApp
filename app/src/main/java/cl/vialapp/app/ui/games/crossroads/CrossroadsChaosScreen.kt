@@ -1,5 +1,6 @@
 package cl.vialapp.app.ui.games.crossroads
 
+import cl.vialapp.app.ui.games.arcade.LocalGameAudio
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -33,6 +34,7 @@ private enum class ArcadePhase { INTRO, PLAY, RESULT }
 @Composable
 fun CrossroadsChaosScreen(userKey: String, onBack: () -> Unit) {
     val context = LocalContext.current
+    val audio=LocalGameAudio.current
     val store = remember(context, userKey) { GameProgressStore(context, userKey) }
     val session = remember(context) { SessionManager(context) }
     var phase by remember(userKey) { mutableStateOf(ArcadePhase.INTRO) }
@@ -53,6 +55,7 @@ fun CrossroadsChaosScreen(userKey: String, onBack: () -> Unit) {
         saving = false
         paused = false
         phase = ArcadePhase.PLAY
+        audio?.play("start")
     }
     fun requestExit() {
         if (phase == ArcadePhase.PLAY) {
@@ -81,11 +84,19 @@ fun CrossroadsChaosScreen(userKey: String, onBack: () -> Unit) {
             accumulator += ((now - previous) / 1_000_000_000f).coerceIn(0f, .10f)
             previous = now
             if (accumulator >= 1f / 30f) {
+                val prior=frame
                 while (accumulator >= 1f / 30f && !frame.finished) {
                     frame = engine.step(1f / 30f)
                     accumulator -= 1f / 30f
                 }
+                when{
+                    frame.lives<prior.lives->audio?.play("crash")
+                    frame.pedestrianServed>prior.pedestrianServed->audio?.play("correct")
+                    frame.passed>prior.passed&&frame.passed%3==0->audio?.play("signal")
+                    frame.pedestrianWaiting&&!prior.pedestrianWaiting->audio?.play("horn")
+                }
                 if (frame.finished) {
+                    audio?.play(if(frame.lives>0||frame.score>record&&frame.score>0)"victory" else "wrong")
                     saving = frame.score > 0
                     phase = ArcadePhase.RESULT
                 }
@@ -128,12 +139,14 @@ fun CrossroadsChaosScreen(userKey: String, onBack: () -> Unit) {
             frame, paused, { paused = !paused }, ::requestExit,
             onPedestrian = {
                 if (!paused) {
+                    audio?.play("signal")
                     engine.requestPedestrian()
                     frame = engine.snapshot()
                 }
             },
             onSignal = {
                 if (!paused) {
+                    audio?.play("signal")
                     engine.requestGreen(it)
                     frame = engine.snapshot()
                 }

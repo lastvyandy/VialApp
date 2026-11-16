@@ -1,5 +1,6 @@
 package cl.vialapp.app.ui.games.signhunt
 
+import cl.vialapp.app.ui.games.arcade.LocalGameAudio
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
@@ -54,6 +55,7 @@ fun SignHuntScreen(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val audio=LocalGameAudio.current
 
     val sessionManager = remember {
         SessionManager(context)
@@ -292,6 +294,7 @@ fun SignHuntScreen(
     }
 
     fun restartGame() {
+        audio?.play("start")
         questions =
             sourceQuestions
                 .shuffled()
@@ -436,6 +439,7 @@ fun SignHuntScreen(
             return@LaunchedEffect
         }
 
+        audio?.play(if(answerWasCorrect)"correct" else "wrong")
         delay(
             if (answerWasCorrect) {
                 850
@@ -452,6 +456,7 @@ fun SignHuntScreen(
             lives <= 0 ||
             lastRound
         ) {
+            audio?.play(if(lives>0)"victory" else "wrong")
             finished = true
         } else {
             prepareNextRound()

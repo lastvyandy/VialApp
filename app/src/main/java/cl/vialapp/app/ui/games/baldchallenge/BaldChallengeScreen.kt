@@ -1,5 +1,6 @@
 package cl.vialapp.app.ui.games.baldchallenge
 
+import cl.vialapp.app.ui.games.arcade.LocalGameAudio
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -81,6 +82,7 @@ fun BaldChallengeScreen(
     val context = LocalContext.current
     val rewards=LocalRewards.current
     val haptic = LocalHapticFeedback.current
+    val audio=LocalGameAudio.current
 
     val sessionManager = remember {
         SessionManager(context)
@@ -455,6 +457,7 @@ fun BaldChallengeScreen(
     fun finishGame() {
         if (finished) return
         savingReward = score > 0
+        audio?.play(if(lives>0)"victory" else "wrong")
         finished = true
     }
 
@@ -482,6 +485,7 @@ fun BaldChallengeScreen(
     }
 
     fun restartGame() {
+        audio?.play("start")
         runId = UUID.randomUUID().toString()
         startedAt = SystemClock.elapsedRealtime()
         savingReward = false
@@ -983,6 +987,7 @@ fun BaldChallengeScreen(
                                         newStreak
                                     )
 
+                                audio?.play(if(streak>=3)"power" else "correct")
                                 correctCount += 1
 
                                 val basePoints = 100
@@ -1047,6 +1052,7 @@ fun BaldChallengeScreen(
                             } else {
                                 earnedPoints = 0
                                 streak = 0
+                                audio?.play("wrong")
                                 wrongFeedbackNonce += 1
 
                                 lives =
@@ -1205,6 +1211,7 @@ fun BaldChallengeScreen(
                             if(!finished && answered && answerWasCorrect){
                                 score+=points
                                 earnedPoints+=points
+                                audio?.play("coin")
                                 showPointsBurst=true
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             }
