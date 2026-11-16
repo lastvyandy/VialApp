@@ -111,6 +111,7 @@ internal fun <S : ArcadeFrame> ArcadeSession(
         if (phase != Phase.PLAY || paused) return@LaunchedEffect
         var last = withFrameNanos { it }
         var carry = 0f
+        val tick=if(compactCombatHud) 1f/60f else 1f/30f
         while (phase == Phase.PLAY && !paused) {
             val now = withFrameNanos { it }
             carry += ((now - last) / 1_000_000_000f).coerceIn(0f, .12f)
@@ -118,9 +119,9 @@ internal fun <S : ArcadeFrame> ArcadeSession(
             val priorScore=frame.score
             val priorHealth=frame.health
             var updated = false
-            while (carry >= 1f / 30f && !frame.finished) {
-                frame = engine.step(1f / 30f)
-                carry -= 1f / 30f
+            while (carry >= tick && !frame.finished) {
+                frame = engine.step(tick)
+                carry -= tick
                 updated = true
             }
             if(updated && compactCombatHud && (frame.score>priorScore || frame.health!=priorHealth)){

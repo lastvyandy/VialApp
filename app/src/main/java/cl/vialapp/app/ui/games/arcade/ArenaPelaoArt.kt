@@ -16,13 +16,17 @@ internal fun DrawScope.drawPelao(f:ArenaCombatFrame){
     val pants=Color(0xFF33465A)
     val beard=Color(0xFF412B27)
     val m=f.move
-    val swing=if(m!=null&&f.lock>0f)sin((f.lock/m.lock).coerceIn(0f,1f)*3.141593f)else 0f
+    val swing=if(m!=null&&f.lock>0f){
+        val t=m.lock-f.lock
+        if(t<=m.windup)(t/m.windup).coerceIn(0f,1f)
+        else (1f-(t-m.windup)/(m.lock-m.windup)).coerceIn(0f,1f)
+    }else 0f
     val kick=if(m==ArenaMove.HEAVY)swing else 0f
     val punch=if(m==ArenaMove.HEAVY)0f else swing
     val gait=if(f.walk>0f)sin(f.walkCycle)*f.walkDir else 0f
     val air=f.jumpHeight
     val crouch=if(f.evade>0f)15f else if(f.finished&&!f.won)17f else 0f
-    val lean=16f*punch-10f*kick+4f*gait-(if(f.playerImpact>0f)12f else 0f)
+    val lean=15f*punch-12f*kick+7f*gait-(if(f.playerImpact>0f)20f*(f.playerImpact/.34f) else 0f)
     val chest=Offset(lean,-112f+crouch+sin(f.elapsed*7f)*2.8f+3f*kotlin.math.abs(gait))
     val waist=Offset(lean,-65f+crouch*.55f)
     fun limb(a:Offset,b:Offset,width:Float,ink:Color){
@@ -45,9 +49,11 @@ internal fun DrawScope.drawPelao(f:ArenaCombatFrame){
     val front=chest+Offset(28f,-3f)
     fun arm(a:Offset,b:Offset,c:Offset){
         limb(a,b,26f,skin);limb(b,c,19f,skin)
-        drawCircle(light,9f,a-Offset(3f,3f))
+        drawCircle(shade,12f,a+Offset(1f,2f))
+        drawOval(skin,a-Offset(15f,12f),Size(29f,28f))
+        drawOval(light,a-Offset(11f,10f),Size(16f,10f))
         drawRoundRect(outline,c-Offset(12f,12f),Size(25f,24f),CornerRadius(9f))
-        drawRoundRect(Color(0xFF455366),c-Offset(9f,10f),Size(20f,16f),CornerRadius(7f))
+        drawRoundRect(Brush.verticalGradient(listOf(Color(0xFF46566C),Color(0xFF1A2436)),startY=c.y-10f,endY=c.y+10f),c-Offset(9f,10f),Size(20f,16f),CornerRadius(7f))
         drawLine(Color(0xFF7F98AD),c+Offset(-5f,-5f),c+Offset(5f,-6f),2f,StrokeCap.Round)
     }
     arm(back,back+Offset(-19f,25f),if(f.won)back+Offset(-20f,-48f)else if(guard)chest+Offset(7f,-31f)else chest+Offset(-6f,9f))
@@ -64,6 +70,8 @@ internal fun DrawScope.drawPelao(f:ArenaCombatFrame){
     }
     drawPath(vest,Brush.verticalGradient(listOf(Color(0xFF5C9BC2),Color(0xFF39709A)),startY=chest.y-24f,endY=waist.y))
     drawLine(Color(0xFF28577D),chest+Offset(-18f,14f),waist+Offset(-10f,-5f),3f)
+    drawLine(Color(0xFF80C0DB),chest+Offset(-14f,9f),chest+Offset(15f,9f),3f,StrokeCap.Round)
+    drawLine(Color(0xFF224665),chest+Offset(-11f,23f),chest+Offset(12f,23f),3f,StrokeCap.Round)
     drawLine(outline,waist-Offset(20f,0f),waist+Offset(20f,0f),6f,StrokeCap.Round)
     drawRoundRect(Color(0xFFF2C477),waist-Offset(5f,4f),Size(10f,8f),CornerRadius(2f))
     val face=chest+Offset(7f,-45f)

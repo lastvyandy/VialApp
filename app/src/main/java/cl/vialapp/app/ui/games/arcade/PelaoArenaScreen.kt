@@ -5,7 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,15 +30,36 @@ import kotlin.math.sin
 
 @Composable
 fun PelaoArenaScreen(userKey:String,onBack:()->Unit){
+    val context=LocalContext.current
+    val audio=remember(context){runCatching{ArenaAudio(context)}.getOrNull()}
+    DisposableEffect(audio){onDispose{audio?.close()}}
+    var sound by remember{mutableStateOf(true)}
+    var previous by remember{mutableStateOf<ArenaCombatFrame?>(null)}
+    @Composable fun Feedback(f:ArenaCombatFrame,enabled:Boolean){
+        LaunchedEffect(f.score,f.hp,f.phase,f.rival,f.move,enabled,sound){
+            val old=previous
+            if(enabled&&sound&&old!=null&&f.elapsed>=old.elapsed){
+                when{
+                    f.phase==ArenaPhase.SHIELD_BREAK&&old.phase!=f.phase->audio?.play("shield")
+                    f.move==ArenaMove.SPECIAL&&old.move!=f.move->audio?.play("power")
+                    f.defendFlash>0f&&f.score>old.score->audio?.play("block")
+                    f.hp<old.hp->audio?.play("heavy")
+                    f.rivalHp<old.rivalHp&&f.rival==old.rival&&f.phase!=ArenaPhase.KNOWLEDGE->audio?.play(if(f.lastImpact==ArenaMove.JAB)"hit" else "heavy")
+                }
+            }
+            previous=f
+        }
+    }
     ArcadeSession(userKey=userKey,gameId=GameProgressStore.PELAO_ARENA,title="Don Pelao Arena",
-        subtitle="Combate y seguridad vial · tres rivales · seis escudos",
+        subtitle="Arcade de combate · tres rondas · seis escudos",
         rules="Mantén el mando para moverte. Combina puños y patadas, salta para evitar barridos y usa el dash para esquivar. Encadena ataques en menos de un segundo; puedes preparar el siguiente golpe antes de terminar el actual. El especial lanza una onda al 100% de energía. Dos escudos educativos por rival: responde para romperlos. El cronómetro se detiene durante cada desafío.",
         duration=ArenaCombatEngine.TIME,create={ArenaCombatEngine()},onBack=onBack,showPlayMessages=false,compactCombatHud=true,
         scene={f,m,enabled,act->
+            Feedback(f,enabled)
             if(f.phase==ArenaPhase.KNOWLEDGE && f.question!=null) ArenaKnowledgePanel(f,m,enabled,act)
             else CombatScene(f,m)
-        },resultArt={f,m->Canvas(m){val u=minOf(size.width/240f,size.height/240f);translate(size.width/2,size.height*.93f){scale(u,u,pivot=Offset.Zero){drawPelao(f)}}}},
-        controls={f,enabled,act->if(f.phase!=ArenaPhase.KNOWLEDGE) ArenaControls(f,enabled,act)})
+        },resultArt={f,m->Feedback(f,true);Canvas(m){val u=minOf(size.width/240f,size.height/240f);translate(size.width/2,size.height*.93f){scale(u,u,pivot=Offset.Zero){drawPelao(f)}}}},
+        controls={f,enabled,act->if(f.phase!=ArenaPhase.KNOWLEDGE) ArenaControls(f,enabled,act,sound){sound=!sound}})
 }
 
 @Composable
@@ -60,38 +82,29 @@ private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(13.dp))){
             Canvas(Modifier.fillMaxSize()){
                 val w=size.width;val h=size.height
-                val floor=h*.83f
-                val sky=when(f.rival){1->listOf(Color(0xFF584051),Color(0xFFB77B59),Color(0xFF303349));2->listOf(Color(0xFF142147),Color(0xFF355D83),Color(0xFF192139));else->listOf(Color(0xFF35202E),Color(0xFF7D3947),Color(0xFF211C2B))}
-                drawRect(Brush.verticalGradient(sky),size=size)
-                // Layered industrial arena, beams and lit spectator silhouettes.
-                for(i in 0..7){
-                    val x=i*w/7f
-                    val bh=h*(.24f+(i%3)*.055f)
-                    drawRect(Color(0xFF24344D),Offset(x,floor-bh),Size(w*.09f,bh))
-                    drawRect(ink.copy(alpha=.20f),Offset(x+3f,floor-bh+8f),Size(w*.06f,4f))
-                }
-                drawRect(Color(0xFF25364A),Offset(0f,h*.12f),Size(w,h*.065f))
-                for(i in 0..4){
-                    val x=(i+.5f)*w/5f
-                    drawCircle(Color(0xFFCFDDF1).copy(alpha=.10f),w*.12f,Offset(x,h*.16f))
-                    drawRoundRect(Color(0xFFE7EFFF),Offset(x-9f,h*.14f),Size(18f,5f),CornerRadius(2f))
-                }
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF4A6079),Color(0xFF1C2B3E)),startY=floor,endY=h),Offset(0f,floor),Size(w,h-floor))
-                for(i in 0..6)drawLine(Color(0xFF6D8297).copy(alpha=.38f),Offset(w*.5f+(i-3)*w*.06f,floor),Offset((i-3)*w*.45f+w*.5f,h),2f)
-                drawLine(Color(0xFFE7B951),Offset(0f,floor),Offset(w,floor),3f)
+                val floor=h*.81f
+                drawArenaStage(f,floor)
                 for(x in listOf(f.playerX,f.rivalX))drawOval(Color.Black.copy(alpha=.42f),Offset(w*x-w*.092f,floor-7f),Size(w*.184f,14f))
                 if(tell){
                     val range=f.attack.range*w
                     drawRoundRect((if(heavy)Color(0xFFEF4444) else Color(0xFFFBBF24)).copy(alpha=.24f),
                         Offset((f.rivalX*w-range).coerceAtLeast(0f),floor-9f),Size(range,18f),CornerRadius(6f))
                 }
-                val unit=minOf(w/330f,h/220f)
-                val cx=w*f.rivalX+(if(f.impact>0f)unit*7f*sin(f.impact*32f)else 0f)
+                val unit=minOf(w/330f,h/260f)
+                val shake=if(f.impact>0f)sin(f.impact*56f)*(f.impact/.30f)*unit*4f else 0f
+                val cx=w*f.rivalX+shake
                 val cy=floor
-                val lift=f.jumpHeight*minOf(h*.21f,w*.18f)
+                val lift=f.jumpHeight*minOf(h*.16f,w*.15f)
                 val px=w*f.playerX
                 val recoil=if(f.playerImpact>0f)sin(f.playerImpact*40f)*4f*unit else 0f
                 translate(cx,cy){scale(unit,unit,pivot=Offset.Zero){drawArenaRival(f,ink)}}
+                if(f.phase==ArenaPhase.SHIELD_BREAK){
+                    val p=(1f-f.phaseTime/.62f).coerceIn(0f,1f)
+                    val radius=(45f+65f*p)*unit
+                    drawCircle(Color(0xFF75DBFF).copy(alpha=(1f-p)*.20f),radius,Offset(cx,cy-102f*unit))
+                    drawCircle(Color(0xFFBBF3FF).copy(alpha=(1f-p)),radius,Offset(cx,cy-102f*unit),style=Stroke(3f*unit))
+                    repeat(6){i->val angle=i*1.0472f;val v=Offset(kotlin.math.cos(angle),kotlin.math.sin(angle));val center=Offset(cx,cy-102f*unit)+v*radius;drawLine(Color(0xFFDAF9FF),center,center+v*12f*unit,3f*unit)}
+                }
                 if(f.evade>0f){
                     val trail=Color(0xFF8EDBFF).copy(alpha=.28f*(f.evade/.44f).coerceIn(0f,1f))
                     repeat(3){i->drawLine(trail,Offset(px+(i+1)*14f*unit,cy-(68f+i*24f)*unit),Offset(px+(i+4)*25f*unit,cy-(68f+i*24f)*unit),4f*unit,StrokeCap.Round)}
@@ -119,7 +132,8 @@ private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
                     }
                 }
             }
-            if(tell)Surface(Modifier.align(Alignment.TopCenter).padding(5.dp),color=if(heavy)Color(0xFF9B2730)else Color(0xFF775522),shape=RoundedCornerShape(10.dp)){
+            if(f.phase==ArenaPhase.SHIELD_BREAK)Text("¡ROMPE EL ESCUDO!",Modifier.align(Alignment.TopCenter).padding(top=12.dp),fontSize=24.sp,color=Color(0xFFBEF4FF),fontWeight=FontWeight.ExtraBold)
+            else if(tell)Surface(Modifier.align(Alignment.TopCenter).padding(5.dp),color=if(heavy)Color(0xFF9B2730)else Color(0xFF775522),shape=RoundedCornerShape(10.dp)){
                 Column(Modifier.widthIn(max=230.dp).padding(horizontal=12.dp,vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally){
                     Text(if(heavy)"CARGA · ESQUIVA" else if(f.attack==RivalAttack.SWEEP)"BARRIDO · SALTA O BLOQUEA" else "GOLPE · BLOQUEA",color=Color.White,fontWeight=FontWeight.ExtraBold,fontSize=12.sp)
                     LinearProgressIndicator(progress={1f-(f.phaseTime/f.attack.tell).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth().height(4.dp),color=Color.White,trackColor=Color.White.copy(alpha=.2f))
@@ -127,7 +141,8 @@ private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
             }else if(f.phase==ArenaPhase.ROUND_CLEAR)Text("¡KO!",Modifier.align(Alignment.Center),fontSize=44.sp,color=Color(0xFFFDE68A),fontWeight=FontWeight.ExtraBold)
             if(f.intro>0f&&!tell)Text(if(f.intro>.45f)"RONDA "+f.rival else "¡PELEA!",Modifier.align(Alignment.TopCenter).padding(top=12.dp),fontSize=28.sp,color=Color(0xFFFFD477),fontWeight=FontWeight.ExtraBold)
             if(f.comboFlash>0f&&f.combo>=2)Text(f.combo.toString()+" GOLPES",Modifier.align(Alignment.CenterStart).padding(8.dp),fontSize=25.sp,color=Color(0xFFFFD477),fontWeight=FontWeight.ExtraBold)
-            if(f.counterFlash>0f)Text("COUNTER",Modifier.align(Alignment.BottomCenter).padding(bottom=15.dp),fontSize=18.sp,color=Color(0xFFDAF9FF),fontWeight=FontWeight.ExtraBold)
+            if(f.defendFlash>0f)Text("¡DEFENSA!",Modifier.align(Alignment.BottomCenter).padding(bottom=15.dp),fontSize=18.sp,color=Color(0xFFBAFCE1),fontWeight=FontWeight.ExtraBold)
+            else if(f.counterFlash>0f)Text("COUNTER",Modifier.align(Alignment.BottomCenter).padding(bottom=15.dp),fontSize=18.sp,color=Color(0xFFDAF9FF),fontWeight=FontWeight.ExtraBold)
             if(f.impact>0f)Text("−"+f.damage,Modifier.align(Alignment.CenterEnd).padding(12.dp),color=Color(0xFFFFDA75),fontSize=25.sp,fontWeight=FontWeight.ExtraBold)
         }
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
@@ -150,8 +165,8 @@ private fun DrawScope.drawArenaRival(f:ArenaCombatFrame,armor:Color){
     val bob=sin(f.elapsed*6f)*2.5f
     val tell=f.phase==ArenaPhase.WINDUP
     val strike=f.phase==ArenaPhase.STRIKE
-    val lean=if(strike)-20f else if(tell)12f else if(f.impact>0f)9f else 0f
-    val step=if(f.phase==ArenaPhase.APPROACH)sin(f.elapsed*17f)*12f else 0f
+    val lean=if(f.rivalStun>0f)18f*(f.rivalStun/.36f).coerceIn(0f,1f) else if(strike)-20f else if(tell)12f else 0f
+    val step=if(f.phase==ArenaPhase.APPROACH&&f.rivalStun<=0f)sin(f.elapsed*17f)*12f else 0f
     scale(sizeFactor,sizeFactor,pivot=Offset.Zero){
         val body=Color(0xFF39495F)
         val dark=Color(0xFF182536)

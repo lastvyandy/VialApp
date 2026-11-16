@@ -19,6 +19,10 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -26,24 +30,24 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 @Composable
-internal fun ArenaControls(f:ArenaCombatFrame,enabled:Boolean,act:(Int)->Unit){
-    val ready=enabled&&f.phase!=ArenaPhase.ROUND_CLEAR
-    val attackReady=ready&&f.evade<=0f&&f.playerImpact<=0f&&(f.lock<=0f||f.move!=null&&f.hitIn<=0f&&f.lock<=.24f)
-    Row(Modifier.fillMaxWidth().background(Color(0xFF142135),RoundedCornerShape(18.dp))
+internal fun ArenaControls(f:ArenaCombatFrame,enabled:Boolean,act:(Int)->Unit,sound:Boolean,onToggleSound:()->Unit){
+    val ready=enabled&&f.phase!=ArenaPhase.ROUND_CLEAR&&f.phase!=ArenaPhase.SHIELD_BREAK
+    val attackReady=ready
+    Row(Modifier.fillMaxWidth().background(Color(0xFF101823),RoundedCornerShape(12.dp))
         .padding(horizontal=10.dp,vertical=5.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
         Column(horizontalAlignment=Alignment.CenterHorizontally){
             ArenaJoystick(ready,act)
-            Text("MOVIMIENTO",color=Color(0xFFB6C9E1),fontSize=9.sp,fontWeight=FontWeight.Bold)
+            Text(if(sound)"Sonido: sí" else "Sonido: no",Modifier.clickable{onToggleSound()}.padding(4.dp),color=Color(0xFFB6C9E1),fontSize=10.sp,fontWeight=FontWeight.Bold)
         }
         Column(horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(4.dp)){
             Row(horizontalArrangement=Arrangement.spacedBy(7.dp),verticalAlignment=Alignment.Bottom){
-                ActionCircle("Salto",7,ready&&f.jump<=0f&&f.lock<=0f&&f.evade<=0f,Color(0xFF317E91),46,act)
+                ActionCircle("Salto",7,ready,Color(0xFF317E91),46,act)
                 ActionCircle("Patada",3,attackReady,Color(0xFFB55738),50,act)
                 ActionCircle("Puño",2,attackReady,Color(0xFFD77C36),54,act)
             }
             Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){
-                ActionCircle("Guardia",4,attackReady,Color(0xFF376BA9),46,act)
-                ActionCircle("Dash",5,ready&&f.evadeLock<=0f&&f.playerImpact<=0f,Color(0xFF317E91),46,act)
+                ActionCircle("Guardia",4,ready,Color(0xFF376BA9),46,act)
+                ActionCircle("Dash",5,ready,Color(0xFF317E91),46,act)
                 ActionCircle("Especial",6,attackReady&&f.power>=100,Color(0xFF865ABB),46,act)
             }
         }
@@ -54,9 +58,10 @@ private fun ArenaJoystick(enabled:Boolean,act:(Int)->Unit){
     var direction by remember{mutableIntStateOf(0)}
     val callback by rememberUpdatedState(act)
     LaunchedEffect(direction,enabled){
-        if(enabled&&direction!=0)while(true){callback(if(direction<0)8 else 9);delay(35)}
+        if(enabled&&direction!=0)while(true){callback(if(direction<0)8 else 9);delay(20)}
+        else if(enabled)callback(10)
     }
-    Box(Modifier.size(98.dp).clip(CircleShape).background(Color(0xFF243950))
+    Box(Modifier.size(98.dp).clip(CircleShape).background(Color(0xFF1A293C))
         .border(2.dp,Color(0xFF647D98),CircleShape)
         .pointerInput(enabled){
             if(enabled)awaitEachGesture{
@@ -89,11 +94,31 @@ private fun ArenaJoystick(enabled:Boolean,act:(Int)->Unit){
 }
 @Composable
 private fun ActionCircle(label:String,action:Int,enabled:Boolean,color:Color,diameter:Int,act:(Int)->Unit){
+    val callback by rememberUpdatedState(act)
+    var pressed by remember{mutableStateOf(false)}
     Column(horizontalAlignment=Alignment.CenterHorizontally){
         Box(Modifier.size(diameter.dp).clip(CircleShape)
-            .background(Brush.verticalGradient(if(enabled)listOf(color.copy(alpha=.95f),color.copy(alpha=.65f))else listOf(color.copy(alpha=.32f),color.copy(alpha=.19f))))
+            .background(Brush.verticalGradient(if(enabled)listOf(if(pressed)Color.White.copy(alpha=.48f) else color.copy(alpha=.95f),color.copy(alpha=.65f))else listOf(color.copy(alpha=.32f),color.copy(alpha=.19f))))
             .border(1.5.dp,if(enabled)Color.White.copy(alpha=.62f)else Color.White.copy(alpha=.16f),CircleShape)
-            .clickable(enabled=enabled){act(action)}.semantics{contentDescription=label},contentAlignment=Alignment.Center){
+            .pointerInput(enabled,action){
+                if(enabled)awaitEachGesture{
+                    val first=awaitFirstDown(requireUnconsumed=false)
+                    first.consume()
+                    pressed=true
+                    callback(action)
+                    try{
+                        do {
+                            val event=awaitPointerEvent()
+                            val change=event.changes.firstOrNull{it.id==first.id}?:break
+                            if(!change.pressed)break
+                            change.consume()
+                        }while(true)
+                    }finally{pressed=false}
+                }
+            }.semantics{
+                contentDescription=label;role=Role.Button
+                if(enabled)onClick{callback(action);true}else disabled()
+            },contentAlignment=Alignment.Center){
             Canvas(Modifier.fillMaxSize().padding(11.dp)){
                 val w=size.width;val h=size.height
                 val ink=Color.White.copy(alpha=if(enabled)1f else .35f)
@@ -113,6 +138,6 @@ private fun ActionCircle(label:String,action:Int,enabled:Boolean,color:Color,dia
                 }
             }
         }
-        Text(label,color=Color(0xFFCFDDF0),fontSize=9.sp)
+        Text(label,color=Color(0xFFCFDDF0),fontSize=10.sp,fontWeight=FontWeight.Bold)
     }
 }
