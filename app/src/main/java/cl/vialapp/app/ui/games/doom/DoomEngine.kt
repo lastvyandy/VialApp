@@ -14,7 +14,7 @@ internal enum class DoomWeaponPhase { READY, LOWERING, RAISING, FIRING, PUMPING,
 internal data class DoomExplosive(val x:Float,val y:Float,val crate:Boolean,var hp:Int=24,var exploded:Boolean=false)
 internal data class DoomExplosion(val x:Float,val y:Float,var time:Float=.52f)
 internal enum class DoomLootKind { COIN, AMMO, SHELLS, CELL, MEDKIT, ARMOR, SHOTGUN, PLASMA, KEY }
-internal data class DoomEnemy(val id:Int,val kind:DoomKind,var x:Float,var y:Float,var hp:Int=kind.hp,var cooldown:Float=.8f,var flash:Float=0f,var alert:Boolean=false,var attackFlash:Float=0f,var pattern:Int=0)
+internal data class DoomEnemy(val id:Int,val kind:DoomKind,var x:Float,var y:Float,var hp:Int=kind.hp,var cooldown:Float=.8f,var flash:Float=0f,var alert:Boolean=false,var attackFlash:Float=0f,var pattern:Int=0,var deathAge:Float=0f)
 internal data class DoomLoot(val kind:DoomLootKind,val x:Float,val y:Float,var taken:Boolean=false)
 internal enum class DoomDecorKind { BARREL, CRATE, TERMINAL, LAMP, WRECK }
 internal data class DoomDecor(val kind:DoomDecorKind,val x:Float,val y:Float,val scale:Float,val lift:Float=0f)
@@ -23,7 +23,24 @@ internal data class DoomChallenge(val prompt:String,val answers:List<String>,val
 internal data class DoomDoor(val x:Int,val y:Int,val kind:Int,val question:DoomChallenge?=null,var open:Boolean=false)
 internal data class DoomRay(val distance:Float,val cell:Int,val u:Float,val side:Int,val mapX:Int=-1,val mapY:Int=-1)
 internal data class DoomInput(val forward:Float=0f,val strafe:Float=0f,val turn:Float=0f,val fire:Boolean=false)
-internal enum class DoomEvent { SHOT, BLAST, PLASMA, HIT, HURT, COIN, LOOT, SWITCH, DOOR, CORRECT, WRONG, VICTORY, DEFEAT, SECRET, EXPLOSION, RELOAD, ENEMY_SHOT }
+internal enum class DoomEvent { SHOT, BLAST, PLASMA, HIT, HURT, COIN, LOOT, SWITCH, DOOR, CORRECT, WRONG, VICTORY, DEFEAT, SECRET, EXPLOSION, RELOAD, ENEMY_SHOT, ENEMY_DEATH, MACHINE_DEATH }
+internal enum class DoomFaceState(val asset:String){
+    NORMAL("02_normal_frente"),RIGHT("03_normal_mirando_derecha_v1"),LEFT("10_normal_mirando_izquierda_v2"),
+    ANGRY("11_enojado_frente"),HURT("12_herido_frente"),HURT_RIGHT("13_herido_mirando_derecha"),
+    HURT_LEFT("14_herido_mirando_izquierda"),CRITICAL("15_muy_herido_frente"),
+    CRITICAL_RIGHT("16_muy_herido_mirando_derecha"),CRITICAL_LEFT("17_muy_herido_mirando_izquierda"),
+    BERSERK_HURT("18_berserk_herido_frente"),BERSERK_HEALTHY("19_berserk_sano_frente")
+}
+internal fun doomFaceState(hp:Int,look:Int,angry:Boolean,berserk:Boolean):DoomFaceState{
+    if(hp<=0)return DoomFaceState.CRITICAL
+    if(berserk&&!angry)return if(hp<=65)DoomFaceState.BERSERK_HURT else DoomFaceState.BERSERK_HEALTHY
+    if(angry)return if(hp<=30)DoomFaceState.CRITICAL else if(hp<=65)DoomFaceState.HURT else DoomFaceState.ANGRY
+    return when{
+        hp<=30->when{look<0->DoomFaceState.CRITICAL_LEFT;look>0->DoomFaceState.CRITICAL_RIGHT;else->DoomFaceState.CRITICAL}
+        hp<=65->when{look<0->DoomFaceState.HURT_LEFT;look>0->DoomFaceState.HURT_RIGHT;else->DoomFaceState.HURT}
+        else->when{look<0->DoomFaceState.LEFT;look>0->DoomFaceState.RIGHT;else->DoomFaceState.NORMAL}
+    }
+}
 internal class DoomEngine(seed:Int=19){
     val width=22
     val height=17
@@ -68,6 +85,20 @@ internal class DoomEngine(seed:Int=19){
     val recoil get()=if(weaponPhase==DoomWeaponPhase.FIRING)sin(weaponProgress*PI.toFloat()).coerceAtLeast(0f)else 0f
     var blastFlash=0f;private set
     var pickupFlash=0f;private set
+    private var faceTurn=0
+    private var faceTurnTime=0f
+    private var facePain=0f
+    private var faceGrin=0f
+    private var faceFire=0f
+    var questionsAnswered=0;private set
+    var questionsCorrect=0;private set
+    val faceState get()=doomFaceState(hp,if(faceTurnTime>0f)faceTurn else when((elapsed/1.25f).toInt()%6){1->-1;4->1;else->0},
+        facePain>0f,faceGrin>0f||faceFire>0f)
+    val deathAnimationActive get()=enemies.any{it.hp<=0&&it.deathAge<.72f}
+    fun advanceDeathAnimations(dt:Float){
+        if(dt<=0f)return
+        for(a in enemies)if(a.hp<=0)a.deathAge=(a.deathAge+dt).coerceAtMost(.72f)
+    }
     var hasKey=false;private set
     var secrets=0;private set
     var pending:DoomDoor?=null;private set
@@ -203,7 +234,10 @@ internal class DoomEngine(seed:Int=19){
         }
     }
     fun look(delta:Float){
-        if(!finished&&pending==null&&delta.isFinite())angle=(angle+delta.coerceIn(-1.2f,1.2f))%(2*PI.toFloat())
+        if(!finished&&pending==null&&delta.isFinite()){
+            angle=(angle+delta.coerceIn(-1.2f,1.2f))%(2*PI.toFloat())
+            if(abs(delta)>.007f){faceTurn=if(delta>0)1 else -1;faceTurnTime=.55f}
+        }
     }
     // The screen and interaction use the same camera ray, not the nearest door behind the player.
     fun screenRay(horizontal:Float):DoomRay {
@@ -245,17 +279,22 @@ internal class DoomEngine(seed:Int=19){
     }
     fun answer(index:Int){
         val d=pending?:return;val q=d.question?:return
-        pending=null
-        if(index==q.correct){d.open=true;events+=DoomEvent.CORRECT;events+=DoomEvent.DOOR
+        pending=null;questionsAnswered++
+        if(index==q.correct){questionsCorrect++;faceGrin=.85f;d.open=true;events+=DoomEvent.CORRECT;events+=DoomEvent.DOOR
             if(d.kind==3){secrets++;events+=DoomEvent.SECRET};tell(q.explanation)}
         else{events+=DoomEvent.WRONG;hurt(8);tell(q.explanation)}
     }
     fun dismissChallenge(){pending=null}
-    private fun hurt(n:Int){if(finished||n<=0)return;val absorbed=min(armor,n/2);armor-=absorbed;hp=(hp-n+absorbed).coerceAtLeast(0);hurtFlash=.2f;events+=DoomEvent.HURT;if(hp<=0)events+=DoomEvent.DEFEAT}
+    private fun hurt(n:Int){if(finished||n<=0)return;val absorbed=min(armor,n/2);armor-=absorbed;hp=(hp-n+absorbed).coerceAtLeast(0);hurtFlash=.2f;facePain=.65f;events+=DoomEvent.HURT;if(hp<=0)events+=DoomEvent.DEFEAT}
     private fun damageEnemy(e:DoomEnemy,amount:Int){
         if(e.hp<=0||amount<=0)return
         e.hp=(e.hp-amount).coerceAtLeast(0);e.flash=.17f;e.alert=true;events+=DoomEvent.HIT
-        if(e.hp==0){kills++;if(e.kind==DoomKind.BOSS)tell("¡Núcleo destruido! Busca la salida.")}
+        if(e.hp==0)enemyDied(e)
+    }
+    private fun enemyDied(e:DoomEnemy){
+        e.hp=0;e.deathAge=0f;e.attackFlash=0f;kills++
+        events+=if(e.kind==DoomKind.DRONE||e.kind==DoomKind.HEAVY||e.kind==DoomKind.BOSS)DoomEvent.MACHINE_DEATH else DoomEvent.ENEMY_DEATH
+        if(e.kind==DoomKind.BOSS){faceGrin=1.5f;tell("¡Núcleo destruido! Busca la salida.")}
     }
     private fun explosion(cx:Float,cy:Float,radius:Float=2.35f,power:Int=110){
         explosions+=DoomExplosion(cx,cy)
@@ -279,7 +318,7 @@ internal class DoomEngine(seed:Int=19){
         val w=weapon
         if(ammo[w.ordinal]<=0){fireCooldown=.3f;tell("Sin munición. Cambia de arma.");return}
         if(magazineAmmo<=0){reload();return}
-        ammo[w.ordinal]--;magazine[w.ordinal]--;fireCooldown=w.delay;shotFlash=.10f
+        ammo[w.ordinal]--;magazine[w.ordinal]--;fireCooldown=w.delay;shotFlash=.10f;faceFire=.36f
         reloadAfterShot=magazineAmmo<=0&&ammunition>0
         phase(DoomWeaponPhase.FIRING,when(w){DoomWeapon.PISTOL->.16f;DoomWeapon.SHOTGUN->.33f;DoomWeapon.PLASMA->.12f})
         events+=when(w){DoomWeapon.PISTOL->DoomEvent.SHOT;DoomWeapon.SHOTGUN->DoomEvent.BLAST;DoomWeapon.PLASMA->DoomEvent.PLASMA}
@@ -312,8 +351,8 @@ internal class DoomEngine(seed:Int=19){
                 DoomLootKind.CELL->ammo[2]+=45
                 DoomLootKind.MEDKIT->hp=(hp+35).coerceAtMost(100)
                 DoomLootKind.ARMOR->armor=(armor+65).coerceAtMost(100)
-                DoomLootKind.SHOTGUN->{owned[1]=true;ammo[1]+=12;magazine[1]=min(ammo[1],magazineSize[1]);selectWeapon(DoomWeapon.SHOTGUN);tell("Escopeta adquirida.")}
-                DoomLootKind.PLASMA->{owned[2]=true;ammo[2]+=45;magazine[2]=min(ammo[2],magazineSize[2]);selectWeapon(DoomWeapon.PLASMA);tell("¡Pelaotrón adquirido!")}
+                DoomLootKind.SHOTGUN->{owned[1]=true;ammo[1]+=12;magazine[1]=min(ammo[1],magazineSize[1]);selectWeapon(DoomWeapon.SHOTGUN);faceGrin=1.25f;tell("Escopeta adquirida.")}
+                DoomLootKind.PLASMA->{owned[2]=true;ammo[2]+=45;magazine[2]=min(ammo[2],magazineSize[2]);selectWeapon(DoomWeapon.PLASMA);faceGrin=1.25f;tell("¡Pelaotrón adquirido!")}
                 DoomLootKind.KEY->{hasKey=true;tell("Credencial del centro de control adquirida.")}
             }
             if(l.kind!=DoomLootKind.COIN)events+=DoomEvent.LOOT
@@ -324,6 +363,8 @@ internal class DoomEngine(seed:Int=19){
         val d=dt.coerceAtMost(.05f);elapsed+=d
         fireCooldown=(fireCooldown-d).coerceAtLeast(0f);shotFlash=(shotFlash-d).coerceAtLeast(0f);hurtFlash=(hurtFlash-d).coerceAtLeast(0f);messageTime=(messageTime-d).coerceAtLeast(0f)
         advanceWeapon(d)
+        advanceDeathAnimations(d)
+        faceTurnTime=(faceTurnTime-d).coerceAtLeast(0f);facePain=(facePain-d).coerceAtLeast(0f);faceGrin=(faceGrin-d).coerceAtLeast(0f);faceFire=(faceFire-d).coerceAtLeast(0f)
         blastFlash=(blastFlash-d).coerceAtLeast(0f);pickupFlash=(pickupFlash-d).coerceAtLeast(0f)
         explosions.forEach{it.time-=d};explosions.removeAll{it.time<=0f}
         angle=(angle+input.turn.coerceIn(-1f,1f)*2.65f*d)%(2*PI.toFloat())
@@ -341,7 +382,7 @@ internal class DoomEngine(seed:Int=19){
             if(sees)e.alert=true
             if(!sees||!e.alert)continue
             if(e.kind==DoomKind.RUNNER&&distance<.85f){
-                e.hp=0;kills++;explosion(e.x,e.y,1.65f,64);continue
+                enemyDied(e);explosion(e.x,e.y,1.65f,64);continue
             }
             val desired=when(e.kind){DoomKind.DRONE->2.7f;DoomKind.SHOTGUNNER->2.1f;DoomKind.HEAVY->3f;DoomKind.RUNNER->.55f;else->1.35f}
             val lateral=if(e.kind==DoomKind.DRONE)sin(elapsed*2.7f+e.id)*.82f else 0f
