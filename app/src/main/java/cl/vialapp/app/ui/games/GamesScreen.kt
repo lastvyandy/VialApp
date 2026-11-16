@@ -45,7 +45,7 @@ fun GamesScreen(
     onOpenCrossroadsChaos: () -> Unit,
     onOpenCarvier: () -> Unit,
     onOpenArena: () -> Unit,
-    onOpenWorkshop: () -> Unit,
+    onOpenRally: () -> Unit,
     onOpenSigns: () -> Unit,
     onBack: () -> Unit,
     onCareer: () -> Unit = {},
@@ -65,7 +65,8 @@ fun GamesScreen(
         )
     }
 
-    val gameProgress = progressStore.snapshot()
+    var gameProgress by remember(userKey){mutableStateOf(progressStore.snapshot())}
+    var rallyExams by remember(userKey){mutableIntStateOf(progressStore.rallyExamCount())}
 
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf("") }
@@ -84,7 +85,8 @@ fun GamesScreen(
 
             // Sincronizar XP y progreso con el servidor al entrar a juegos
             try {
-                progressStore.syncFromBackend(ApiClient.api, token)
+                gameProgress=progressStore.syncFromBackend(ApiClient.api, token)
+                rallyExams=progressStore.rallyExamCount()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -275,14 +277,15 @@ fun GamesScreen(
 
         item {
             PlayableGameCard(
-                gameId = GameProgressStore.AUTO_WORKSHOP,
-                record = progressStore.getHighScore(GameProgressStore.AUTO_WORKSHOP),
-                title = "Taller del Auto",
-                subtitle = "Diagnóstico interactivo · 4 fallas",
-                description = "Cuatro órdenes: identifica la pieza, utiliza la herramienta y toma una decisión segura.",
+                gameId = GameProgressStore.VIAL_RALLY,
+                record = progressStore.getHighScore(GameProgressStore.VIAL_RALLY),
+                title = "Vial Rally",
+                subtitle = "Carreras arcade · 8 circuitos",
+                description = if(rallyExams>=3)"Compite con tu auto del garaje en tres modos y desbloquea circuitos con XP." else "Licencia de competición · "+rallyExams+"/3 exámenes completos. Entra para ver tu progreso.",
                 accent = GamesOrange,
                 enabled = true,
-                onClick = onOpenWorkshop
+                actionLabel = if(rallyExams>=3)"JUGAR  ›" else "LICENCIA  ›",
+                onClick = onOpenRally
             )
         }
 
@@ -377,6 +380,7 @@ private fun PlayableGameCard(
     description: String,
     accent: Color,
     enabled: Boolean,
+    actionLabel: String?=null,
     onClick: () -> Unit
 ) {
     val c = MaterialTheme.colorScheme
@@ -394,7 +398,7 @@ private fun PlayableGameCard(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (record > 0) "Récord: $record" else "Sin récord aún", color = c.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.weight(1f))
                 Surface(shape = RoundedCornerShape(12.dp), color = if (enabled) c.primaryContainer else c.surfaceVariant) {
-                    Text(if (enabled) "JUGAR  ›" else "NO DISPONIBLE", Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                    Text(actionLabel ?: if (enabled) "JUGAR  ›" else "NO DISPONIBLE", Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
                         color = if (enabled) c.onPrimaryContainer else c.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }

@@ -36,6 +36,7 @@ internal fun GameCover(gameId: String, modifier: Modifier = Modifier) {
         GameProgressStore.CARVIER_DRIVE -> "CONDUCCIÓN"
         GameProgressStore.PELAO_ARENA -> "REFLEJOS"
         GameProgressStore.BALD_CHALLENGE -> "CONOCIMIENTOS"
+        GameProgressStore.VIAL_RALLY -> "COMPETICIÓN"
         GameProgressStore.AUTO_WORKSHOP -> "MECÁNICA"
         GameProgressStore.CROSSROADS_ARCADE -> "PRIORIDADES"
         else -> "SEÑALIZACIÓN"
@@ -54,6 +55,7 @@ internal fun GameCover(gameId: String, modifier: Modifier = Modifier) {
                 GameProgressStore.CARVIER_DRIVE -> "En ruta"
                 GameProgressStore.PELAO_ARENA -> "Arena"
                 GameProgressStore.BALD_CHALLENGE -> "El reto"
+                GameProgressStore.VIAL_RALLY -> "Rally"
                 GameProgressStore.AUTO_WORKSHOP -> "Box 01"
                 GameProgressStore.CROSSROADS_ARCADE -> "Hora punta"
                 else -> "Ojo a la vía"
@@ -68,6 +70,7 @@ internal fun GameCover(gameId: String, modifier: Modifier = Modifier) {
 private fun gameCoverPalette(gameId:String):List<Color> = when (gameId) {
         GameProgressStore.CARVIER_DRIVE -> listOf(Color(0xFF104B72), Color(0xFF214F64))
         GameProgressStore.PELAO_ARENA, GameProgressStore.BALD_CHALLENGE -> listOf(Color(0xFF24304B), Color(0xFF513552))
+        GameProgressStore.VIAL_RALLY -> listOf(Color(0xFF203C51),Color(0xFFB47842))
         GameProgressStore.AUTO_WORKSHOP -> listOf(Color(0xFF273E51), Color(0xFF75552F))
         GameProgressStore.CROSSROADS_ARCADE -> listOf(Color(0xFF204C42), Color(0xFF315D72))
         else -> listOf(Color(0xFF263D62), Color(0xFF356981))
@@ -104,6 +107,7 @@ private fun GameCoverIllustration(gameId:String){
             )) }
             TrafficBoard(preview, Modifier.size(122.dp))
         }
+        GameProgressStore.VIAL_RALLY -> cl.vialapp.app.ui.games.rally.RallyPreview(cl.vialapp.app.ui.games.rally.RallyTracks.all.first(),Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)))
         GameProgressStore.AUTO_WORKSHOP -> Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width * .55f, size.height * .5f)
             val u = minOf(size.width, size.height) / 140f

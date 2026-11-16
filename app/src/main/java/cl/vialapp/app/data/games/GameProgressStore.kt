@@ -71,6 +71,12 @@ class GameProgressStore(
         )
 
 
+    fun rallyExamCount():Int = preferences.getInt("rally_confirmed_exams",0).coerceIn(0,3)
+
+    private fun confirmRallyExams(count:Int?){
+        if(count!=null)preferences.edit().putInt("rally_confirmed_exams",maxOf(rallyExamCount(),count.coerceIn(0,3))).apply()
+    }
+
     fun getHighScore(
         gameId: String
     ): Int {
@@ -160,6 +166,7 @@ class GameProgressStore(
     fun applyRemoteProgress(
         remote: GamificationProgressResponse
     ) {
+        confirmRallyExams(remote.rallyExamCount)
         preferences.edit()
             .putInt(KEY_TOTAL_XP, remote.totalXp.coerceAtLeast(0))
             .putInt(KEY_TOTAL_POINTS, remote.totalPoints.coerceAtLeast(0))
@@ -173,6 +180,7 @@ class GameProgressStore(
         score: Int,
         event: GamificationEventResponse
     ): Boolean {
+        confirmRallyExams(event.rallyExamCount)
         val currentHighScore = getHighScore(gameId)
         val newHighScore = score > currentHighScore
         val today = LocalDate.now()
@@ -335,7 +343,8 @@ class GameProgressStore(
                 xpInLevel = reward.xpInLevel,
                 xpToNextLevel = reward.xpToNextLevel,
                 streakDays = reward.streakDays,
-                streakActiveToday = reward.streakActiveToday
+                streakActiveToday = reward.streakActiveToday,
+                rallyExamCount = reward.rallyExamCount
             )
         )
 
@@ -594,6 +603,7 @@ class GameProgressStore(
         const val CARVIER_DRIVE = "carvier_drive"
         const val PELAO_ARENA = "pelao_arena"
         const val AUTO_WORKSHOP = "auto_workshop"
+        const val VIAL_RALLY = "vial_rally"
 
         private const val PREFERENCES_NAME = "vialapp_games"
         private const val KEY_TOTAL_POINTS = "games_total_points"

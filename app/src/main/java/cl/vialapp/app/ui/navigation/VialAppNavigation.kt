@@ -52,7 +52,7 @@ import cl.vialapp.app.ui.games.GamesScreen
 import cl.vialapp.app.ui.career.CareerScreen
 import cl.vialapp.app.ui.games.arcade.CarvierDriveScreen
 import cl.vialapp.app.ui.games.arcade.PelaoArenaScreen
-import cl.vialapp.app.ui.games.arcade.AutoWorkshopScreen
+import cl.vialapp.app.ui.games.rally.VialRallyScreen
 import cl.vialapp.app.ui.games.baldchallenge.BaldChallengeScreen
 import cl.vialapp.app.ui.games.crossroads.CrossroadsChaosScreen
 import cl.vialapp.app.ui.games.arcade.SignArcadeScreen
@@ -280,7 +280,7 @@ fun VialAppNavigation(
                 currentRoute != "games/crossroads" &&
                 currentRoute != "games/carvier" &&
                 currentRoute != "games/arena" &&
-                currentRoute != "games/workshop" &&
+                currentRoute != "games/rally" &&
                 currentRoute != "collection" &&
                 currentRoute != "offline_study" &&
                 currentRoute != "library" &&
@@ -595,7 +595,7 @@ fun VialAppNavigation(
                     },
                     onOpenCarvier = { navController.navigate("games/carvier") },
                     onOpenArena = { navController.navigate("games/arena") },
-                    onOpenWorkshop = { navController.navigate("games/workshop") },
+                    onOpenRally = { navController.navigate("games/rally") },
                     onOpenSigns = { navController.navigate("games/signs") },
                     onCareer = { navController.navigate("career") },
                     onGarage = { navController.navigate("garage") },
@@ -622,8 +622,9 @@ fun VialAppNavigation(
             composable("games/arena") {
                 PelaoArenaScreen(userKey = user.id, onBack = { navController.popBackStack() })
             }
-            composable("games/workshop") {
-                AutoWorkshopScreen(userKey = user.id, onBack = { navController.popBackStack() })
+            composable("games/rally") {
+                VialRallyScreen(userKey = user.id, onBack = { navController.popBackStack() },
+                    onGarage = { navController.navigate("garage") }, onExams = { navController.navigate("exams") })
             }
 
             /*

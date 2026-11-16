@@ -10,7 +10,8 @@ data class GamificationProgressResponse(
     @SerializedName("xp_in_level") val xpInLevel: Int = 0,
     @SerializedName("xp_to_next_level") val xpToNextLevel: Int = 500,
     @SerializedName("streak_days") val streakDays: Int? = null,
-    @SerializedName("streak_active_today") val streakActiveToday: Boolean? = null
+    @SerializedName("streak_active_today") val streakActiveToday: Boolean? = null,
+    @SerializedName("rally_exam_count") val rallyExamCount: Int? = null
 )
 
 data class GamificationGameEventRequest(
@@ -33,7 +34,8 @@ data class GamificationEventResponse(
     @SerializedName("points_awarded") val pointsAwarded: Int = 0,
     @SerializedName("duplicate") val duplicate: Boolean = false,
     @SerializedName("streak_days") val streakDays: Int? = null,
-    @SerializedName("streak_active_today") val streakActiveToday: Boolean? = null
+    @SerializedName("streak_active_today") val streakActiveToday: Boolean? = null,
+    @SerializedName("rally_exam_count") val rallyExamCount: Int? = null
 )
 
 data class DailyMissionResponse(
