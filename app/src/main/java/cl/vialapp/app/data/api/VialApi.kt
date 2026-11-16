@@ -16,6 +16,18 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface VialApi {
+    @GET("config/features")
+    suspend fun getPublicFeatures(): Response<PublicFeatures>
+
+    @POST("users/google-login")
+    suspend fun googleLogin(@Body request: GoogleLoginRequest): Response<LoginResponse>
+
+    @POST("users/me/google-link")
+    suspend fun linkGoogle(@Header("Authorization") authorization:String,@Body request:GoogleLinkRequest):Response<UserResponse>
+
+    @POST("payments/google-play/verify")
+    suspend fun verifyPlayPurchase(@Header("Authorization") authorization:String,@Body request:PlayPurchaseVerify):Response<PlayPurchaseResult>
+
 
     @POST("users/")
     suspend fun register(@Body request: RegistrationRequest): Response<UserResponse>

@@ -48,6 +48,8 @@ internal fun AuthScreen(onLoginSuccess:(UserResponse)->Unit,onOfflineStudy:()->U
     var attempted by remember{mutableStateOf(false)}
     var error by remember{mutableStateOf("")}
     var notice by rememberSaveable{mutableStateOf("")}
+    var googleId by remember{mutableStateOf<String?>(null)}
+    LaunchedEffect(Unit){try{val result=ApiClient.api.getPublicFeatures();if(result.isSuccessful)googleId=result.body()?.googleClientId}catch(c:CancellationException){throw c}catch(_:Exception){}}
     val registering=mode=="register"
     val resetting=mode=="reset"
     val emailValid=android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
@@ -60,6 +62,37 @@ internal fun AuthScreen(onLoginSuccess:(UserResponse)->Unit,onOfflineStudy:()->U
     fun link(path:String){
         runCatching{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://vialapp.cl/"+path)))}
             .onFailure{error="No se pudo abrir el navegador."}
+    }
+    fun google(){
+        if(loading)return
+        val clientId=googleId
+        if(clientId.isNullOrBlank()){error="Google no está disponible en este momento.";return}
+        if(registering&&(!age||!terms)){attempted=true;error="Confirma tu edad y acepta los términos para crear la cuenta con Google.";return}
+        loading=true;error="";notice=""
+        scope.launch{
+            try{
+                val token=GoogleIdentity.getToken(context,clientId)
+                val response=ApiClient.api.googleLogin(GoogleLoginRequest(token,registering&&terms,registering&&age))
+                val tokens=response.body()
+                if(!response.isSuccessful||tokens==null||tokens.accessToken.isBlank()){
+                    error=when(response.code()){
+                        409->"Esta cuenta ya existe. Inicia sesión con contraseña y vincula Google desde tu perfil."
+                        400->if(!registering)"Si es tu primera vez, elige Crear cuenta y acepta los términos antes de continuar con Google." else "No se pudo verificar Google. Revisa tu cuenta e intenta nuevamente."
+                        else->authResponseError(response,AuthAction.LOGIN)
+                    };return@launch
+                }
+                session.saveAccessToken(tokens.accessToken)
+                tokens.csrfToken?.let{session.saveCsrfToken(it)}
+                val profile=ApiClient.api.getMe("Bearer "+tokens.accessToken)
+                val user=profile.body()
+                if(profile.isSuccessful&&user!=null){password="";onLoginSuccess(user)}
+                else{session.clearSession();ApiClient.clearCookies();error="No se pudo cargar tu perfil. Intenta nuevamente."}
+            }catch(c:CancellationException){throw c}
+            catch(c:androidx.credentials.exceptions.GetCredentialCancellationException){/* user closed chooser */}
+            catch(c:androidx.credentials.exceptions.GetCredentialException){error="No se pudo iniciar sesión con Google. Comprueba Google Play Services."}
+            catch(c:Exception){error=authNetworkError(c)}
+            finally{loading=false}
+        }
     }
     fun submit(){
         if(loading)return
@@ -150,6 +183,13 @@ internal fun AuthScreen(onLoginSuccess:(UserResponse)->Unit,onOfflineStudy:()->U
             Button(onClick=::submit,enabled=!loading,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(15.dp)){
                 if(loading){CircularProgressIndicator(Modifier.size(19.dp),color=c.onPrimary,strokeWidth=2.dp);Spacer(Modifier.width(10.dp))}
                 Text(if(loading)when(mode){"register"->"Creando cuenta…";"reset"->"Enviando…";else->"Iniciando sesión…"}else when(mode){"register"->"Crear cuenta";"reset"->"Enviar instrucciones";else->"Iniciar sesión"},fontWeight=FontWeight.Bold)
+            }
+            if(!resetting&&!googleId.isNullOrBlank()){
+                OutlinedButton(onClick=::google,enabled=!loading,modifier=Modifier.fillMaxWidth().heightIn(min=50.dp),shape=RoundedCornerShape(15.dp)){
+                    Image(painterResource(R.drawable.ic_google_sign_in),null,modifier=Modifier.size(20.dp))
+                    Spacer(Modifier.width(11.dp))
+                    Text(if(registering)"Registrarse con Google" else "Continuar con Google",fontWeight=FontWeight.SemiBold)
+                }
             }
             if(mode=="login")TextButton(onClick={switch("register")},enabled=!loading){Text("¿No tienes cuenta? Crear cuenta")}
             Text("VialApp · Educación vial",fontSize=12.sp,color=c.onSurfaceVariant)
