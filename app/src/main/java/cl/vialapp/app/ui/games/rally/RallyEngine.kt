@@ -146,7 +146,10 @@ internal class RallyEngine(val track:RallyTrack,val mode:RallyMode,seed:Int=42){
         }
         for(i in coinPositions.indices){
             coinCooldown[i]=(coinCooldown[i]-d).coerceAtLeast(0f)
-            if(coinCooldown[i]==0f&&(track.at(coinPositions[i],if(i%2==0)-21f else 21f).first-p).length()<(if(old.magnet>0f)62f else 20f)){
+            val coinLane = if (i % 2 == 0) -21f else 21f
+            val pickupRadius = if (old.magnet > 0f) 62f else 20f
+            val coinDistance = (track.at(coinPositions[i], coinLane).first - p).length()
+            if (coinCooldown[i] == 0f && coinDistance < pickupRadius) {
                 coins++;coinCooldown[i]=30f
             }
         }
