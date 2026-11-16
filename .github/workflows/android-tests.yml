@@ -55,7 +55,11 @@ jobs:
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -path "*/bin/sdkmanager" -type f | sort -V | tail -1)"; fi
           test -x "$SDKMANAGER"
-          "$SDKMANAGER" "platforms;android-37"
+          # API 37 can be listed on the preview channel even when absent on stable.
+          if [ ! -f "$ANDROID_HOME/platforms/android-37/android.jar" ]; then
+            "$SDKMANAGER" --channel=3 "platforms;android-37"
+          fi
+          test -f "$ANDROID_HOME/platforms/android-37/android.jar"
       - uses: gradle/actions/setup-gradle@v4
       - run: bash gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
       - uses: actions/upload-artifact@v4
