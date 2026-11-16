@@ -4,6 +4,11 @@ import android.app.Activity
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import android.media.MediaPlayer
+import android.graphics.BitmapFactory
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.text.font.FontFamily
+import kotlinx.coroutines.delay
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -105,15 +110,17 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     var exit by remember{mutableStateOf(false)}
     var reward by remember{mutableStateOf<GameRunResult?>(null)}
     var saving by remember{mutableStateOf(false)}
+    var resultVisible by remember{mutableStateOf(false)}
     fun clear(){drive=DoomInput()}
     fun drain(){
         for(event in e.drainEvents()){
             audio?.play(when(event){
                 DoomEvent.SHOT->"doom_shot";DoomEvent.BLAST->"doom_blast";DoomEvent.PLASMA->"doom_plasma"
-                DoomEvent.HIT->"doom_hit";DoomEvent.HURT->"doom_hurt";DoomEvent.COIN->"coin";DoomEvent.LOOT->"doom_pickup"
-                DoomEvent.SWITCH->"doom_switch";DoomEvent.DOOR->"doom_door";DoomEvent.CORRECT->"correct";DoomEvent.WRONG->"wrong"
-                DoomEvent.VICTORY->"victory";DoomEvent.DEFEAT->"wrong";DoomEvent.SECRET->"xp"
+                DoomEvent.HIT->"doom_hit";DoomEvent.HURT->"doom_hurt";DoomEvent.COIN->"doom_pickup";DoomEvent.LOOT->"doom_pickup"
+                DoomEvent.SWITCH->"doom_switch";DoomEvent.DOOR->"doom_door";DoomEvent.CORRECT->"doom_correct";DoomEvent.WRONG->"doom_wrong"
+                DoomEvent.VICTORY->"doom_exit";DoomEvent.DEFEAT->"doom_player_death";DoomEvent.SECRET->"doom_correct"
                 DoomEvent.EXPLOSION->"doom_explosion";DoomEvent.RELOAD->"doom_reload";DoomEvent.ENEMY_SHOT->"doom_enemy"
+                DoomEvent.ENEMY_DEATH->"doom_death";DoomEvent.MACHINE_DEATH->"doom_machine_death"
             })
         }
     }
@@ -172,6 +179,13 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     LaunchedEffect(finished){
         if(!finished)return@LaunchedEffect
         clear()
+        // Let a final enemy collapse before cutting to the intermission.
+        repeat(24){e.advanceDeathAnimations(1f/30f);revision++;delay(33)}
+        resultVisible=true
+    }
+    LaunchedEffect(finished){
+        if(!finished)return@LaunchedEffect
+        clear()
         saving=true
         try{
             val token=session.getAccessToken()
@@ -186,6 +200,10 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     }
     if(!ready){
         Box(Modifier.fillMaxSize().background(Dark),contentAlignment=Alignment.Center){Text("Gira el teléfono para jugar",color=White)}
+        return
+    }
+    if(resultVisible){
+        DoomIntermission(e,reward,saving,onMenu,onRetry)
         return
     }
     Column(Modifier.fillMaxSize().background(Dark).padding(horizontal=5.dp,vertical=3.dp)){
@@ -225,20 +243,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                     Button(onClick={paused=false}){Text("CONTINUAR")}
                 }
             }
-            if(finished){
-                Box(Modifier.fillMaxSize().background(Dark.copy(alpha=.93f)),contentAlignment=Alignment.Center){
-                    Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(7.dp)){
-                        Text(if(e.won)"SECTOR RECUPERADO" else "MISIÓN FALLIDA",fontSize=25.sp,fontWeight=FontWeight.Black,color=if(e.won)Gold else Red)
-                        Text("Puntos "+e.score+"  ·  Robots "+e.kills+"  ·  Secretos "+e.secrets+"/1",color=White)
-                        if(saving)Text("Guardando resultado…",color=White,fontSize=12.sp)
-                        else Text(reward?.takeIf{it.syncedWithBackend}?.let{"+${it.xpAwarded} XP · +${it.coinsAwarded} monedas"}?:"Récord local",color=Gold)
-                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                            Button(onClick=onRetry,enabled=!saving){Text("REINTENTAR")}
-                            OutlinedButton(onClick=onMenu,enabled=!saving){Text("MENÚ",color=White)}
-                        }
-                    }
-                }
-            }
+
         }
         DoomStatusBar(e,tick,!finished&&!paused&&challenge==null,
             onSelect={w->change{e.selectWeapon(w)}},onReload={change{e.reload()}})
@@ -401,7 +406,7 @@ private val hudDigits=arrayOf(
                 }
                 Text(e.weapon.title,color=Gold,fontSize=8.sp,maxLines=1)
             }
-            DoomFace(e.hp,e.hurtFlash>0f,e.shotFlash>0f,Modifier.weight(1.07f).fillMaxHeight())
+            DoomFace(e.faceState,e.hp<=0,Modifier.weight(1.07f).fillMaxHeight())
             HudMeter("ARMOR",e.armor,Color(0xFF9FB7A0),Modifier.weight(1f).fillMaxHeight())
             Column(Modifier.weight(1.06f).fillMaxHeight().background(Color(0xFF242524)).border(1.dp,Color(0xFF676052)),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
                 PixelNumber(e.coins,Gold,Modifier.fillMaxWidth().height(17.dp))
@@ -432,10 +437,97 @@ private val hudDigits=arrayOf(
         drawCircle(Red,3.dp.toPx(),p);drawLine(White,p,p+Offset(cos(e.angle)*sx*1.7f,sin(e.angle)*sy*1.7f),1.5.dp.toPx())
     }
 }
-@Composable private fun DoomFace(hp:Int,hurt:Boolean,fire:Boolean,modifier:Modifier){
-    Box(modifier.clip(RoundedCornerShape(5.dp)).background(if(hurt||hp<35)Color(0xFF502C26)else if(fire)Color(0xFF72532C)else Color(0xFF232224)).border(1.dp,Color(0xFF807367),RoundedCornerShape(5.dp))){
-        Image(painterResource(R.drawable.mascot_mister_pelao),"Don Pelao",Modifier.fillMaxSize(),contentScale=ContentScale.Crop,alignment=Alignment.TopCenter)
-        if(hurt)Box(Modifier.fillMaxSize().background(Color(0x37C01812)))
-        if(hp<35)Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(4.dp).background(Red))
+@Composable private fun DoomFace(state:DoomFaceState,dead:Boolean,modifier:Modifier){
+    val context=LocalContext.current
+    val bitmaps=remember(context){
+        // PNG and WebP have the same resource ID. Missing portraits never break the build.
+        val fallback=context.resources.getIdentifier("doom_face_02_normal_frente","drawable",context.packageName)
+        val default=if(fallback!=0)fallback else R.drawable.mascot_mister_pelao
+        val cache=mutableMapOf<Int,androidx.compose.ui.graphics.ImageBitmap>()
+        DoomFaceState.entries.associateWith{face->
+            val id=context.resources.getIdentifier("doom_face_"+face.asset,"drawable",context.packageName).let{if(it!=0)it else default}
+            cache.getOrPut(id){
+                val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true}
+                BitmapFactory.decodeResource(context.resources,id,bounds)
+                var sample=1
+                while(max(bounds.outWidth,bounds.outHeight)/sample>256)sample*=2
+                val image=BitmapFactory.decodeResource(context.resources,id,BitmapFactory.Options().apply{inSampleSize=sample;inScaled=false})
+                image.asImageBitmap()
+            }
+        }
+    }
+    Box(modifier.background(Color(0xFF191817)).border(2.dp,Color(0xFF8D7F64)).padding(2.dp)){
+        Image(bitmap=bitmaps.getValue(state),contentDescription="Don Pelao",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit,filterQuality=FilterQuality.None)
+        if(dead)Box(Modifier.fillMaxSize().background(Color(0x66000000)))
+    }
+}
+
+@Composable private fun DoomIntermission(e:DoomEngine,reward:GameRunResult?,saving:Boolean,onMenu:()->Unit,onRetry:()->Unit){
+    val audio=LocalGameAudio.current
+    var stage by remember{mutableIntStateOf(0)}
+    var tally by remember{mutableFloatStateOf(0f)}
+    val metrics=listOf("ENEMIGOS" to e.kills*100/e.enemies.size.coerceAtLeast(1),
+        "SECRETOS" to e.secrets*100,
+        "OBJETOS" to (e.loot.count{it.taken}*100/e.loot.size.coerceAtLeast(1)),
+        "TRÁNSITO" to if(e.questionsAnswered>0)e.questionsCorrect*100/e.questionsAnswered else 0)
+    LaunchedEffect(Unit){
+        delay(180)
+        for(i in metrics.indices){
+            stage=i;tally=0f
+            repeat(12){step->tally=(step+1)/12f;delay(24)}
+            audio?.play("doom_reload");delay(100)
+        }
+        stage=metrics.size;tally=1f
+    }
+    BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xFF171513))){
+        val short=maxHeight<310.dp
+        Canvas(Modifier.fillMaxSize()){
+            val cell=size.width/100f
+            for(y in 0..(size.height/cell).toInt())for(x in 0..99){
+                val n=((x*79+y*313+x*y*17) xor (x*13+y*7)) and 15
+                val c=if(y%7==0||((x+if((y/7)%2==0)0 else 7)%14==0))Color(0xFF24201D)else Color(0xFF40362D)
+                drawRect(c.copy(alpha=.64f+n*.018f),Offset(x*cell,y*cell),Size(cell+.5f,cell+.5f))
+            }
+            drawRect(Color(0x99100D0B))
+            for(y in listOf(5.dp.toPx(),size.height-6.dp.toPx())){
+                drawLine(Color(0xFF6C5942),Offset(0f,y),Offset(size.width,y),2.dp.toPx())
+                drawLine(Color(0xFF151210),Offset(0f,y+3),Offset(size.width,y+3),2.dp.toPx())
+            }
+        }
+        Column(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=if(short)8.dp else 14.dp),horizontalAlignment=Alignment.CenterHorizontally){
+            Text("E1M1  /  ESTACIONAMIENTO INFERNAL",color=Gold,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Bold,fontSize=if(short)12.sp else 15.sp)
+            Text(if(e.won)"¡SECTOR COMPLETADO!" else "MISIÓN FALLIDA",color=Color(0xFFFF4B30),fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Black,fontSize=if(short)23.sp else 30.sp,lineHeight=if(short)25.sp else 32.sp)
+            Row(Modifier.weight(1f).fillMaxWidth().padding(vertical=4.dp),horizontalArrangement=Arrangement.spacedBy(18.dp),verticalAlignment=Alignment.CenterVertically){
+                Column(Modifier.weight(1.25f),verticalArrangement=Arrangement.spacedBy(if(short)3.dp else 6.dp)){
+                    for((i,m) in metrics.withIndex()){
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+                            Text(m.first,color=Color(0xFFE7BD77),fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Bold,fontSize=if(short)13.sp else 17.sp)
+                            val v=when{stage>i->m.second;stage==i->(m.second*tally).toInt();else->0}
+                            Row(verticalAlignment=Alignment.CenterVertically){
+                                PixelNumber(v,Color(0xFFE95636),Modifier.width(45.dp).height(if(short)15.dp else 22.dp))
+                                Text("%",color=Red,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Black,fontSize=if(short)13.sp else 17.sp)
+                            }
+                        }
+                    }
+                }
+                Column(Modifier.weight(1f).border(1.dp,Color(0xFF826D50)).background(Color(0xDD211B17)).padding(if(short)5.dp else 9.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(2.dp)){
+                    Text("TIEMPO",color=Gold,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Bold,fontSize=10.sp)
+                    val seconds=e.elapsed.toInt()
+                    Text("%02d:%02d".format(seconds/60,seconds%60),color=White,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Black,fontSize=if(short)20.sp else 27.sp)
+                    Text("PUNTOS",color=Gold,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Bold,fontSize=10.sp)
+                    PixelNumber(e.score,Color(0xFFEDB951),Modifier.fillMaxWidth().height(if(short)17.dp else 24.dp))
+                    Text(if(saving)"GUARDANDO..." else reward?.takeIf{it.syncedWithBackend}?.let{"+${it.xpAwarded} XP  +${it.coinsAwarded} MONEDAS"}?:"RÉCORD LOCAL",color=Gold,fontFamily=FontFamily.Monospace,fontSize=9.sp,textAlign=TextAlign.Center)
+                }
+            }
+            Row(horizontalArrangement=Arrangement.spacedBy(15.dp)){
+                RetroResultButton("REINTENTAR",!saving,onRetry)
+                RetroResultButton("MENÚ",!saving,onMenu)
+            }
+        }
+    }
+}
+@Composable private fun RetroResultButton(label:String,enabled:Boolean,action:()->Unit){
+    Box(Modifier.width(132.dp).height(34.dp).background(Color(0xFF3B2F25)).border(2.dp,Color(0xFF967951)).clickable(enabled=enabled,onClick=action),contentAlignment=Alignment.Center){
+        Text("› "+label,color=if(enabled)Gold else Color.Gray,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Black,fontSize=13.sp)
     }
 }

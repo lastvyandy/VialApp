@@ -92,7 +92,11 @@ internal class DoomView(context:Context):View(context){
                 val size=when(a.kind){DoomKind.BOSS->1.33f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
                 val pose=if(a.attackFlash>0f)art.enemyAttack[a.kind.ordinal] else art.enemyFrames[a.kind.ordinal][phase]
                 sprites+=Sprite(a.x,a.y,size,pose,a.flash>0f,if(a.kind==DoomKind.DRONE).25f+sin(e.elapsed*4+a.id)*.07f else 0f)
-            }else sprites+=Sprite(a.x,a.y,.42f,art.wreck)
+            }else{
+                val frame=(a.deathAge/.12f).toInt().coerceIn(0,5)
+                val size=when(a.kind){DoomKind.BOSS->1.33f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
+                sprites+=Sprite(a.x,a.y,size,art.enemyDeath[a.kind.ordinal][frame],frame==0,if(a.kind==DoomKind.DRONE)(.25f*(1f-a.deathAge/.55f)).coerceAtLeast(0f)else 0f)
+            }
         }
         for(b in e.bolts)sprites+=Sprite(b.x,b.y,.23f,art.bolt,false,.43f)
         sprites.sortByDescending{(it.x-e.x)*(it.x-e.x)+(it.y-e.y)*(it.y-e.y)}
@@ -329,6 +333,30 @@ private class DoomArt{
             val d=abs(x-cx)+abs(y-cy)
             if(d<9)a[y*64+x]=if(d<4)0xffffe6a0.toInt()else 0xffef7035.toInt()
         }
+    }}
+    // Six distinct collapse frames preserve each robot's silhouette.
+    val enemyDeath=Array(enemies.size){kind->Array(6){frame->
+        val out=IntArray(4096)
+        val source=enemies[kind]
+        val compression=floatArrayOf(.98f,.82f,.61f,.42f,.24f,.18f)[frame]
+        val tilt=floatArrayOf(0f,.12f,.24f,.38f,.50f,.55f)[frame]
+        for(y in 0..63)for(x in 0..63){
+            val c=source[y*64+x]
+            if(c ushr 24==0)continue
+            val xx=(x+(63-y)*tilt).roundToInt().coerceIn(0,63)
+            val yy=(63-(63-y)*compression).roundToInt().coerceIn(0,63)
+            val brightness=1f-frame*.075f
+            out[yy*64+xx]=rgb((((c shr 16)and 255)*brightness).toInt(),(((c shr 8)and 255)*brightness).toInt(),((c and 255)*brightness).toInt())
+        }
+        if(frame in 0..3){
+            for(i in 0..(18-frame*3)){
+                val xx=(i*23+kind*13+frame*7)%58+3
+                val yy=(i*11+frame*9+kind*3)%38+16
+                out[yy*64+xx]=if(i%3==0)0xffffcf61.toInt()else 0xffd35d2b.toInt()
+            }
+        }
+        if(frame>=3)for(y in 60..63)for(x in 13..53)if((x+y*7+kind)%5!=0&&out[y*64+x]==0)out[y*64+x]=0xff382923.toInt()
+        out
     }}
     val explosive=arrayOf(
         sprite{
