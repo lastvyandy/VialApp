@@ -43,7 +43,7 @@ private fun accountHash(id:String)=MessageDigest.getInstance("SHA-256").digest(i
     var message by remember{mutableStateOf("")}
     var license by remember{mutableStateOf(if(user.licenseClass=="C")"c" else "b")}
     var refresh by remember{mutableIntStateOf(0)}
-    val inflight=remember{mutableSetOf<String>()}
+    val inflight=remember(user.id){mutableSetOf<String>()}
     fun process(purchases:List<Purchase>){
         scope.launch{
             for(purchase in purchases){
@@ -111,7 +111,7 @@ private fun accountHash(id:String)=MessageDigest.getInstance("SHA-256").digest(i
         try{
             val flag=ApiClient.api.getPublicFeatures()
             enabled=flag.body()?.let{it.paymentsEnabled&&it.googlePlayEnabled}?.takeIf{flag.isSuccessful}
-            if(enabled!=true){loading=false;return@LaunchedEffect}
+            if(enabled!=true){products=emptyMap();loading=false;if(enabled==null)message="No se pudo consultar la disponibilidad de los pagos.";return@LaunchedEffect}
             if(client.isReady){connected=true;query()}
             else client.startConnection(object:BillingClientStateListener{
                 override fun onBillingSetupFinished(result:BillingResult){
@@ -133,7 +133,7 @@ private fun accountHash(id:String)=MessageDigest.getInstance("SHA-256").digest(i
     }
     fun buy(product:ProductDetails){
         val act=activity?:return
-        if(!connected||!client.isReady||purchasing||verifying>0)return
+        if(enabled!=true||!connected||!client.isReady||purchasing||verifying>0)return
         val offer=product.oneTimePurchaseOfferDetails?:return
         val details=BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(product)
         offer.offerToken?.takeIf{it.isNotBlank()}?.let{details.setOfferToken(it)}

@@ -12,6 +12,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
@@ -937,8 +938,6 @@ fun VialAppNavigation(
                     licenseClass = user.licenseClass,
                     onPractice = { navigateTopLevel("practice") },
                     onOpenCollection = { navController.navigate("collection") },
-                    onOpenPremium = { navController.navigate("premium") },
-                    onLinkGoogle = { navController.navigate("google_link") },
                     onOpenLeague = { navController.navigate("leaderboard/weekly") { launchSingleTop = true } }
                 )
             }
@@ -1043,6 +1042,8 @@ fun VialAppNavigation(
                         navController.navigate("mascot_selection")
                     },
                     onOpenCollection = { navController.navigate("collection") },
+                    onOpenPremium = { navController.navigate("premium") },
+                    onLinkGoogle = { navController.navigate("google_link") },
 
                     onUserUpdated = onUserUpdated,
 
