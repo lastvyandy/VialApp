@@ -31,6 +31,10 @@ import cl.vialapp.app.ui.games.crossroads.*
 
 @Composable
 internal fun GameCover(gameId: String, modifier: Modifier = Modifier) {
+    if(gameId==GameProgressStore.PELAO_DOOM){
+        cl.vialapp.app.ui.games.doom.DoomPreview(modifier)
+        return
+    }
     val palette = gameCoverPalette(gameId)
     val category = when (gameId) {
         GameProgressStore.CARVIER_DRIVE -> "CONDUCCIÓN"
@@ -68,6 +72,7 @@ internal fun GameCover(gameId: String, modifier: Modifier = Modifier) {
 }
 
 private fun gameCoverPalette(gameId:String):List<Color> = when (gameId) {
+        GameProgressStore.PELAO_DOOM -> listOf(Color(0xFF342626),Color(0xFF784532))
         GameProgressStore.CARVIER_DRIVE -> listOf(Color(0xFF104B72), Color(0xFF214F64))
         GameProgressStore.PELAO_ARENA, GameProgressStore.BALD_CHALLENGE -> listOf(Color(0xFF24304B), Color(0xFF513552))
         GameProgressStore.VIAL_RALLY -> listOf(Color(0xFF203C51),Color(0xFFB47842))
@@ -89,6 +94,7 @@ internal fun GameRecordThumbnail(gameId:String,modifier:Modifier=Modifier){
 @Composable
 private fun GameCoverIllustration(gameId:String){
     when (gameId) {
+        GameProgressStore.PELAO_DOOM -> cl.vialapp.app.ui.games.doom.DoomPreview(Modifier.fillMaxSize())
         GameProgressStore.PELAO_ARENA -> MascotGameThumbnail {
             PelaoSprite(PelaoPose.ATTACK_ONE, Modifier.fillMaxSize())
         }

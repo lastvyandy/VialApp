@@ -281,6 +281,7 @@ fun VialAppNavigation(
                 currentRoute != "games/carvier" &&
                 currentRoute != "games/arena" &&
                 currentRoute != "games/rally" &&
+                currentRoute != "games/doom" &&
                 currentRoute != "collection" &&
                 currentRoute != "offline_study" &&
                 currentRoute != "library" &&
@@ -596,6 +597,7 @@ fun VialAppNavigation(
                     onOpenCarvier = { navController.navigate("games/carvier") },
                     onOpenArena = { navController.navigate("games/arena") },
                     onOpenRally = { navController.navigate("games/rally") },
+                    onOpenDoom = { navController.navigate("games/doom") },
                     onOpenSigns = { navController.navigate("games/signs") },
                     onCareer = { navController.navigate("career") },
                     onGarage = { navController.navigate("garage") },
@@ -621,6 +623,9 @@ fun VialAppNavigation(
             }
             composable("games/arena") {
                 PelaoArenaScreen(userKey = user.id, onBack = { navController.popBackStack() })
+            }
+            composable("games/doom") {
+                cl.vialapp.app.ui.games.doom.DoomScreen(user.id,onBack={navController.popBackStack()})
             }
             composable("games/rally") {
                 VialRallyScreen(userKey = user.id, onBack = { navController.popBackStack() },

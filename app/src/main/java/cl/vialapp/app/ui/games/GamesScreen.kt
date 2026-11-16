@@ -50,7 +50,8 @@ fun GamesScreen(
     onOpenSigns: () -> Unit,
     onBack: () -> Unit,
     onCareer: () -> Unit = {},
-    onGarage: () -> Unit = {}
+    onGarage: () -> Unit = {},
+    onOpenDoom: () -> Unit = {}
 ) {
     BackHandler {
         onBack()
@@ -332,6 +333,20 @@ fun GamesScreen(
                 accent = GamesBlue,
                 enabled = true,
                 onClick = onOpenSigns
+            )
+        }
+
+        item {
+            PlayableGameCard(
+                gameId = GameProgressStore.PELAO_DOOM,
+                record = progressStore.getHighScore(GameProgressStore.PELAO_DOOM),
+                title = "Don Pelao: Operación Caos Vial",
+                subtitle = "FPS retro · Episodio 01",
+                description = "Explora el sector, combate robots y abre terminales resolviendo desafíos de tránsito.",
+                accent = Color(0xFFBA5240),
+                enabled = true,
+                actionLabel = "JUGAR  ›",
+                onClick = onOpenDoom
             )
         }
 

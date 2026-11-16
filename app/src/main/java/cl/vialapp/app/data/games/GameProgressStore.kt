@@ -604,6 +604,7 @@ class GameProgressStore(
         const val PELAO_ARENA = "pelao_arena"
         const val AUTO_WORKSHOP = "auto_workshop"
         const val VIAL_RALLY = "vial_rally"
+        const val PELAO_DOOM = "pelao_doom"
 
         private const val PREFERENCES_NAME = "vialapp_games"
         private const val KEY_TOTAL_POINTS = "games_total_points"
