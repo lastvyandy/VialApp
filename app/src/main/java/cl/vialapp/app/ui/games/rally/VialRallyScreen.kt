@@ -255,11 +255,11 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                 Surface(color=Dark.copy(alpha=.84f),shape=RoundedCornerShape(14.dp)){
                     Column(Modifier.padding(horizontal=14.dp,vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally){
                         Row(verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                            Text((f.speed*1.55f).roundToInt().toString(),fontSize=32.sp,fontWeight=FontWeight.Black,color=Gold)
-                            Text("km/h",Modifier.padding(bottom=5.dp),fontSize=11.sp,color=Color.White)
+                            Text((kotlin.math.abs(f.speed)*1.55f).roundToInt().toString(),fontSize=32.sp,fontWeight=FontWeight.Black,color=Gold)
+                            Text(if(f.speed<-.5f)"R · km/h" else "km/h",Modifier.padding(bottom=5.dp),fontSize=11.sp,color=Color.White)
                         }
                         Text("Fichas "+f.collected+"  ·  "+f.integrity+"% estado",color=Color.White,fontSize=11.sp)
-                        if(f.nitro>0f||f.boost>0f||f.drafted)Text(if(f.nitro>0f)"NITRO" else if(f.boost>0f)"TURBO" else "REBUFO",color=Color(0xFF70E9FF),fontSize=12.sp,fontWeight=FontWeight.Black)
+                        if(f.air.airborne||f.speed<-.5f||f.nitro>0f||f.boost>0f||f.drafted)Text(if(f.air.airborne)"¡EN EL AIRE!" else if(f.speed<-.5f)"REVERSA" else if(f.nitro>0f)"NITRO" else if(f.boost>0f)"TURBO" else "REBUFO",color=Color(0xFF70E9FF),fontSize=12.sp,fontWeight=FontWeight.Black)
                     }
                 }
             }
@@ -277,7 +277,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                     modifier=Modifier.height(42.dp).widthIn(min=88.dp),contentPadding=PaddingValues(horizontal=10.dp),
                     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF8557B9))){Text(f.item?.label?.uppercase()?:"SIN OBJETO",fontWeight=FontWeight.Black,fontSize=12.sp)}
                 Row(horizontalArrangement=Arrangement.spacedBy(9.dp),verticalAlignment=Alignment.Bottom){
-                    Pedal("FRENO",brake,active,Modifier.size(64.dp,70.dp),true){brake=it}
+                    Pedal("FRENO\nR",brake,active,Modifier.size(64.dp,70.dp),true){brake=it}
                     Pedal("GAS",gas,active,Modifier.size(76.dp,88.dp)){gas=it}
                 }
             }
@@ -355,7 +355,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                     p.consume()
                 }while(true)}finally{latest(false)}
             }
-        },contentAlignment=Alignment.Center){Text(label,color=Color.White,fontSize=if(label=="◀"||label=="▶")25.sp else 13.sp,fontWeight=FontWeight.Black)}
+        },contentAlignment=Alignment.Center){Text(label,textAlign=androidx.compose.ui.text.style.TextAlign.Center,color=Color.White,fontSize=if(label=="◀"||label=="▶")25.sp else 13.sp,fontWeight=FontWeight.Black)}
 }
 private fun formatTime(seconds:Float):String{
     val ms=(seconds.coerceAtLeast(0f)*1000f).toInt()

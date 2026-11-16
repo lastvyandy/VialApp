@@ -62,13 +62,12 @@ private val rivalLoadouts=listOf(
 private class RallyRenderer(private val track:RallyTrack,private val loadout:RallyLoadout,initial:RallyFrame):GLSurfaceView.Renderer{
     @Volatile var frame=initial
     private val palette=rallyPalette(track)
-    private val boxLanes=rallyBoxLanes(track)
     private data class Batch(val id:Int,val count:Int)
     private var program=0
     private var position=0;private var color=0;private var mvp=0;private var fog=0
     private var world=Batch(0,0)
     private var cars=emptyList<Batch>()
-    private var box=Batch(0,0);private var coin=Batch(0,0);private var shadow=Batch(0,0);private var oil=Batch(0,0)
+    private var boxes=emptyMap<RallyItem,Batch>();private var coin=Batch(0,0);private var shadow=Batch(0,0);private var oil=Batch(0,0)
     private var shield=Batch(0,0);private var flame=Batch(0,0);private var pulse=Batch(0,0)
     private var spark=Batch(0,0);private var dust=Batch(0,0)
     private var neon:Batch?=null
@@ -79,6 +78,7 @@ private class RallyRenderer(private val track:RallyTrack,private val loadout:Ral
     private var cameraX=initial.pos.x
     private var cameraZ=initial.pos.y
     private var lastElapsed=initial.elapsed
+    private var cameraHeight=initial.air.height
     override fun onSurfaceCreated(gl:GL10?,config:EGLConfig?){
         GL.glClearColor(palette.sky.red,palette.sky.green,palette.sky.blue,1f)
         GL.glEnable(GL.GL_DEPTH_TEST)
@@ -91,7 +91,7 @@ private class RallyRenderer(private val track:RallyTrack,private val loadout:Ral
         mvp=GL.glGetUniformLocation(program,"uMvp");fog=GL.glGetUniformLocation(program,"uFog")
         world=upload(makeRallyWorld(track,palette))
         cars=(listOf(loadout)+rivalLoadouts).map{upload(makeRallyCar(it.style,it.paint,it.kit))}
-        box=upload(makePickup(true));coin=upload(makePickup(false))
+        boxes=RallyItem.values().associateWith{upload(makePickup(true,it))};coin=upload(makePickup(false))
         shadow=upload(RallyMeshBuilder().apply{disc(0f,.20f,0f,1f,shade(palette.road,.66f))}.finish())
         oil=upload(RallyMeshBuilder().apply{disc(0f,.21f,0f,1f,Color(0xFF212732))}.finish())
         neon=loadout.kit.neonColor()?.let{c->upload(RallyMeshBuilder().apply{disc(0f,.24f,0f,1f,c)}.finish())}
@@ -118,14 +118,15 @@ private class RallyRenderer(private val track:RallyTrack,private val loadout:Ral
         val mix=(elapsedDelta*15f).coerceIn(.12f,.85f)
         cameraX+= (f.pos.x-cameraX)*mix;cameraZ+=(f.pos.y-cameraZ)*mix
         cameraAngle+=wrappedDelta(f.angle-cameraAngle,2f*PI.toFloat())*(mix*.80f)
+        cameraHeight+=(f.air.height-cameraHeight)*mix*.65f
         val forwardX=cos(cameraAngle);val forwardZ=sin(cameraAngle)
         val fast=f.nitro>0f||f.boost>0f
-        val back=if(fast)67f else 51f
+        val back=if(fast)71f else 53f
         val shake=if(f.hit>0f)sin(f.hit*78f)*f.hit*3.7f else 0f
         val driftSide=f.drift*7f+shake
-        Matrix.perspectiveM(projection,0,if(fast)65f else 58f,aspect,.9f,1700f)
-        Matrix.setLookAtM(camera,0,cameraX-forwardX*back-forwardZ*driftSide,if(fast)30f else 26f,cameraZ-forwardZ*back+forwardX*driftSide,
-            cameraX+forwardX*49f,8f,cameraZ+forwardZ*49f,0f,1f,0f)
+        Matrix.perspectiveM(projection,0,if(fast)68f else 60f,aspect,.9f,1700f)
+        Matrix.setLookAtM(camera,0,cameraX-forwardX*back-forwardZ*driftSide,(if(fast)30f else 26f)+cameraHeight*.8f,cameraZ-forwardZ*back+forwardX*driftSide,
+            cameraX+forwardX*49f,8f+cameraHeight*.55f,cameraZ+forwardZ*49f,0f,1f,0f)
         Matrix.multiplyMM(vp,0,projection,0,camera,0)
         GL.glUseProgram(program)
         GL.glUniform3f(fog,palette.fog.red,palette.fog.green,palette.fog.blue)
@@ -133,30 +134,28 @@ private class RallyRenderer(private val track:RallyTrack,private val loadout:Ral
         draw(world,0f,0f,0f)
         for(o in f.oils)draw(oil,o.pos.x,0f,o.pos.y,sx=13f,sy=1f,sz=10f)
         for(b in f.boxes){
-            val p=track.at(b).first
-            if(near(p,f.pos,740f))for((i,lane) in boxLanes.withIndex()){
-                val at=track.at(b,lane).first
-                draw(box,at.x,9.2f+sin(f.elapsed*5f+b+i)*1.5f,at.y,f.elapsed*85f+i*30f,1.18f,1.18f,1.18f)
-            }
+            val p=track.at(b.progress,b.lane).first
+            val batch=boxes[b.item]?:continue
+            if(near(p,f.pos,740f))draw(batch,p.x,8.4f+sin(f.elapsed*4f+b.progress)*1.3f,p.y,f.elapsed*65f+b.lane,1.13f,1.13f,1.13f)
         }
         for(b in f.coins){
-            val i=((b/track.length)*32f).toInt()
+            val i=((b/track.length)*RALLY_COIN_COUNT).toInt()
             val p=track.at(b,if(i%2==0)-21f else 21f).first
             if(near(p,f.pos,570f))draw(coin,p.x,5f+sin(f.elapsed*5f+b),p.y,f.elapsed*155f)
         }
         for((i,r) in f.rivals.withIndex()){
             val at=track.at(r.progress,r.lane)
             if(near(at.first,f.pos,780f)){
-                drawCar(cars[(i+1)%cars.size],at.first,at.second+(r.targetLane-r.lane)*.012f)
-                if(r.slowed>0f)draw(pulse,at.first.x,9f,at.first.y,sx=15f,sy=1f,sz=15f)
-                if(r.shield>0f)draw(shield,at.first.x,8f,at.first.y,sx=17f,sy=1f,sz=17f)
-                if(r.nitro>0f)drawExhaust(at.first,at.second,f.elapsed)
+                drawCar(cars[(i+1)%cars.size],at.first,at.second+(r.targetLane-r.lane)*.012f,r.air)
+                if(r.slowed>0f)draw(pulse,at.first.x,9f+r.air.height,at.first.y,sx=15f,sy=1f,sz=15f)
+                if(r.shield>0f)draw(shield,at.first.x,8f+r.air.height,at.first.y,sx=17f,sy=1f,sz=17f)
+                if(r.nitro>0f)drawExhaust(at.first,at.second,f.elapsed,r.air.height)
             }
         }
         neon?.let{draw(it,f.pos.x,.10f,f.pos.y,sx=9f,sy=1f,sz=15f)}
-        drawCar(cars[0],f.pos,f.angle)
-        if(fast)drawExhaust(f.pos,f.angle,f.elapsed)
-        if(f.offroad||abs(f.drift)>.12f){
+        drawCar(cars[0],f.pos,f.angle,f.air)
+        if(fast)drawExhaust(f.pos,f.angle,f.elapsed,f.air.height)
+        if(!f.air.airborne&&(f.offroad||abs(f.drift)>.12f)){
             val bx=-cos(f.angle);val bz=-sin(f.angle)
             for(i in 0..6){
                 val distance=15f+i*3.8f
@@ -181,7 +180,7 @@ private class RallyRenderer(private val track:RallyTrack,private val loadout:Ral
             val radius=18f+(.65f-ep.life)*155f
             draw(pulse,ep.pos.x,3f,ep.pos.y,sx=radius,sy=1f,sz=radius)
         }
-        if(f.shield>0f)draw(shield,f.pos.x,8f,f.pos.y,f.elapsed*45f,17f,1f,17f)
+        if(f.shield>0f)draw(shield,f.pos.x,8f+f.air.height,f.pos.y,f.elapsed*45f,17f,1f,17f)
         if(f.pulse>0f){
             val radius=20f+(.65f-f.pulse)*170f
             draw(pulse,f.pos.x,3f,f.pos.y,sx=radius,sy=1f,sz=radius)
@@ -189,18 +188,19 @@ private class RallyRenderer(private val track:RallyTrack,private val loadout:Ral
         GL.glDisableVertexAttribArray(position);GL.glDisableVertexAttribArray(color)
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER,0)
     }
-    private fun drawExhaust(p:V2,angle:Float,elapsed:Float){
+    private fun drawExhaust(p:V2,angle:Float,elapsed:Float,height:Float){
         val bx=-cos(angle);val bz=-sin(angle)
         for(side in listOf(-1f,1f)){
             val x=p.x+bx*15f-bz*side*4f;val z=p.y+bz*15f+bx*side*4f
-            draw(flame,x,2.7f,z,90f-angle*180f/PI.toFloat(),1f,1.2f+sin(elapsed*50f)*.20f,1f,90f)
+            draw(flame,x,2.7f+height,z,90f-angle*180f/PI.toFloat(),1f,1.2f+sin(elapsed*50f)*.20f,1f,90f)
         }
     }
     private fun near(a:V2,b:V2,r:Float):Boolean{val d=a-b;return d.dot(d)<r*r}
-    private fun drawCar(batch:Batch,p:V2,angle:Float){
+    private fun drawCar(batch:Batch,p:V2,angle:Float,air:RallyAir){
         val yaw=90f-angle*180f/PI.toFloat()
         draw(shadow,p.x,0f,p.y,yaw,8f,1f,14f)
-        draw(batch,p.x,.38f,p.y,yaw,6.3f,6.3f,6.3f)
+        val pitch=if(air.airborne)(-air.velocity*.48f).coerceIn(-18f,15f) else if(air.height>0f)-18f else 0f
+        draw(batch,p.x,.38f+air.height,p.y,yaw,6.3f,6.3f,6.3f,pitch)
     }
     private fun draw(batch:Batch,x:Float,y:Float,z:Float,yaw:Float=0f,sx:Float=1f,sy:Float=1f,sz:Float=1f,pitch:Float=0f){
         Matrix.setIdentityM(model,0)

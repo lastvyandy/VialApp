@@ -103,6 +103,28 @@ internal fun makeRallyWorld(track:RallyTrack,p:RallyPalette):FloatArray{
             m.quad(a,b,e,f,Color(0xFF8DF9F4));m.quad(b,c,d,e,Color(0xFF8DF9F4))
         }
     }
+    // Wedge ramps with solid side faces, contrasting landing arrows and a real collision profile.
+    for(ramp in rallyRamps(track)){
+        val s=ramp.progress-ramp.run
+        val e=ramp.progress
+        val l=ramp.lane-ramp.halfWidth;val r=ramp.lane+ramp.halfWidth
+        val a=track.at(s,l).first;val b=track.at(s,r).first
+        val c=track.at(e,r).first;val d=track.at(e,l).first
+        val h=ramp.height
+        m.quad(a.v(.25f),b.v(.25f),c.v(h),d.v(h),Color(0xFFE9A63C))
+        m.tri(a.v(.18f),d.v(.18f),d.v(h),Color(0xFF744528))
+        m.tri(b.v(.18f),c.v(h),c.v(.18f),Color(0xFF9D5A2B))
+        m.quad(d.v(.18f),c.v(.18f),c.v(h),d.v(h),Color(0xFF78482B))
+        fun top(at:Float,lane:Float)=track.at(at,lane).first.v(h*((at-s)/ramp.run)+.32f)
+        for(k in 0..2){
+            val z=s+5f+k*8f
+            m.quad(top(z,l+2f),top(z,r-2f),top(z+3f,r-2f),top(z+3f,l+2f),Color(0xFF34313A))
+        }
+        for(side in listOf(-1f,1f)){
+            val q=track.at(s, ramp.lane+side*(ramp.halfWidth+2f)).first
+            m.cone(q.x,0f,q.y,2.4f,5f,Color(0xFFFF7951),6)
+        }
+    }
     // Checkerboard starting line, spanning the actual road.
     for(i in 0 until 12)for(j in 0..1){
         val l=-track.halfWidth+2*track.halfWidth*i/12f
@@ -180,14 +202,32 @@ internal fun makeRallyCar(style:String,paint:Color,kit:GarageKit):FloatArray{
     }
     return m.finish()
 }
-internal fun makePickup(isBox:Boolean):FloatArray{
+internal fun makePickup(isBox:Boolean,item:RallyItem=RallyItem.NITRO):FloatArray{
     val m=RallyMeshBuilder()
     if(isBox){
-        m.box(0f,-4.5f,0f,5f,10f,5f,Color(0xFF208EB3))
-        m.box(0f,4.8f,0f,5.3f,1f,5.3f,Color(0xFF91F4FF))
+        val c=when(item){
+            RallyItem.NITRO->Color(0xFF168BCF)
+            RallyItem.SHIELD->Color(0xFF35B996)
+            RallyItem.OIL->Color(0xFF695846)
+            RallyItem.MAGNET->Color(0xFFE29B31)
+            RallyItem.REPAIR->Color(0xFFDB4D5A)
+            RallyItem.EMP->Color(0xFF9459D1)
+        }
+        val hx=if(item==RallyItem.OIL)4.3f else 5f
+        m.box(0f,-4.5f,0f,hx,10f,5f,c)
+        m.box(0f,4.8f,0f,hx+.4f,1f,5.4f,m.shade(c,1.3f))
+        val white=Color(0xFFFFF5DC)
         for(side in listOf(-1f,1f)){
-            m.box(0f,-.8f,side*5.1f,3.6f,1.6f,.21f,Color.White)
-            m.box(0f,-3.6f,side*5.1f,1f,7.2f,.22f,Color.White)
+            val z=side*5.18f
+            fun bar(x:Float,y:Float,width:Float,height:Float)=m.box(x,y,z,width,height,.24f,white)
+            when(item){
+                RallyItem.REPAIR->{bar(0f,-.85f,3.4f,1.7f);bar(0f,-3.3f,.9f,6.6f)}
+                RallyItem.NITRO->{for(k in 0..2)bar(-2.1f+k*2.1f,-3f+k*.7f,.65f,5f-k*.8f)}
+                RallyItem.SHIELD->{bar(0f,2.1f,3.2f,1f);bar(-2.6f,-1.7f,.65f,4.5f);bar(2.6f,-1.7f,.65f,4.5f);bar(0f,-2.8f,2.1f,1f)}
+                RallyItem.OIL->{bar(0f,-2.9f,2.5f,4.3f);bar(0f,1.1f,1.3f,2.2f)}
+                RallyItem.MAGNET->{bar(-2.2f,-2.5f,.85f,5.8f);bar(2.2f,-2.5f,.85f,5.8f);bar(0f,-3f,3f,1.5f)}
+                RallyItem.EMP->{bar(0f,-.6f,3.4f,1.2f);bar(0f,-3.2f,.7f,6.4f);bar(-2.3f,1.5f,.55f,1.1f);bar(2.3f,-2.6f,.55f,1.1f)}
+            }
         }
     }else{
         m.box(0f,-4f,0f,3.5f,8f,1.0f,Color(0xFFD99B27))

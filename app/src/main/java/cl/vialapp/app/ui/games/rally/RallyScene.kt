@@ -116,7 +116,7 @@ private fun scenery(track:RallyTrack):List<Scenery>{
                         }
                         for(o in f.oils)drawOval(Color(0xFF171D24).copy(alpha=.70f),o.pos.o()-Offset(10f,7f),Size(20f,14f))
                         for(b in f.boxes){
-                            val p=track.at(b).first.o()
+                            val p=track.at(b.progress,b.lane).first.o()
                             drawCircle(Color(0xFF45DBF2).copy(alpha=.25f),17f,p)
                             drawRoundRect(Color(0xFF137F9D),p-Offset(8f,8f),Size(16f,16f),CornerRadius(3f))
                             drawRoundRect(Color(0xFFB9F8FF),p-Offset(8f,8f),Size(16f,16f),CornerRadius(3f),style=Stroke(1.6f))
@@ -125,7 +125,7 @@ private fun scenery(track:RallyTrack):List<Scenery>{
                         }
                         // Same alternating lateral placements as the collection logic.
                         for(b in f.coins){
-                            val index=((b/track.length)*32f).toInt()
+                            val index=((b/track.length)*RALLY_COIN_COUNT).toInt()
                             val p=track.at(b,if(index%2==0)-21f else 21f).first.o()
                             drawCircle(Color(0xFFFFC64E),5f,p);drawCircle(Color(0xFFFFEBA7),3.7f,p,style=Stroke(1f))
                         }

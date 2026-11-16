@@ -59,17 +59,51 @@ class RallyEngineTest {
         assertFalse(r.wrongWay)
         assertEquals(0,e.score())
     }
-    @Test fun chaosHasEarlyFullWidthPickupRowsAndClassicHasNone(){
+    @Test fun chaosHasSparseVariedPickupsAndClassicHasNone(){
         for(t in RallyTracks.all){
-            val rows=rallyBoxRows(t)
-            assertTrue(rows.size>=14)
-            assertEquals(86f,rows.first(),.001f)
-            assertTrue(rows.zipWithNext().all{(a,b)->b-a<=175.1f})
-            val lanes=rallyBoxLanes(t)
-            assertEquals(4,lanes.size)
-            assertTrue(lanes.zipWithNext().all{(a,b)->b-a<38f})
+            val boxes=rallyBoxes(t)
+            assertTrue(boxes.size in 10..30)
+            assertEquals(6,boxes.map{it.item}.toSet().size)
+            assertTrue(boxes.groupBy{it.progress}.values.all{it.size in 1..3})
+            assertTrue(boxes.groupBy{it.progress}.values.map{it.size}.toSet().size>1)
+            assertTrue(boxes.all{abs(it.lane)<t.halfWidth-8f})
             assertTrue(RallyEngine(t,RallyMode.CLASSIC).snapshot().boxes.isEmpty())
-            assertEquals(rows,RallyEngine(t,RallyMode.CHAOS).snapshot().boxes)
+            assertEquals(boxes,RallyEngine(t,RallyMode.CHAOS).snapshot().boxes)
+        }
+    }
+    @Test fun brakeEngagesReverseAndGasReturnsToForward(){
+        val e=RallyEngine(track,RallyMode.TIME_TRIAL)
+        start(e)
+        repeat(60){e.step(tick,0f,true,false)}
+        repeat(105){e.step(tick,0f,false,true)}
+        val reverse=e.snapshot()
+        assertTrue(reverse.speed < -10f)
+        val p=reverse.progress
+        repeat(30){e.step(tick,0f,false,true)}
+        assertTrue(e.snapshot().progress<p)
+        assertEquals(1,e.snapshot().lap)
+        assertFalse(e.snapshot().finished)
+        repeat(75){e.step(tick,0f,true,false)}
+        assertTrue(e.snapshot().speed>20f)
+    }
+    @Test fun rampsHaveSurfaceLaunchAndLand(){
+        for(t in RallyTracks.all){
+            val ramps=rallyRamps(t)
+            assertTrue(ramps.size in 2..3)
+            val ramp=ramps.first()
+            assertEquals(ramp.height*.5f,rallyRampSurface(t,ramps,ramp.progress-ramp.run*.5f,ramp.lane),.01f)
+            assertEquals(0f,rallyRampSurface(t,ramps,ramp.progress-ramp.run*.5f,-ramp.lane),.01f)
+            var a=rallyAirStep(t,ramps,RallyAir(ramp.height),ramp.progress-1f,ramp.progress+1f,ramp.lane,140f,tick)
+            assertTrue(a.airborne)
+            val initial=a.height
+            a=rallyAirStep(t,ramps,a,ramp.progress+1f,ramp.progress+3f,ramp.lane,140f,tick)
+            assertTrue(a.height>initial)
+            var p=ramp.progress+3f
+            repeat(180){a=rallyAirStep(t,ramps,a,p,p+2f,ramp.lane,140f,tick);p+=2f}
+            assertFalse(a.airborne)
+            assertEquals(0f,a.height,.01f)
+            val backwards=rallyAirStep(t,ramps,RallyAir(),ramp.progress+1f,ramp.progress-1f,ramp.lane,-40f,tick)
+            assertFalse(backwards.airborne)
         }
     }
     @Test fun rivalsChangeLaneAndPickUpItems(){
