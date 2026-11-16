@@ -2,7 +2,6 @@ package cl.vialapp.app.ui.games.doom
 
 import android.app.Activity
 import android.content.ContextWrapper
-import android.content.pm.ActivityInfo
 import android.media.MediaPlayer
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.asImageBitmap
@@ -70,6 +69,7 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
     var unlocked by remember(userKey){mutableIntStateOf(if(levels.getBoolean(userKey+"_level3",false))3 else if(levels.getBoolean(userKey+"_level2",false))2 else 1)}
     fun unlockNext(level:Int){if(level<3&&unlocked<level+1){unlocked=level+1;levels.edit().putBoolean(userKey+"_level"+unlocked,true).apply()}}
     val engine=run
+    cl.vialapp.app.ui.GameLandscape(active=engine!=null)
     val audio=LocalGameAudio.current
     if(engine==null){
         BackHandler{onBack()}
@@ -153,12 +153,10 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
         var ctx=context
         while(ctx is ContextWrapper&&ctx !is Activity)ctx=ctx.baseContext
         val activity=ctx as? Activity
-        val orientation=activity?.requestedOrientation
-        activity?.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         val lifecycle=(activity as? LifecycleOwner)?.lifecycle
         val observer=LifecycleEventObserver{_,event->if(event==Lifecycle.Event.ON_PAUSE){clear();paused=true}}
         lifecycle?.addObserver(observer)
-        onDispose{lifecycle?.removeObserver(observer);if(orientation!=null)activity?.requestedOrientation=orientation}
+        onDispose{lifecycle?.removeObserver(observer)}
     }
     BackHandler{
         when{

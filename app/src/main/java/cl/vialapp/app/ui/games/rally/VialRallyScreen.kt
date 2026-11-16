@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import android.app.Activity
-import android.content.pm.ActivityInfo
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
@@ -73,6 +72,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
     var track by remember{mutableStateOf(RallyTracks.all.first())}
     var mode by remember{mutableStateOf(RallyMode.CHAOS)}
     var engine by remember{mutableStateOf<RallyEngine?>(null)}
+    cl.vialapp.app.ui.GameLandscape(active=engine!=null)
     var loadout by remember{mutableStateOf<RallyLoadout?>(null)}
     var coins by remember{mutableStateOf<Int?>(null)}
     LaunchedEffect(userKey,refresh){
@@ -169,7 +169,6 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
     val runId=remember(engine){UUID.randomUUID().toString()}
     val rewards=LocalRewards.current
     val context=LocalContext.current
-    RallyLandscape()
     val haptic=LocalHapticFeedback.current
     val audio=LocalGameAudio.current
     val sounds=audio?.enabled==true
@@ -332,19 +331,6 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                 Button(onClick=onMenu,enabled=!saving){Text("Volver a circuitos")}
             }
         }
-    }
-}
-
-/** Restore the exact previous orientation when leaving a race. */
-@Composable private fun RallyLandscape(){
-    val context=LocalContext.current
-    DisposableEffect(context){
-        var ctx=context
-        while(ctx is android.content.ContextWrapper&&ctx !is Activity)ctx=ctx.baseContext
-        val activity=ctx as? Activity
-        val previous=activity?.requestedOrientation
-        activity?.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        onDispose{if(activity!=null&&previous!=null)activity.requestedOrientation=previous}
     }
 }
 

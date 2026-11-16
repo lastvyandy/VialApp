@@ -83,6 +83,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Always start in the normal app orientation, never a previous game's mode.
+        cl.vialapp.app.ui.AppOrientation.restore(this)
 
         ApiClient.init(applicationContext)
         runCatching { StudyReminder.channel(applicationContext) }
