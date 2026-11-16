@@ -14,7 +14,7 @@ private fun walk(e:DoomEngine,x:Float,y:Float){
 }
 fun main(){
     val combat=DoomEngine(19)
-    check(combat.enemies.size==10)
+    check(combat.enemies.size==13&&combat.enemies.map{it.kind}.toSet().size==6)
     check(combat.solid(.2f,3.5f))
     check(combat.ray(combat.x,combat.y,1f,0f).cell==5)
     val guard=combat.enemies.first()
@@ -34,10 +34,10 @@ fun main(){
     e.look(-1.0f)
     check(!e.touchInteract(0f,1.2f)){"A tap outside the projected door must not open it"}
     check(e.touchInteract(0f));check(e.doors[0].open)
-    walk(e,9.6f,3.5f);check(e.weapon==DoomWeapon.SHOTGUN)
+    walk(e,9.6f,3.5f);check(e.owns(DoomWeapon.SHOTGUN));repeat(24){e.step(.025f)};check(e.weapon==DoomWeapon.SHOTGUN)
     walk(e,14.4f,4.5f);e.interact();check(e.pending?.kind==3)
     e.answer(0);check(e.secrets==1&&e.doors[4].open)
-    walk(e,16.5f,4.5f);walk(e,19.4f,4.5f);check(e.weapon==DoomWeapon.PLASMA)
+    walk(e,16.5f,4.5f);walk(e,19.4f,4.5f);repeat(24){e.step(.025f)};check(e.weapon==DoomWeapon.PLASMA)
     walk(e,15.5f,4.5f);walk(e,11.5f,4.5f);walk(e,11.5f,6.4f)
     e.look(1.2f);e.look((PI/2).toFloat()-1.2f)
     check(e.targetHint()=="TOCA EL TERMINAL")
@@ -53,5 +53,23 @@ fun main(){
     e.interact();check(e.doors[3].open)
     walk(e,16.5f,11.5f);walk(e,18.5f,11.5f);walk(e,19.5f,13.5f)
     e.interact();check(e.won&&e.finished)
+    val blast=DoomEngine()
+    blast.enemies.forEach{it.hp=0}
+    blast.explosives.clear()
+    blast.explosives+=DoomExplosive(4.25f,3.5f,false)
+    blast.explosives+=DoomExplosive(5.25f,3.5f,true)
+    val ammo=blast.ammunition
+    blast.step(.025f,DoomInput(fire=true))
+    check(blast.explosives.all{it.exploded}&&blast.explosions.size==2){"Shot must cause a chain reaction"}
+    check(blast.hp<100&&blast.ammunition==ammo-1)
+    check(blast.drainEvents().count{it==DoomEvent.EXPLOSION}==2)
+    repeat(30){blast.step(.025f)}
+    check(blast.explosions.isEmpty())
+    repeat(12){blast.step(.025f,DoomInput(fire=true))}
+    repeat(25){blast.step(.025f)}
+    val reserve=blast.ammunition
+    blast.reload();check(blast.weaponPhase==DoomWeaponPhase.RELOADING)
+    repeat(30){blast.step(.025f)}
+    check(blast.ammunition==reserve&&blast.magazineAmmo==min(reserve,10))
     println("DOOM smoke OK: combat, three weapons, coins, touch-ray doors, classroom gates, secret, credential, exit.")
 }

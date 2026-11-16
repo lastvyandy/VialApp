@@ -6,6 +6,7 @@ import android.content.pm.ActivityInfo
 import android.media.MediaPlayer
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
@@ -112,6 +113,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                 DoomEvent.HIT->"doom_hit";DoomEvent.HURT->"doom_hurt";DoomEvent.COIN->"coin";DoomEvent.LOOT->"doom_pickup"
                 DoomEvent.SWITCH->"doom_switch";DoomEvent.DOOR->"doom_door";DoomEvent.CORRECT->"correct";DoomEvent.WRONG->"wrong"
                 DoomEvent.VICTORY->"victory";DoomEvent.DEFEAT->"wrong";DoomEvent.SECRET->"xp"
+                DoomEvent.EXPLOSION->"doom_blast";DoomEvent.RELOAD->"doom_switch";DoomEvent.ENEMY_SHOT->"doom_hit"
             })
         }
     }
@@ -216,7 +218,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                 e.targetHint()?.let{hint->
                     Text(hint,Modifier.align(Alignment.Center).offset(y=19.dp).background(Dark.copy(alpha=.83f),RoundedCornerShape(3.dp)).padding(horizontal=7.dp,vertical=3.dp),color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
                 }
-                DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(7.dp).size(87.dp,67.dp))
+                DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(5.dp).size(72.dp,54.dp))
             }
             if(paused&&!exit&&!finished&&challenge==null){
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.75f)),contentAlignment=Alignment.Center){
@@ -238,14 +240,9 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().height(52.dp).background(Metal).border(2.dp,Color(0xFF716B61)).padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
-            Meter("VIDA",e.hp.toString()+"%",Red)
-            Meter("ARMADURA",e.armor.toString()+"%",Color(0xFF83C8C9))
-            DoomFace(e.hp,e.hurtFlash>0f,e.shotFlash>0f,Modifier.size(64.dp,49.dp))
-            TextButton(onClick={change{e.cycleWeapon()}},enabled=!finished&&!paused&&challenge==null,contentPadding=PaddingValues(0.dp)){Meter(e.weapon.title,e.ammunition.toString(),Gold)}
-            Meter("FICHAS",e.coins.toString(),Gold)
-            Meter("ACCESO",if(e.hasKey)"SI" else "—",Gold)
-        }
+        DoomStatusBar(e,tick,!finished&&!paused&&challenge==null,
+            onSelect={w->change{e.selectWeapon(w)}},onReload={change{e.reload()}})
+
     }
     if(challenge!=null&&!finished)AlertDialog(onDismissRequest={change{e.dismissChallenge()}},containerColor=Dark,title={Text("TERMINAL DE CONTROL",color=Gold,fontWeight=FontWeight.Black)},
         text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(6.dp)){
@@ -273,12 +270,12 @@ private data class TouchLayout(val move:Offset,val gun:Offset,val use:Offset,val
         (p-gun).getDistance()<radius*.91f->TouchRole.FIRE
         (p-use).getDistance()<radius*.55f->TouchRole.USE
         (p-weapon).getDistance()<radius*.54f->TouchRole.WEAPON
-        p.x<w*.42f&&p.y>h*.43f->TouchRole.MOVE
+        p.x<w*.31f&&p.y>h*.54f->TouchRole.MOVE
         else->TouchRole.LOOK
     }
 }
 private fun touchLayout(w:Float,h:Float):TouchLayout{
-    val r=min(h*.30f,w*.116f)
+    val r=min(h*.19f,w*.079f)
     return TouchLayout(Offset(r*1.35f,h-r*1.20f),Offset(w-r*1.04f,h-r*1.15f),
         Offset(w-r*1.05f,h-r*2.62f),Offset(w-r*2.45f,h-r*.67f),r,w,h)
 }
@@ -340,22 +337,87 @@ private fun touchLayout(w:Float,h:Float):TouchLayout{
         val l=touchLayout(size.width,size.height)
         val r=l.radius
         val origin=anchor?:l.move
-        drawCircle(Color.Black.copy(alpha=.33f),r*.87f,origin)
-        drawCircle(White.copy(alpha=.35f),r*.87f,origin,style=Stroke(1.5.dp.toPx()))
-        drawCircle(White.copy(alpha=.48f),r*.29f,origin+stick*r*.60f)
+        drawCircle(Color.Black.copy(alpha=.20f),r*.87f,origin)
+        drawCircle(White.copy(alpha=.24f),r*.87f,origin,style=Stroke(1.5.dp.toPx()))
+        drawCircle(White.copy(alpha=.36f),r*.29f,origin+stick*r*.60f)
         fun pad(p:Offset,radius:Float,label:String,active:Boolean=false){
-            drawCircle(if(active)Red.copy(alpha=.90f) else Color.Black.copy(alpha=.42f),radius,p)
-            drawCircle((if(active)Gold else White).copy(alpha=.53f),radius,p,style=Stroke(1.5.dp.toPx()))
-            labelPaint.textSize=radius*.39f
+            val corner=androidx.compose.ui.geometry.CornerRadius(radius*.23f)
+            val pos=p-Offset(radius*.83f,radius*.72f)
+            val box=Size(radius*1.66f,radius*1.44f)
+            drawRoundRect(if(active)Red.copy(alpha=.74f) else Color.Black.copy(alpha=.28f),pos,box,corner)
+            drawRoundRect((if(active)Gold else White).copy(alpha=.38f),pos,box,corner,style=Stroke(1.dp.toPx()))
+            labelPaint.textSize=radius*.42f
             drawIntoCanvas{it.nativeCanvas.drawText(label,p.x,p.y-(labelPaint.ascent()+labelPaint.descent())*.5f,labelPaint)}
         }
         pad(l.gun,r*.86f,"FIRE",firing);pad(l.use,r*.49f,"USAR");pad(l.weapon,r*.46f,"ARMA")
     }
 }
-@Composable private fun Meter(label:String,value:String,color:Color){
-    Column(horizontalAlignment=Alignment.CenterHorizontally){
-        Text(value,color=color,fontWeight=FontWeight.Black,fontSize=20.sp,lineHeight=22.sp)
-        Text(label,color=White,fontWeight=FontWeight.Bold,fontSize=8.sp,maxLines=1)
+// Pixel display glyphs, drawn rather than relying on a device font.
+private val hudDigits=arrayOf(
+    arrayOf("111","101","101","101","111"),arrayOf("010","110","010","010","111"),
+    arrayOf("111","001","111","100","111"),arrayOf("111","001","111","001","111"),
+    arrayOf("101","101","111","001","001"),arrayOf("111","100","111","001","111"),
+    arrayOf("111","100","111","101","111"),arrayOf("111","001","010","010","010"),
+    arrayOf("111","101","111","101","111"),arrayOf("111","101","111","001","111"))
+@Composable private fun PixelNumber(value:Int,color:Color,modifier:Modifier=Modifier){
+    val digits=value.coerceAtLeast(0).toString()
+    Canvas(modifier){
+        val unit=min(size.height/5f,size.width/(digits.length*4-1))
+        val origin=Offset((size.width-unit*(digits.length*4-1))/2f,(size.height-unit*5f)/2f)
+        for((i,ch) in digits.withIndex())for(y in 0..4)for(x in 0..2)if(hudDigits[ch-'0'][y][x]=='1'){
+            val p=origin+Offset((i*4+x)*unit,y*unit)
+            drawRect(Color.Black.copy(alpha=.85f),p+Offset(unit*.25f,unit*.25f),Size(unit,unit))
+            drawRect(color,p,Size(unit,unit))
+        }
+    }
+}
+@Composable private fun HudMeter(label:String,value:Int,color:Color,modifier:Modifier=Modifier,sub:String?=null,onClick:(()->Unit)?=null){
+    Column(modifier.then(if(onClick!=null)Modifier.clickable(onClick=onClick)else Modifier).background(Color(0xFF242524)).border(1.dp,Color(0xFF676052)).padding(horizontal=4.dp,vertical=3.dp),
+        horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+        PixelNumber(value,color,Modifier.fillMaxWidth().height(23.dp))
+        Text(label,color=Color(0xFFD2C3A3),fontWeight=FontWeight.Black,fontSize=9.sp,maxLines=1,lineHeight=10.sp)
+        if(sub!=null)Text(sub,color=Gold,fontSize=8.sp,maxLines=1,lineHeight=9.sp)
+    }
+}
+@Composable private fun DoomStatusBar(e:DoomEngine,revision:Int,enabled:Boolean,onSelect:(DoomWeapon)->Unit,onReload:()->Unit){
+    Box(Modifier.fillMaxWidth().height(61.dp).background(Color(0xFF49433A)).border(2.dp,Color(0xFF9B8C72))){
+        Canvas(Modifier.fillMaxSize()){
+            for(y in 0..17)drawLine(if(y%2==0)Color(0xFF5D5548)else Color(0xFF3B3730),Offset(0f,size.height*y/17f),Offset(size.width,size.height*y/17f),1.dp.toPx())
+            drawLine(Color(0xFFBAA27D),Offset.Zero,Offset(size.width,0f),2.dp.toPx())
+        }
+        Row(Modifier.fillMaxSize().padding(4.dp),horizontalArrangement=Arrangement.spacedBy(3.dp),verticalAlignment=Alignment.CenterVertically){
+            HudMeter("AMMO",e.ammunition,Color(0xFFE8B747),Modifier.weight(1.12f).fillMaxHeight(),
+                sub=if(e.weaponPhase==DoomWeaponPhase.RELOADING)"RECARGA" else "CARG. "+e.magazineAmmo,
+                onClick=if(enabled)onReload else null)
+            HudMeter("HEALTH",e.hp,Color(0xFFE94D3A),Modifier.weight(1f).fillMaxHeight())
+            Column(Modifier.weight(1.18f).fillMaxHeight().background(Color(0xFF292721)).border(1.dp,Color(0xFF716652)),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+                Text("ARMS",color=Color(0xFFD2C3A3),fontSize=9.sp,fontWeight=FontWeight.Black)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){
+                    DoomWeapon.entries.forEachIndexed{i,w->
+                        Box(Modifier.weight(1f).height(23.dp).padding(1.dp).background(if(e.weapon==w)Color(0xFF83602D)else Color(0xFF1A1A18)).clickable(enabled=enabled&&e.owns(w)){onSelect(w)},contentAlignment=Alignment.Center){
+                            PixelNumber(i+2,if(e.weapon==w)Gold else if(e.owns(w))Color(0xFFD3C2A0)else Color(0xFF54524B),Modifier.size(12.dp,17.dp))
+                        }
+                    }
+                }
+                Text(e.weapon.title,color=Gold,fontSize=8.sp,maxLines=1)
+            }
+            DoomFace(e.hp,e.hurtFlash>0f,e.shotFlash>0f,Modifier.weight(1.07f).fillMaxHeight())
+            HudMeter("ARMOR",e.armor,Color(0xFF9FB7A0),Modifier.weight(1f).fillMaxHeight())
+            Column(Modifier.weight(1.06f).fillMaxHeight().background(Color(0xFF242524)).border(1.dp,Color(0xFF676052)),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+                PixelNumber(e.coins,Gold,Modifier.fillMaxWidth().height(17.dp))
+                Text("FICHAS",color=Color(0xFFD2C3A3),fontSize=8.sp,fontWeight=FontWeight.Black)
+                Text(if(e.hasKey)"◆ KEY" else "◇ KEY",color=if(e.hasKey)Gold else Color(0xFF77736A),fontSize=10.sp,fontWeight=FontWeight.Bold)
+            }
+            Column(Modifier.weight(.95f).fillMaxHeight().background(Color(0xFF242524)).border(1.dp,Color(0xFF676052)).padding(3.dp),verticalArrangement=Arrangement.Center){
+                DoomWeapon.entries.forEachIndexed{i,w->
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+                        Text(listOf("BUL","SHL","CEL")[i],color=Color(0xFFAFA38A),fontSize=8.sp,lineHeight=10.sp)
+                        Text(e.ammoFor(w).toString(),color=if(e.weapon==w)Gold else White,fontSize=9.sp,fontWeight=FontWeight.Bold,lineHeight=10.sp)
+                    }
+                }
+            }
+        }
+        if(revision<0)Spacer(Modifier.size(0.dp))
     }
 }
 @Composable private fun DoomMap(e:DoomEngine,revision:Int,modifier:Modifier){

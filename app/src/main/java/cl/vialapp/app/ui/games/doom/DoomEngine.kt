@@ -10,7 +10,7 @@ internal enum class DoomKind(val hp:Int,val speed:Float,val attack:Float,val dam
     GUARD(55,.85f,1.65f,9), DRONE(38,1.3f,1.9f,7), BOSS(310,.65f,1.22f,13),
     SHOTGUNNER(72,.93f,1.6f,7), HEAVY(135,.55f,2.15f,11), RUNNER(36,2.0f,1.0f,26)
 }
-internal enum class DoomWeaponPhase { READY, LOWERING, RAISING, FIRING, RELOADING }
+internal enum class DoomWeaponPhase { READY, LOWERING, RAISING, FIRING, PUMPING, RELOADING }
 internal data class DoomExplosive(val x:Float,val y:Float,val crate:Boolean,var hp:Int=24,var exploded:Boolean=false)
 internal data class DoomExplosion(val x:Float,val y:Float,var time:Float=.52f)
 internal enum class DoomLootKind { COIN, AMMO, SHELLS, CELL, MEDKIT, ARMOR, SHOTGUN, PLASMA, KEY }
@@ -61,7 +61,8 @@ internal class DoomEngine(seed:Int=19){
     val weaponLowering get()=when(weaponPhase){
         DoomWeaponPhase.LOWERING->weaponProgress
         DoomWeaponPhase.RAISING->1f-weaponProgress
-        DoomWeaponPhase.RELOADING->sin(weaponProgress*PI.toFloat())*.72f
+        DoomWeaponPhase.RELOADING->sin(weaponProgress*PI.toFloat())*.50f
+        DoomWeaponPhase.PUMPING->sin(weaponProgress*PI.toFloat())*.19f
         else->0f
     }
     val recoil get()=if(weaponPhase==DoomWeaponPhase.FIRING)sin(weaponProgress*PI.toFloat()).coerceAtLeast(0f)else 0f
@@ -173,6 +174,7 @@ internal class DoomEngine(seed:Int=19){
     }
     fun selectWeapon(next:DoomWeapon){
         if(finished||pending!=null||!owns(next)||next==weapon&&queuedWeapon==null)return
+        if(next==weapon&&weaponPhase!=DoomWeaponPhase.LOWERING){queuedWeapon=null;return}
         queuedWeapon=next
         if(weaponPhase==DoomWeaponPhase.READY||weaponPhase==DoomWeaponPhase.RELOADING){
             reloadAfterShot=false;phase(DoomWeaponPhase.LOWERING,.19f)
@@ -194,7 +196,8 @@ internal class DoomEngine(seed:Int=19){
         when(weaponPhase){
             DoomWeaponPhase.LOWERING->{weapon=queuedWeapon?:weapon;queuedWeapon=null;events+=DoomEvent.SWITCH;phase(DoomWeaponPhase.RAISING,.22f)}
             DoomWeaponPhase.RAISING->{phase(DoomWeaponPhase.READY,1f);if(queuedWeapon!=null&&queuedWeapon!=weapon)phase(DoomWeaponPhase.LOWERING,.19f)}
-            DoomWeaponPhase.FIRING->{phase(DoomWeaponPhase.READY,1f);if(queuedWeapon!=null&&queuedWeapon!=weapon){reloadAfterShot=false;phase(DoomWeaponPhase.LOWERING,.19f)}else if(reloadAfterShot){reloadAfterShot=false;reload()}else if(weapon==DoomWeapon.SHOTGUN){phase(DoomWeaponPhase.RELOADING,.30f);events+=DoomEvent.RELOAD}}
+            DoomWeaponPhase.FIRING->{phase(DoomWeaponPhase.READY,1f);if(queuedWeapon!=null&&queuedWeapon!=weapon){reloadAfterShot=false;phase(DoomWeaponPhase.LOWERING,.19f)}else if(reloadAfterShot){reloadAfterShot=false;reload()}else if(weapon==DoomWeapon.SHOTGUN){phase(DoomWeaponPhase.PUMPING,.30f);events+=DoomEvent.RELOAD}}
+            DoomWeaponPhase.PUMPING->{phase(DoomWeaponPhase.READY,1f);if(queuedWeapon!=null&&queuedWeapon!=weapon)phase(DoomWeaponPhase.LOWERING,.19f)}
             DoomWeaponPhase.RELOADING->{magazine[weapon.ordinal]=min(ammunition,magazineSize[weapon.ordinal]);phase(DoomWeaponPhase.READY,1f);if(queuedWeapon!=null&&queuedWeapon!=weapon)phase(DoomWeaponPhase.LOWERING,.19f)}
             DoomWeaponPhase.READY->Unit
         }
