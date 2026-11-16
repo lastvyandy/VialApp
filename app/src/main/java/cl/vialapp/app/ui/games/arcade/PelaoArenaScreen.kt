@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,7 +31,6 @@ import kotlin.math.sin
 
 @Composable
 fun PelaoArenaScreen(userKey:String,onBack:()->Unit){
-    val context=LocalContext.current
     val audio=LocalGameAudio.current
     val sound=audio?.enabled==true
     var previous by remember{mutableStateOf<ArenaCombatFrame?>(null)}
@@ -62,7 +60,7 @@ fun PelaoArenaScreen(userKey:String,onBack:()->Unit){
             if(f.phase==ArenaPhase.KNOWLEDGE && f.question!=null) ArenaKnowledgePanel(f,m,enabled,act)
             else CombatScene(f,m)
         },resultArt={f,m->Feedback(f,true);Canvas(m){val u=minOf(size.width/240f,size.height/240f);translate(size.width/2,size.height*.93f){scale(u,u,pivot=Offset.Zero){drawPelao(f)}}}},
-        controls={f,enabled,act->if(f.phase!=ArenaPhase.KNOWLEDGE) ArenaControls(f,enabled,act,sound){audio?.setEnabled(!sound)}})
+        controls={f,enabled,act->if(f.phase!=ArenaPhase.KNOWLEDGE) ArenaControls(f,enabled,act,sound){audio?.setEffectsEnabled(!sound)}})
 }
 
 @Composable

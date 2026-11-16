@@ -267,7 +267,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                 Column(horizontalAlignment=Alignment.End){
                     FilledTonalButton(onClick=::leave,modifier=Modifier.height(36.dp),contentPadding=PaddingValues(horizontal=13.dp)){Text("Salir",fontSize=12.sp)}
                     if(!f.finished)FilledTonalButton(onClick={clearInputs();paused=!paused},modifier=Modifier.height(36.dp),contentPadding=PaddingValues(horizontal=13.dp)){Text(if(paused)"Seguir" else "Pausa",fontSize=12.sp)}
-                    TextButton(onClick={audio?.setEnabled(!sounds)},modifier=Modifier.height(30.dp),contentPadding=PaddingValues(horizontal=4.dp)){Text(if(sounds)"Sonido ON" else "Sonido OFF",color=Color.White,fontSize=10.sp)}
+                    TextButton(onClick={audio?.setEffectsEnabled(!sounds)},modifier=Modifier.height(30.dp),contentPadding=PaddingValues(horizontal=4.dp)){Text(if(sounds)"Sonido ON" else "Sonido OFF",color=Color.White,fontSize=10.sp)}
                 }
             }
         }

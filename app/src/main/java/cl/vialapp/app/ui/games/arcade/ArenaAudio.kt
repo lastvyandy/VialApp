@@ -54,7 +54,7 @@ internal class ArenaAudio(context:Context){
             "drift" to pool.load(context,R.raw.sfx_drift,1),
             "engine" to pool.load(context,R.raw.sfx_engine,1))
     }
-    fun setEnabled(value:Boolean){
+    fun setEffectsEnabled(value:Boolean){
         enabled=value
         prefs.edit().putBoolean("effects_enabled",value).apply()
         if(!value)stopAll()
@@ -109,7 +109,7 @@ internal val LocalGameAudio=staticCompositionLocalOf<ArenaAudio?>{null}
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Switch(checked=audio.enabled,onCheckedChange={enabled->
-                audio.setEnabled(enabled)
+                audio.setEffectsEnabled(enabled)
                 if(enabled)audio.play("coin")
             })
         }
