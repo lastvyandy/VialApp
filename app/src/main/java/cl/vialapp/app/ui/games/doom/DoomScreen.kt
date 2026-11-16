@@ -5,6 +5,11 @@ import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import cl.vialapp.app.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -67,7 +72,7 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
             DoomPreview(Modifier.fillMaxWidth().aspectRatio(16f/9f))
             Text("EPISODIO 01 · ESTACIONAMIENTO INFERNAL",color=Gold,fontWeight=FontWeight.Bold)
             Text("Carvier: La central vial está fuera de control. Recupera la credencial, desbloquea los accesos de tránsito y destruye el núcleo.",color=White)
-            Text("Mando izquierdo: movimiento. Mando derecho: girar. Mantén FUEGO para disparar. USA abre puertas y terminales; ARMA cambia el arma equipada.",color=White,fontSize=13.sp)
+            Text("Pulgar izquierdo: muévete en cualquier dirección. Desliza sobre la escena para mirar; toca directamente las puertas. Mantén FIRE para disparar y toca el arma del HUD para cambiarla.",color=White,fontSize=13.sp)
             Text("Récord: "+store.getHighScore(GameProgressStore.PELAO_DOOM)+" · Prototipo jugable",color=Gold,fontSize=12.sp)
             Button(onClick={run=DoomEngine();audio?.play("start")},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
                 Text("ENTRAR AL SECTOR",fontWeight=FontWeight.Black,color=Color.White)
@@ -90,13 +95,12 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     val runId=remember{UUID.randomUUID().toString()}
     var revision by remember{mutableIntStateOf(0)}
     var move by remember{mutableStateOf(Offset.Zero)}
-    var turn by remember{mutableFloatStateOf(0f)}
     var fire by remember{mutableStateOf(false)}
     var paused by remember{mutableStateOf(false)}
     var exit by remember{mutableStateOf(false)}
     var reward by remember{mutableStateOf<GameRunResult?>(null)}
     var saving by remember{mutableStateOf(false)}
-    fun clear(){move=Offset.Zero;turn=0f;fire=false}
+    fun clear(){move=Offset.Zero;fire=false}
     fun drain(){
         for(event in e.drainEvents()){
             audio?.play(when(event){
@@ -140,7 +144,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             carry+=((now-last)/1_000_000_000f).coerceIn(0f,.1f);last=now
             var updated=false
             while(carry>=1f/30f&&!e.finished&&e.pending==null){
-                e.step(1f/30f,DoomInput(-move.y,move.x,turn,fire));carry-=1f/30f;updated=true
+                e.step(1f/30f,DoomInput(-move.y,move.x,0f,fire));carry-=1f/30f;updated=true
             }
             if(updated){drain();revision++}
         }
@@ -174,24 +178,30 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             TextButton(onClick={clear();paused=!paused},enabled=!finished&&challenge==null,contentPadding=PaddingValues(horizontal=6.dp)){Text(if(paused)"SEGUIR" else "PAUSA",color=Gold,fontSize=11.sp)}
         }
         Box(Modifier.weight(1f).fillMaxWidth().border(2.dp,Color(0xFF69645B))){
-            AndroidView(factory={DoomView(it).apply{engine=e}},update={view->view.engine=e;if(tick>=0)view.invalidate()},modifier=Modifier.fillMaxSize())
+            AndroidView(factory={DoomView(it).apply{engine=e}},update={view->
+                view.engine=e
+                view.inputEnabled=!paused&&!finished&&challenge==null
+                view.onLook={delta->if(!paused&&!e.finished&&e.pending==null){e.look(delta);revision++}}
+                view.onTap={horizontal->if(!paused&&!e.finished&&e.pending==null&&e.touchInteract(horizontal)){clear();drain();revision++}}
+                if(tick>=0)view.invalidate()
+            },modifier=Modifier.fillMaxSize())
             if(e.messageTime>0f&&challenge==null&&!finished){
                 Text(e.message,Modifier.align(Alignment.TopCenter).padding(top=6.dp).background(Dark.copy(alpha=.84f),RoundedCornerShape(3.dp)).padding(horizontal=9.dp,vertical=4.dp),
                     color=Gold,fontSize=11.sp,textAlign=TextAlign.Center)
             }
             if(!paused&&!finished&&challenge==null){
-                DoomStick(move,Modifier.align(Alignment.BottomStart).padding(12.dp).size(100.dp)){move=it}
-                Column(Modifier.align(Alignment.BottomEnd).padding(8.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(5.dp)){
-                    Row(horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                        ActionKey("ARMA"){change{e.cycleWeapon()}}
-                        ActionKey("USAR"){clear();change{e.interact()}}
-                    }
+                DoomStick(move,Modifier.align(Alignment.BottomStart).padding(start=10.dp,bottom=9.dp).size(116.dp)){move=it}
+                e.targetHint()?.let{hint->
+                    Text(hint,Modifier.align(Alignment.Center).offset(y=20.dp).background(Dark.copy(alpha=.83f),RoundedCornerShape(3.dp)).padding(horizontal=7.dp,vertical=3.dp),color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
+                }
+                Column(Modifier.align(Alignment.BottomEnd).padding(10.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(6.dp)){
+                    ActionKey("USAR"){clear();change{e.interact()}}
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                        DoomStick(Offset(turn,0f),Modifier.size(72.dp),horizontalOnly=true){turn=it.x}
-                        Box(Modifier.size(74.dp).background(Red.copy(alpha=if(fire).9f else .64f),RoundedCornerShape(36.dp)).border(2.dp,Gold.copy(alpha=.65f),RoundedCornerShape(36.dp))
+                        ActionKey("ARMA"){change{e.cycleWeapon()}}
+                        Box(Modifier.size(85.dp).background(Red.copy(alpha=if(fire).85f else .42f),RoundedCornerShape(44.dp)).border(1.5.dp,Gold.copy(alpha=.48f),RoundedCornerShape(44.dp))
                             .pointerInput(Unit){awaitEachGesture{val first=awaitFirstDown(requireUnconsumed=false);first.consume();fire=true
                                 try{do{val event=awaitPointerEvent();val p=event.changes.firstOrNull{it.id==first.id};p?.consume()}while(p?.pressed==true)}finally{fire=false}}},contentAlignment=Alignment.Center){
-                            Text("FUEGO",fontSize=12.sp,fontWeight=FontWeight.Black,color=Color.White)
+                            Text("FIRE",fontSize=15.sp,fontWeight=FontWeight.Black,color=Color.White)
                         }
                     }
                 }
@@ -220,8 +230,8 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
         Row(Modifier.fillMaxWidth().height(52.dp).background(Metal).border(2.dp,Color(0xFF716B61)).padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
             Meter("VIDA",e.hp.toString()+"%",Red)
             Meter("ARMADURA",e.armor.toString()+"%",Color(0xFF83C8C9))
-            DoomFace(e.hp,e.hurtFlash>0f,e.shotFlash>0f,Modifier.size(53.dp,46.dp))
-            Meter(e.weapon.title,e.ammunition.toString(),Gold)
+            DoomFace(e.hp,e.hurtFlash>0f,e.shotFlash>0f,Modifier.size(64.dp,49.dp))
+            TextButton(onClick={change{e.cycleWeapon()}},enabled=!finished&&!paused&&challenge==null,contentPadding=PaddingValues(0.dp)){Meter(e.weapon.title,e.ammunition.toString(),Gold)}
             Meter("FICHAS",e.coins.toString(),Gold)
             Meter("ACCESO",if(e.hasKey)"SI" else "—",Gold)
         }
@@ -253,16 +263,16 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     val latest by rememberUpdatedState(change)
     Canvas(modifier.pointerInput(horizontalOnly){awaitEachGesture{
         val first=awaitFirstDown(requireUnconsumed=false)
-        val center=Offset(size.width/2f,size.height/2f)
-        val radius=min(size.width,size.height)*.42f
-        fun track(p:Offset){val v=(p-center)/radius;val n=v.getDistance().coerceAtLeast(1f);latest(if(horizontalOnly)Offset((v.x/n).coerceIn(-1f,1f),0f)else v/n)}
+        val center=first.position
+        val radius=min(size.width,size.height)*.32f
+        fun track(p:Offset){val v=(p-center)/radius;val d=v.getDistance();val n=d.coerceAtLeast(1f);val result=if(d<.08f)Offset.Zero else v/n;latest(if(horizontalOnly)Offset(result.x,0f)else result)}
         first.consume();track(first.position)
         try{do{val event=awaitPointerEvent();val p=event.changes.firstOrNull{it.id==first.id};if(p?.pressed==true){track(p.position);p.consume()}}while(p?.pressed==true)}finally{latest(Offset.Zero)}
     }}){
         val r=size.minDimension*.46f
-        drawCircle(Dark.copy(alpha=.58f),r)
-        drawCircle(Gold.copy(alpha=.42f),r,style=androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
-        drawCircle(White.copy(alpha=.55f),r*.37f,center+value*r*.63f)
+        drawCircle(Dark.copy(alpha=.32f),r)
+        drawCircle(White.copy(alpha=.32f),r,style=androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+        drawCircle(White.copy(alpha=.44f),r*.32f,center+value*r*.63f)
         if(horizontalOnly){drawLine(White.copy(alpha=.55f),Offset(center.x-r*.78f,center.y),Offset(center.x+r*.78f,center.y),2.dp.toPx())}
     }
 }
@@ -285,17 +295,9 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     }
 }
 @Composable private fun DoomFace(hp:Int,hurt:Boolean,fire:Boolean,modifier:Modifier){
-    Canvas(modifier.background(Color(0xFF232224))){
-        val sx=size.width/32f;val sy=size.height/32f
-        fun b(x:Int,y:Int,w:Int,h:Int,c:Long){drawRect(Color(c),Offset(x*sx,y*sy),Size(w*sx,h*sy))}
-        b(8,3,16,26,0xFF3F2924);b(6,9,20,15,0xFF9B634A);b(8,5,16,23,0xFFBD8660)
-        b(10,4,12,3,0xFFE6B38B);b(9,8,14,9,0xFFE6B38B);b(10,17,12,9,0xFFD49C73)
-        b(6,14,3,8,0xFFC18A65);b(23,14,3,8,0xFF965B45)
-        b(9,12,6,2,0xFF4D352F);b(17,12,6,2,0xFF4D352F)
-        b(10,14,5,3,0xFFF0E6CD);b(17,14,5,3,0xFFF0E6CD);b(12,14,2,3,0xFF28262A);b(18,14,2,3,0xFF28262A)
-        b(14,16,4,5,0xFFA86F52);b(12,23,8,3,0xFF612E2A)
-        if(fire&&!hurt){b(11,22,10,4,0xFF612E2A);b(12,22,8,2,0xFFFFECD5)}
-        if(hurt||hp<45){b(8,18,2,6,0xFF9D2B26);b(21,9,2,6,0xFF9D2B26)}
-        b(10,28,12,4,0xFF50636A)
+    Box(modifier.clip(RoundedCornerShape(5.dp)).background(if(hurt||hp<35)Color(0xFF502C26)else if(fire)Color(0xFF72532C)else Color(0xFF232224)).border(1.dp,Color(0xFF807367),RoundedCornerShape(5.dp))){
+        Image(painterResource(R.drawable.mascot_mister_pelao),"Don Pelao",Modifier.fillMaxSize(),contentScale=ContentScale.Crop,alignment=Alignment.TopCenter)
+        if(hurt)Box(Modifier.fillMaxSize().background(Color(0x37C01812)))
+        if(hp<35)Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(4.dp).background(Red))
     }
 }

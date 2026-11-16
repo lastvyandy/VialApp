@@ -15,7 +15,7 @@ internal data class DoomLoot(val kind:DoomLootKind,val x:Float,val y:Float,var t
 internal data class DoomBolt(var x:Float,var y:Float,val vx:Float,val vy:Float,val damage:Int,var life:Float=3f)
 internal data class DoomChallenge(val prompt:String,val answers:List<String>,val correct:Int,val explanation:String)
 internal data class DoomDoor(val x:Int,val y:Int,val kind:Int,val question:DoomChallenge?=null,var open:Boolean=false)
-internal data class DoomRay(val distance:Float,val cell:Int,val u:Float,val side:Int)
+internal data class DoomRay(val distance:Float,val cell:Int,val u:Float,val side:Int,val mapX:Int=-1,val mapY:Int=-1)
 internal data class DoomInput(val forward:Float=0f,val strafe:Float=0f,val turn:Float=0f,val fire:Boolean=false)
 internal enum class DoomEvent { SHOT, BLAST, PLASMA, HIT, HURT, COIN, LOOT, DOOR, CORRECT, WRONG, VICTORY, DEFEAT, SECRET }
 internal class DoomEngine(seed:Int=19){
@@ -104,7 +104,7 @@ internal class DoomEngine(seed:Int=19){
             if(ax<ay){d=ax;ax+=ddx;mx+=sx;side=0}else{d=ay;ay+=ddy;my+=sy;side=1}
             val c=cell(mx,my)
             if(c!=0){val u=if(side==0)py+d*dy else px+d*dx
-                return DoomRay(d.coerceAtLeast(.025f),c,u-floor(u),side)}
+                return DoomRay(d.coerceAtLeast(.025f),c,u-floor(u),side,mx,my)}
         }
         return DoomRay(80f,1,0f,0)
     }
@@ -115,15 +115,43 @@ internal class DoomEngine(seed:Int=19){
     fun drainEvents():List<DoomEvent> = events.toList().also{events.clear()}
     private fun tell(s:String){message=s;messageTime=3.5f}
     fun cycleWeapon(){if(finished||pending!=null)return;val available=weapons;weapon=available[(available.indexOf(weapon)+1)%available.size]}
-    fun interact(){
-        if(finished||pending!=null)return
-        val door=doors.filter{!it.open}.minByOrNull{hypot(it.x+.5f-x,it.y+.5f-y)}
-        if(hypot(20.5f-x,13.5f-y)<1.55f){
+    fun look(delta:Float){
+        if(!finished&&pending==null&&delta.isFinite())angle=(angle+delta.coerceIn(-1.2f,1.2f))%(2*PI.toFloat())
+    }
+    // The screen and interaction use the same camera ray, not the nearest door behind the player.
+    fun screenRay(horizontal:Float):DoomRay {
+        val c=cos(angle);val s=sin(angle);val p=horizontal.coerceIn(-1f,1f)*.66f
+        return ray(x,y,c-s*p,s+c*p)
+    }
+    fun targetHint(horizontal:Float=0f):String?{
+        val hit=screenRay(horizontal)
+        if(hit.distance>1.7f)return null
+        if(hit.cell==6)return if(bossAlive)"NÚCLEO ACTIVO" else "TOCA PARA SALIR"
+        if(hit.cell!=5)return null
+        val door=doors.firstOrNull{!it.open&&it.x==hit.mapX&&it.y==hit.mapY}?:return null
+        return when{door.kind==2&&!hasKey->"REQUIERE CREDENCIAL";door.question!=null->"TOCA EL TERMINAL";else->"TOCA PARA ABRIR"}
+    }
+    fun touchInteract(horizontal:Float):Boolean{
+        if(finished||pending!=null)return false
+        val hit=screenRay(horizontal)
+        if(hit.distance>1.7f)return false
+        if(hit.cell==6){interactExit();return true}
+        val door=doors.firstOrNull{!it.open&&it.x==hit.mapX&&it.y==hit.mapY&&hit.cell==5}?:return false
+        openDoor(door);return true
+    }
+    private fun interactExit(){
             if(bossAlive)tell("Carvier: Destruye el núcleo antes de salir.")
             else{won=true;events+=DoomEvent.VICTORY;tell("¡Sector recuperado!")}
-            return
-        }
+    }
+    // Accessible fallback, also used in the deterministic progression test.
+    fun interact(){
+        if(finished||pending!=null)return
+        if(hypot(20.5f-x,13.5f-y)<1.55f){interactExit();return}
+        val door=doors.filter{!it.open}.minByOrNull{hypot(it.x+.5f-x,it.y+.5f-y)}
         if(door==null||hypot(door.x+.5f-x,door.y+.5f-y)>1.6f){tell("Acércate a una puerta o terminal.");return}
+        openDoor(door)
+    }
+    private fun openDoor(door:DoomDoor){
         if(door.kind==2&&!hasKey){tell("Se necesita la credencial de acceso.");return}
         if(door.question!=null){pending=door;return}
         door.open=true;events+=DoomEvent.DOOR;tell("Acceso abierto.")
@@ -179,7 +207,7 @@ internal class DoomEngine(seed:Int=19){
         fireCooldown=(fireCooldown-d).coerceAtLeast(0f);shotFlash=(shotFlash-d).coerceAtLeast(0f);hurtFlash=(hurtFlash-d).coerceAtLeast(0f);messageTime=(messageTime-d).coerceAtLeast(0f)
         angle=(angle+input.turn.coerceIn(-1f,1f)*2.65f*d)%(2*PI.toFloat())
         val f=input.forward.coerceIn(-1f,1f);val s=input.strafe.coerceIn(-1f,1f);val norm=hypot(f,s).coerceAtLeast(1f)
-        val dx=(cos(angle)*f-sin(angle)*s)*d*2.8f/norm;val dy=(sin(angle)*f+cos(angle)*s)*d*2.8f/norm
+        val dx=(cos(angle)*f-sin(angle)*s)*d*3.3f/norm;val dy=(sin(angle)*f+cos(angle)*s)*d*3.3f/norm
         if(!solid(x+dx,y)&&enemies.none{it.hp>0&&hypot(it.x-x-dx,it.y-y)<.36f})x+=dx
         if(!solid(x,y+dy)&&enemies.none{it.hp>0&&hypot(it.x-x,it.y-y-dy)<.36f})y+=dy
         if(abs(dx)+abs(dy)>.001f)walk+=d*9f
