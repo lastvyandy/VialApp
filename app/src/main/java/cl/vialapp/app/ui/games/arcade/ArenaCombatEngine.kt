@@ -3,7 +3,7 @@ package cl.vialapp.app.ui.games.arcade
 import kotlin.math.abs
 import kotlin.random.Random
 
-internal enum class ArenaPhase { APPROACH, WINDUP, STRIKE, RECOVER, ROUND_CLEAR, SHIELD_BREAK, KNOWLEDGE }
+internal enum class ArenaPhase { APPROACH, WINDUP, STRIKE, RECOVER, ROUND_CLEAR, SHIELD_BREAK, KNOWLEDGE, ANSWER_IMPACT }
 internal enum class ArenaMove(val windup:Float,val lock:Float,val range:Float,val damage:Int){
     JAB(.055f,.26f,.235f,12), HEAVY(.14f,.43f,.30f,20), SPECIAL(.24f,.72f,.72f,42)
 }
@@ -12,7 +12,7 @@ internal enum class RivalAttack(val damage:Int,val tell:Float,val range:Float){
 }
 internal data class ArenaCombatFrame(
     override val elapsed:Float=0f,override val score:Int=0,
-    val hp:Int=100,val rivalHp:Int=200,val rival:Int=1,
+    val hp:Int=100,val rivalHp:Int=320,val rival:Int=1,
     val playerX:Float=.28f,val rivalX:Float=.72f,
     val phase:ArenaPhase=ArenaPhase.APPROACH,val phaseTime:Float=.40f,
     val attack:RivalAttack=RivalAttack.QUICK,val attackNumber:Int=0,
@@ -30,12 +30,16 @@ internal data class ArenaCombatFrame(
     val moveIntent:Int=0,val inputTtl:Float=0f,val velocity:Float=0f,
     val rivalStun:Float=0f,val defendFlash:Float=0f,val dashDir:Int=-1,
     val lastImpact:ArenaMove?=null,
+    val answerApplied:Boolean=false,
     override val message:String="Acércate y golpea."
 ):ArcadeFrame{
-    val rivalMax:Int get()=when(rival){1->200;2->250;else->300}
+    val rivalMax:Int get()=when(rival){1->320;2->400;else->480}
+    val answerCorrect:Boolean get()=selected>=0&&question?.correct==selected
+    val answerProgress:Float get()=if(phase==ArenaPhase.ANSWER_IMPACT)(1f-phaseTime/ArenaCombatEngine.ANSWER_TIME).coerceIn(0f,1f)else 0f
+    val isCinematic:Boolean get()=phase==ArenaPhase.SHIELD_BREAK||phase==ArenaPhase.ANSWER_IMPACT||phase==ArenaPhase.ROUND_CLEAR
     val distance:Float get()=abs(rivalX-playerX)
     val jumpHeight:Float get()=if(jump>0f)kotlin.math.sin(jump/ArenaCombatEngine.JUMP_TIME*3.1415927f).coerceAtLeast(0f) else 0f
-    override val finished get()=hp<=0||rival>3||elapsed>=ArenaCombatEngine.TIME
+    override val finished get()=phase!=ArenaPhase.ANSWER_IMPACT&&(hp<=0||rival>3||elapsed>=ArenaCombatEngine.TIME)
     override val won get()=rival>3&&hp>0
     override val health get()="$hp HP"
     override val detail get()="${(rival-1).coerceIn(0,3)}/3 rivales · $knowledgeCorrect/6 escudos · $knowledgeMissed errores · combo ×$bestCombo"
@@ -61,23 +65,23 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
     }
     override fun snapshot()=s
     override fun act(action:Int):ArenaCombatFrame{
-        if(s.finished||s.phase==ArenaPhase.ROUND_CLEAR||s.phase==ArenaPhase.SHIELD_BREAK)return s
+        if(s.finished||s.isCinematic)return s
         if(s.phase==ArenaPhase.KNOWLEDGE){
             val q=s.question ?: return s
             if(action in 20..22 && s.selected<0){
                 val index=action-20
-                s=if(index==q.correct){
-                    val damage=s.rivalMax/5
-                    s.copy(selected=index,shieldsBroken=s.shieldsBroken+1,knowledgeCorrect=s.knowledgeCorrect+1,
-                        shieldDamage=s.shieldDamage+damage,rivalHp=(s.rivalHp-damage).coerceAtLeast(1),
-                        power=(s.power+25).coerceAtMost(100),score=s.score+damage*5+100,
-                        message="¡Escudo roto! +25 de energía")
-                }else s.copy(selected=index,knowledgeMissed=s.knowledgeMissed+1,hp=(s.hp-8).coerceAtLeast(0),combo=0,
-                    message="El escudo resiste. −8 HP")
-            }else if(action==23&&s.selected>=0){
-                s=if(s.selected==q.correct)s.copy(phase=ArenaPhase.RECOVER,phaseTime=1.2f,
-                    question=null,selected=-1,lock=0f,move=null,hitIn=0f,queued=-1,chainTime=0f,combo=0,jump=0f,message="¡Contraataca!")
-                else s.copy(question=nextQuestion(),selected=-1,message="Intenta otro desafío")
+                // Select exactly once, then show the consequence on the stage.
+                // Damage is committed by the cinematic's impact frame, not this input.
+                s=s.copy(selected=index,phase=ArenaPhase.ANSWER_IMPACT,phaseTime=ANSWER_TIME,
+                    answerApplied=false,move=null,hitIn=0f,lock=0f,guard=0f,evade=0f,jump=0f,
+                    queued=-1,moveIntent=0,inputTtl=0f,velocity=0f,walk=0f,rivalStun=0f,
+                    impact=0f,playerImpact=0f,comboFlash=0f,counterFlash=0f,defendFlash=0f,intro=0f,
+                    message=if(index==q.correct)"¡Respuesta correcta!" else "Respuesta incorrecta")
+            }else if(action==23&&s.selected>=0&&s.answerApplied){
+                s=if(s.answerCorrect)s.copy(phase=ArenaPhase.RECOVER,phaseTime=1.35f,
+                    question=null,selected=-1,answerApplied=false,lock=0f,move=null,hitIn=0f,
+                    queued=-1,chainTime=0f,combo=0,jump=0f,rivalStun=.42f,message="¡Guardia abierta! Ataca")
+                else s.copy(question=nextQuestion(),selected=-1,answerApplied=false,message="Intenta otro desafío")
             }
             return s
         }
@@ -122,6 +126,24 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
         if(s.finished||dt<=0f||s.phase==ArenaPhase.KNOWLEDGE)return s
         val d=dt.coerceAtMost(.05f)
         if(s.freeze>0f){s=s.copy(freeze=(s.freeze-d).coerceAtLeast(0f));return s}
+        if(s.phase==ArenaPhase.ANSWER_IMPACT){
+            val left=(s.phaseTime-d).coerceAtLeast(0f)
+            var f=s.copy(phaseTime=left)
+            if(!f.answerApplied&&left<=ANSWER_TIME*.55f){
+                f=if(f.answerCorrect){
+                    val damage=f.rivalMax/5
+                    f.copy(answerApplied=true,shieldsBroken=f.shieldsBroken+1,knowledgeCorrect=f.knowledgeCorrect+1,
+                        shieldDamage=f.shieldDamage+damage,rivalHp=(f.rivalHp-damage).coerceAtLeast(1),
+                        power=(f.power+25).coerceAtMost(100),score=f.score+damage*3+100,
+                        damage=damage,lastImpact=ArenaMove.SPECIAL,message="¡Escudo destruido!")
+                }else f.copy(answerApplied=true,knowledgeMissed=f.knowledgeMissed+1,
+                    hp=(f.hp-8).coerceAtLeast(0),combo=0,chainTime=0f,lastHit=null,
+                    message="El escudo resiste. −8 HP")
+            }
+            if(left<=0f)f=f.copy(phase=ArenaPhase.KNOWLEDGE,phaseTime=0f)
+            s=f
+            return s
+        }
         if(s.phase==ArenaPhase.SHIELD_BREAK){
             val left=(s.phaseTime-d).coerceAtLeast(0f)
             s=s.copy(phaseTime=left,impact=(s.impact-d).coerceAtLeast(0f),phase=if(left==0f)ArenaPhase.KNOWLEDGE else ArenaPhase.SHIELD_BREAK)
@@ -161,19 +183,19 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
                 val threshold=when(f.shieldsBroken){0->f.rivalMax*4/5;1->f.rivalMax*2/5;else->0}
                 val dealt=minOf(damage,(f.rivalHp-threshold).coerceAtLeast(0))
                 val combo=f.combo+1
-                f=f.copy(rivalHp=f.rivalHp-dealt,score=f.score+dealt*5+combo.coerceAtMost(8)*8,
+                f=f.copy(rivalHp=f.rivalHp-dealt,score=f.score+dealt*3+combo.coerceAtMost(8)*8,
                     combo=combo,bestCombo=maxOf(f.bestCombo,combo),chainTime=1.15f,lastHit=m,comboFlash=if(combo>=2).65f else 0f,counterFlash=if(counter).55f else 0f,power=(f.power+if(m==ArenaMove.SPECIAL)0 else 10).coerceAtMost(100),
                     impact=.30f,freeze=if(m==ArenaMove.SPECIAL).12f else if(m==ArenaMove.HEAVY).08f else .045f,damage=dealt,lastImpact=m,rivalStun=if(m==ArenaMove.SPECIAL).36f else if(m==ArenaMove.HEAVY).20f else .12f,message=when{armored->"¡Guardia del rival!";chained->"¡COMBO!";counter->"¡COUNTER!";else->"¡Impacto!"})
                 if(f.shieldsBroken<2&&f.rivalHp==threshold){
-                    s=f.copy(phase=ArenaPhase.SHIELD_BREAK,phaseTime=.62f,question=nextQuestion(),selected=-1,move=null,hitIn=0f,lock=0f,
+                    s=f.copy(phase=ArenaPhase.SHIELD_BREAK,phaseTime=.62f,question=nextQuestion(),selected=-1,answerApplied=false,move=null,hitIn=0f,lock=0f,
                         guard=0f,evade=0f,freeze=0f,queued=-1,jump=0f,walk=0f,moveIntent=0,inputTtl=0f,velocity=0f,message="¡Escudo de conocimiento!")
                     return s
                 }
                 if(f.rivalHp<=0){
                     if(f.rival==3){s=f.copy(rival=4,score=f.score+700,message="¡Campeón!");return s}
-                    s=f.copy(phase=ArenaPhase.ROUND_CLEAR,phaseTime=1.15f,queued=-1,jump=0f,walk=0f,score=f.score+350,message="¡KO! +15 HP");return s
+                    s=f.copy(phase=ArenaPhase.ROUND_CLEAR,phaseTime=1.15f,queued=-1,jump=0f,walk=0f,score=f.score+350,message="¡KO! Recuperas hasta 20 HP");return s
                 }
-                if(f.phase==ArenaPhase.WINDUP && f.phaseTime>.14f && (m==ArenaMove.HEAVY||m==ArenaMove.SPECIAL))f=f.copy(phase=ArenaPhase.RECOVER,phaseTime=.28f,attackNumber=f.attackNumber+1)
+                if(f.phase==ArenaPhase.WINDUP && f.phaseTime>.14f && (m==ArenaMove.SPECIAL||m==ArenaMove.HEAVY&&(old.lastHit!=ArenaMove.HEAVY||old.chainTime<=0f)))f=f.copy(phase=ArenaPhase.RECOVER,phaseTime=.28f,attackNumber=f.attackNumber+1)
                 else if(f.phase==ArenaPhase.RECOVER)f=f.copy(phaseTime=maxOf(f.phaseTime,.16f))
                 if(m!=ArenaMove.JAB)f=f.copy(rivalX=(f.rivalX+if(m==ArenaMove.SPECIAL).055f else .025f).coerceAtMost(.87f))
             }else f=f.copy(combo=0,chainTime=0f,lastHit=null,message="Fuera de alcance")
@@ -196,20 +218,21 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
                 val blocked=!avoided&&f.guard>0f&&attack!=RivalAttack.CHARGE
                 if(avoided)f=f.copy(dodges=f.dodges+1,power=(f.power+18).coerceAtMost(100),
                     score=f.score+75,defendFlash=.48f,message="¡Esquiva perfecta!")
-                else if(blocked)f=f.copy(power=(f.power+14).coerceAtMost(100),score=f.score+45,defendFlash=.48f,rivalStun=.26f,phaseTime=.22f,message="¡Bloqueo!")
+                else if(blocked)f=f.copy(power=(f.power+14).coerceAtMost(100),score=f.score+45,defendFlash=.48f,rivalStun=.26f,guard=0f,lock=0f,message="¡Bloqueo! Contraataca")
                 else f=f.copy(hp=(f.hp-attack.damage).coerceAtLeast(0),playerImpact=.34f,combo=0,
                     playerX=(f.playerX-.055f).coerceAtLeast(.12f),freeze=.09f,move=null,hitIn=0f,lock=.26f,queued=-1,jump=0f,walk=0f,chainTime=0f,lastHit=null,
                     message="−"+attack.damage+" HP")
-                f=f.copy(phase=ArenaPhase.STRIKE,phaseTime=.15f,attackNumber=f.attackNumber+1)
+                f=f.copy(phase=ArenaPhase.STRIKE,phaseTime=.17f,attackNumber=f.attackNumber+1,
+                    rivalX=if(attack==RivalAttack.CHARGE&&inRange)(f.rivalX-.065f).coerceAtLeast(f.playerX+.19f) else f.rivalX)
             }
             ArenaPhase.STRIKE->if(f.phaseTime<=0f)f=f.copy(phase=ArenaPhase.RECOVER,
                 phaseTime=if(f.attack==RivalAttack.CHARGE).88f else .51f,message=if(f.playerImpact>0f)f.message else "¡Contraataca!")
             ArenaPhase.RECOVER->if(f.phaseTime<=0f)f=f.copy(phase=ArenaPhase.APPROACH,phaseTime=.24f)
-            ArenaPhase.SHIELD_BREAK,ArenaPhase.KNOWLEDGE->Unit
+            ArenaPhase.SHIELD_BREAK,ArenaPhase.KNOWLEDGE,ArenaPhase.ANSWER_IMPACT->Unit
             ArenaPhase.ROUND_CLEAR->if(f.phaseTime<=0f){
                 val rival=f.rival+1
                 questions=ArenaQuestions.forRival(rival,random);questionIndex=0
-                f=f.copy(shieldsBroken=0,question=null,selected=-1,rival=rival,rivalHp=if(rival==2)250 else 300,hp=(f.hp+15).coerceAtMost(100),
+                f=f.copy(shieldsBroken=0,question=null,selected=-1,answerApplied=false,rival=rival,rivalHp=if(rival==2)400 else 480,hp=(f.hp+20).coerceAtMost(100),
                     playerX=.24f,rivalX=.76f,phase=ArenaPhase.APPROACH,phaseTime=.8f,attackNumber=0,
                     move=null,lock=0f,hitIn=0f,guard=0f,evade=0f,evadeLock=0f,combo=0,queued=-1,chainTime=0f,lastHit=null,jump=0f,walk=0f,intro=.95f,moveIntent=0,inputTtl=0f,velocity=0f,rivalStun=0f,defendFlash=0f,lastImpact=null,message="¡Nuevo rival!")
             }
@@ -220,5 +243,5 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
         }
         return s
     }
-    companion object{const val TIME=150f;const val JUMP_TIME=.72f}
+    companion object{const val TIME=210f;const val JUMP_TIME=.72f;const val ANSWER_TIME=1.35f}
 }

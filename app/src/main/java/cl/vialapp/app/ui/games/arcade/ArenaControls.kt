@@ -31,7 +31,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 internal fun ArenaControls(f:ArenaCombatFrame,enabled:Boolean,act:(Int)->Unit,sound:Boolean,onToggleSound:()->Unit){
-    val ready=enabled&&f.phase!=ArenaPhase.ROUND_CLEAR&&f.phase!=ArenaPhase.SHIELD_BREAK
+    val ready=enabled&&!f.isCinematic&&f.phase!=ArenaPhase.KNOWLEDGE
     val attackReady=ready
     Row(Modifier.fillMaxWidth().background(Color(0xFF101823),RoundedCornerShape(12.dp))
         .padding(horizontal=10.dp,vertical=5.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){

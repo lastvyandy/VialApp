@@ -1,6 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +43,8 @@ fun PelaoArenaScreen(userKey:String,onBack:()->Unit){
             if(enabled&&sound&&old!=null&&f.elapsed>=old.elapsed){
                 when{
                     f.phase==ArenaPhase.SHIELD_BREAK&&old.phase!=f.phase->audio?.play("shield")
+                    f.phase==ArenaPhase.ANSWER_IMPACT&&old.phase!=f.phase&&f.answerCorrect->audio?.play("power")
+                    f.phase==ArenaPhase.ANSWER_IMPACT&&f.answerApplied&&!old.answerApplied->audio?.play(if(f.answerCorrect)"shield" else "heavy")
                     f.move==ArenaMove.SPECIAL&&old.move!=f.move->audio?.play("power")
                     f.defendFlash>0f&&f.score>old.score->audio?.play("block")
                     f.hp<old.hp->audio?.play("heavy")
@@ -52,7 +56,7 @@ fun PelaoArenaScreen(userKey:String,onBack:()->Unit){
     }
     ArcadeSession(userKey=userKey,gameId=GameProgressStore.PELAO_ARENA,title="Don Pelao Arena",
         subtitle="Arcade de combate · tres rondas · seis escudos",
-        rules="Mantén el mando para moverte. Combina puños y patadas, salta para evitar barridos y usa el dash para esquivar. Encadena ataques en menos de un segundo; puedes preparar el siguiente golpe antes de terminar el actual. El especial lanza una onda al 100% de energía. Dos escudos educativos por rival: responde para romperlos. El cronómetro se detiene durante cada desafío.",
+        rules="Mantén el mando para moverte. Combina puños y patadas, salta para evitar barridos y usa el dash para esquivar. Encadena ataques en menos de un segundo; puedes preparar el siguiente golpe antes de terminar el actual. El especial lanza una onda al 100% de energía. Dos escudos educativos por rival: responde para romperlos. Al responder verás el resultado en la arena. El cronómetro se detiene durante los desafíos y las animaciones de respuesta.",
         duration=ArenaCombatEngine.TIME,create={ArenaCombatEngine()},onBack=onBack,showPlayMessages=false,compactCombatHud=true,
         scene={f,m,enabled,act->
             Feedback(f,enabled)
@@ -72,7 +76,7 @@ private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
         verticalArrangement=Arrangement.spacedBy(7.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
             CombatHealth("DON PELAO",f.hp,100,Color(0xFF73E0AC),Modifier.weight(1f))
-            CombatHealth(name,f.rivalHp,f.rivalMax,ink,Modifier.weight(1f))
+            key(f.rival){CombatHealth(name,f.rivalHp,f.rivalMax,ink,Modifier.weight(1f),2-f.shieldsBroken)}
         }
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){
             Text("RIVAL "+f.rival.coerceAtMost(3)+"/3 · ESCUDOS "+(2-f.shieldsBroken),color=Color(0xFFBCD2EF),fontSize=11.sp,fontWeight=FontWeight.Bold)
@@ -92,12 +96,21 @@ private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
                 }
                 val unit=minOf(w/330f,h/260f)
                 val shake=if(f.impact>0f)sin(f.impact*56f)*(f.impact/.30f)*unit*4f else 0f
-                val cx=w*f.rivalX+shake
+                val answer=f.phase==ArenaPhase.ANSWER_IMPACT
+                val p=f.answerProgress
+                val correct=f.answerCorrect
+                val rush=if(answer&&!correct)sin((p/.45f).coerceIn(0f,1f)*1.5707963f)*(1f-((p-.45f)/.55f).coerceIn(0f,1f)) else 0f
+                val recoilBeat=if(answer&&p>.45f)sin(((p-.45f)/.55f).coerceIn(0f,1f)*3.1415927f) else 0f
+                val cx=w*f.rivalX+shake+(if(answer&&correct)recoilBeat*unit*17f else -rush*minOf(w*.10f,f.distance*w*.35f))
                 val cy=floor
                 val lift=f.jumpHeight*minOf(h*.16f,w*.15f)
                 val px=w*f.playerX
-                val recoil=if(f.playerImpact>0f)sin(f.playerImpact*40f)*4f*unit else 0f
-                translate(cx,cy){scale(unit,unit,pivot=Offset.Zero){drawArenaRival(f,ink)}}
+                val recoil=if(answer&&!correct)-recoilBeat*unit*16f else if(f.playerImpact>0f)sin(f.playerImpact*40f)*4f*unit else 0f
+                val enemyPose=if(answer){
+                    if(correct)f.copy(rivalStun=if(p>.45f)recoilBeat*.36f else 0f)
+                    else f.copy(phase=if(p<.32f)ArenaPhase.WINDUP else if(p<.66f)ArenaPhase.STRIKE else ArenaPhase.RECOVER,rivalStun=0f,attack=RivalAttack.CHARGE)
+                }else f
+                translate(cx,cy){scale(unit,unit,pivot=Offset.Zero){drawArenaRival(enemyPose,ink)}}
                 if(f.phase==ArenaPhase.SHIELD_BREAK){
                     val p=(1f-f.phaseTime/.62f).coerceIn(0f,1f)
                     val radius=(45f+65f*p)*unit
@@ -109,7 +122,12 @@ private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
                     val trail=Color(0xFF8EDBFF).copy(alpha=.28f*(f.evade/.44f).coerceIn(0f,1f))
                     repeat(3){i->drawLine(trail,Offset(px+(i+1)*14f*unit,cy-(68f+i*24f)*unit),Offset(px+(i+4)*25f*unit,cy-(68f+i*24f)*unit),4f*unit,StrokeCap.Round)}
                 }
-                translate(px+recoil,cy-lift){scale(unit,unit,pivot=Offset.Zero){drawPelao(f)}}
+                val playerPose=if(answer){
+                    if(correct)f.copy(move=ArenaMove.SPECIAL,lock=(ArenaMove.SPECIAL.lock-p*.90f).coerceAtLeast(0f))
+                    else f.copy(playerImpact=recoilBeat*.34f)
+                }else f
+                translate(px+recoil,cy-lift){scale(unit,unit,pivot=Offset.Zero){drawPelao(playerPose)}}
+                if(answer)drawArenaAnswerEffect(correct,p,Offset(px,cy-108f*unit),Offset(cx,cy-106f*unit),unit)
                 if(f.move==ArenaMove.SPECIAL&&f.hitIn>0f){
                     val fraction=(1f-f.hitIn/ArenaMove.SPECIAL.windup).coerceIn(0f,1f)
                     val travel=minOf(f.distance,ArenaMove.SPECIAL.range)*w*fraction
@@ -133,17 +151,25 @@ private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
                 }
             }
             if(f.phase==ArenaPhase.SHIELD_BREAK)Text("¡ROMPE EL ESCUDO!",Modifier.align(Alignment.TopCenter).padding(top=12.dp),fontSize=24.sp,color=Color(0xFFBEF4FF),fontWeight=FontWeight.ExtraBold)
+            else if(f.phase==ArenaPhase.ANSWER_IMPACT){
+                val success=f.answerCorrect
+                val tint=if(success)Color(0xFF73F0BB)else Color(0xFFFF9395)
+                Column(Modifier.align(Alignment.TopCenter).padding(top=12.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                    Text(if(success)"¡CORRECTO!" else "¡CONTRAATAQUE!",fontSize=25.sp,color=tint,fontWeight=FontWeight.ExtraBold)
+                    Text(if(!f.answerApplied)if(success)"Rompiendo el escudo..." else "El escudo resiste..." else if(success)"−"+f.damage+" HP · +25 ENERGÍA" else "−8 HP",fontSize=14.sp,color=Color.White,fontWeight=FontWeight.Bold)
+                }
+            }
             else if(tell)Surface(Modifier.align(Alignment.TopCenter).padding(5.dp),color=if(heavy)Color(0xFF9B2730)else Color(0xFF775522),shape=RoundedCornerShape(10.dp)){
                 Column(Modifier.widthIn(max=230.dp).padding(horizontal=12.dp,vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally){
                     Text(if(heavy)"CARGA · ESQUIVA" else if(f.attack==RivalAttack.SWEEP)"BARRIDO · SALTA O BLOQUEA" else "GOLPE · BLOQUEA",color=Color.White,fontWeight=FontWeight.ExtraBold,fontSize=12.sp)
                     LinearProgressIndicator(progress={1f-(f.phaseTime/f.attack.tell).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth().height(4.dp),color=Color.White,trackColor=Color.White.copy(alpha=.2f))
                 }
             }else if(f.phase==ArenaPhase.ROUND_CLEAR)Text("¡KO!",Modifier.align(Alignment.Center),fontSize=44.sp,color=Color(0xFFFDE68A),fontWeight=FontWeight.ExtraBold)
-            if(f.intro>0f&&!tell)Text(if(f.intro>.45f)"RONDA "+f.rival else "¡PELEA!",Modifier.align(Alignment.TopCenter).padding(top=12.dp),fontSize=28.sp,color=Color(0xFFFFD477),fontWeight=FontWeight.ExtraBold)
-            if(f.comboFlash>0f&&f.combo>=2)Text(f.combo.toString()+" GOLPES",Modifier.align(Alignment.CenterStart).padding(8.dp),fontSize=25.sp,color=Color(0xFFFFD477),fontWeight=FontWeight.ExtraBold)
-            if(f.defendFlash>0f)Text("¡DEFENSA!",Modifier.align(Alignment.BottomCenter).padding(bottom=15.dp),fontSize=18.sp,color=Color(0xFFBAFCE1),fontWeight=FontWeight.ExtraBold)
-            else if(f.counterFlash>0f)Text("COUNTER",Modifier.align(Alignment.BottomCenter).padding(bottom=15.dp),fontSize=18.sp,color=Color(0xFFDAF9FF),fontWeight=FontWeight.ExtraBold)
-            if(f.impact>0f)Text("−"+f.damage,Modifier.align(Alignment.CenterEnd).padding(12.dp),color=Color(0xFFFFDA75),fontSize=25.sp,fontWeight=FontWeight.ExtraBold)
+            if(f.intro>0f&&!tell&&!f.isCinematic)Text(if(f.intro>.45f)"RONDA "+f.rival else "¡PELEA!",Modifier.align(Alignment.TopCenter).padding(top=12.dp),fontSize=28.sp,color=Color(0xFFFFD477),fontWeight=FontWeight.ExtraBold)
+            if(!f.isCinematic&&f.comboFlash>0f&&f.combo>=2)Text(f.combo.toString()+" GOLPES",Modifier.align(Alignment.CenterStart).padding(8.dp),fontSize=25.sp,color=Color(0xFFFFD477),fontWeight=FontWeight.ExtraBold)
+            if(!f.isCinematic&&f.defendFlash>0f)Text("¡DEFENSA!",Modifier.align(Alignment.BottomCenter).padding(bottom=15.dp),fontSize=18.sp,color=Color(0xFFBAFCE1),fontWeight=FontWeight.ExtraBold)
+            else if(!f.isCinematic&&f.counterFlash>0f)Text("COUNTER",Modifier.align(Alignment.BottomCenter).padding(bottom=15.dp),fontSize=18.sp,color=Color(0xFFDAF9FF),fontWeight=FontWeight.ExtraBold)
+            if(f.impact>0f&&!f.isCinematic)Text("−"+f.damage,Modifier.align(Alignment.CenterEnd).padding(12.dp),color=Color(0xFFFFDA75),fontSize=25.sp,fontWeight=FontWeight.ExtraBold)
         }
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
             Text(f.message,modifier=Modifier.weight(1f),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold,maxLines=1)
@@ -152,10 +178,29 @@ private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
     }
 }
 @Composable
-private fun CombatHealth(name:String,hp:Int,max:Int,color:Color,modifier:Modifier){
+private fun CombatHealth(name:String,hp:Int,max:Int,color:Color,modifier:Modifier,shields:Int=0){
+    val ratio=(hp.toFloat()/max).coerceIn(0f,1f)
+    val current by animateFloatAsState(ratio,tween(180),label="health")
+    val trail by animateFloatAsState(ratio,tween(620),label="damageTrail")
     Column(modifier,verticalArrangement=Arrangement.spacedBy(4.dp)){
-        Text(name+" · "+hp,color=Color(0xFFE5ECF8),fontSize=11.sp,fontWeight=FontWeight.ExtraBold,maxLines=1)
-        LinearProgressIndicator(progress={(hp.toFloat()/max).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth().height(9.dp),color=color,trackColor=Color(0xFF3B4659))
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+            Text(name,modifier=Modifier.weight(1f),color=Color(0xFFE5ECF8),fontSize=10.sp,fontWeight=FontWeight.ExtraBold,maxLines=1)
+            Text(hp.toString(),color=Color.White,fontSize=11.sp,fontWeight=FontWeight.Bold)
+        }
+        Canvas(Modifier.fillMaxWidth().height(12.dp)){
+            val corner=CornerRadius(4.dp.toPx())
+            drawRoundRect(Color(0xFF323D50),cornerRadius=corner)
+            if(trail>0f)drawRoundRect(Color(0xFFF3D18C),size=Size(size.width*maxOf(current,trail),size.height),cornerRadius=corner)
+            if(current>0f)drawRoundRect(Brush.verticalGradient(listOf(color,color.copy(alpha=.64f))),size=Size(size.width*current,size.height),cornerRadius=corner)
+            if(shields>0){
+                // Mark only thresholds that are still ahead of the player.
+                val marks=if(shields==2)listOf(.8f,.4f)else listOf(.4f)
+                for(mark in marks){
+                    val x=size.width*mark
+                    drawLine(Color.White,Offset(x,0f),Offset(x,size.height),2.dp.toPx())
+                }
+            }
+        }
     }
 }
 
@@ -176,16 +221,17 @@ private fun DrawScope.drawArenaRival(f:ArenaCombatFrame,armor:Color){
             drawLine(dark,b,c,18f,StrokeCap.Round);drawLine(body,b,c,12f,StrokeCap.Round)
             drawCircle(edge,6f,b);drawCircle(dark,12f,c);drawCircle(armor,8f,c)
         }
-        limb(Offset(-17f,-65f),Offset(-24f-step*.55f,-34f),Offset(-32f-step,-9f))
+        if(strike&&f.attack==RivalAttack.SWEEP)limb(Offset(-17f,-65f),Offset(-54f,-32f),Offset(-91f,-13f))
+        else limb(Offset(-17f,-65f),Offset(-24f-step*.55f,-34f),Offset(-32f-step,-9f))
         limb(Offset(17f,-65f),Offset(24f+step*.55f,-32f),Offset(32f+step,-9f))
-        drawRoundRect(dark,Offset(-46f-step,-10f),Size(31f,10f),CornerRadius(4f))
+        drawRoundRect(dark,Offset(if(strike&&f.attack==RivalAttack.SWEEP)-107f else -46f-step,-10f),Size(31f,10f),CornerRadius(4f))
         drawRoundRect(dark,Offset(15f+step,-10f),Size(31f,10f),CornerRadius(4f))
         val x=lean;val yy=-100f+bob
         val chest=Path().apply{moveTo(x-35f,yy-34f);lineTo(x+35f,yy-34f);lineTo(x+26f,yy+25f);lineTo(x-26f,yy+25f);close()}
         drawPath(chest,dark);drawPath(chest,armor.copy(alpha=.90f),style=Stroke(5f))
         drawRoundRect(body,Offset(x-23f,yy-21f),Size(46f,31f),CornerRadius(7f))
         drawCircle(if(tell)Color(0xFFFDE68A) else armor,if(f.rival==3)11f else 8f,Offset(x,yy-5f))
-        val frontHand=when{strike->Offset(x-84f,yy-8f);tell->Offset(x-17f,yy-58f);else->Offset(x-47f,yy-15f)}
+        val frontHand=when{strike&&f.attack==RivalAttack.CHARGE->Offset(x-98f,yy-18f);strike&&f.attack==RivalAttack.SWEEP->Offset(x-49f,yy-30f);strike->Offset(x-84f,yy-8f);tell->Offset(x-17f,yy-58f);else->Offset(x-47f,yy-15f)}
         limb(Offset(x-37f,yy-22f),Offset(x-49f,yy+5f),frontHand)
         limb(Offset(x+35f,yy-22f),Offset(x+46f,yy+4f),Offset(x+39f,yy-16f))
         drawRoundRect(armor,Offset(x-27f,yy-74f),Size(54f,39f),CornerRadius(if(f.rival==3)5f else 11f))
