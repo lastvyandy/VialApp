@@ -266,6 +266,12 @@ fun VialAppNavigation(
     }
 
 
+    fun openGameOrActivity(route:String){
+        // Returning from Rally through its garage shortcut should not stack a second Rally screen.
+        if(navController.previousBackStackEntry?.destination?.route==route)navController.popBackStack()
+        else navController.navigate(route){launchSingleTop=true}
+    }
+
     /*
      * Ocultamos la barra inferior
      * mientras el usuario responde
@@ -548,6 +554,7 @@ fun VialAppNavigation(
                     },
                     onCareer = { navController.navigate("career") },
                     onGarage = { navController.navigate("garage") },
+                    onRally = { openGameOrActivity("games/rally") },
                     onResumeExam = { testId ->
 
                         navController.navigate(
@@ -613,11 +620,11 @@ fun VialAppNavigation(
 
             composable("career") {
                 CareerScreen(user.id, false, onBack = { navController.popBackStack() },
-                    onActivity = { route -> navController.navigate(route) })
+                    onActivity = { route -> openGameOrActivity(route) })
             }
             composable("garage") {
                 CareerScreen(user.id, true, onBack = { navController.popBackStack() },
-                    onActivity = { route -> navController.navigate(route) })
+                    onActivity = { route -> openGameOrActivity(route) })
             }
             composable("games/carvier") {
                 CarvierDriveScreen(userKey = user.id, onBack = { navController.popBackStack() })
@@ -938,7 +945,8 @@ fun VialAppNavigation(
                     licenseClass = user.licenseClass,
                     onPractice = { navigateTopLevel("practice") },
                     onOpenCollection = { navController.navigate("collection") },
-                    onOpenLeague = { navController.navigate("leaderboard/weekly") { launchSingleTop = true } }
+                    onOpenLeague = { navController.navigate("leaderboard/weekly") { launchSingleTop = true } },
+                    onOpenGame = { route -> openGameOrActivity(route) }
                 )
             }
 

@@ -76,7 +76,8 @@ fun HomeScreen(
     onAdaptivePractice: () -> Unit = {},
     onContinueChapter: (String) -> Unit = { onLearningPath() },
     onOfflineStudy: () -> Unit = onLibrary,
-    onLeague: () -> Unit = onProgress
+    onLeague: () -> Unit = onProgress,
+    onRally: () -> Unit = onGames
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -582,6 +583,7 @@ fun HomeScreen(
             Text("Aprende jugando",color=HomeDark,fontSize=21.sp,fontWeight=FontWeight.Bold)
         }
         item { GamesQuickEntry(onClick=onGames) }
+        item { cl.vialapp.app.ui.games.RallyQuickEntry(onClick=onRally) }
         item { CareerShortcuts(onCareer,onGarage) }
 
         item {

@@ -43,3 +43,30 @@ fun GamesQuickEntry(onClick: () -> Unit) {
         }
     }
 }
+
+/** Direct access to the same Rally route from home and career, including its existing unlock gate. */
+@Composable
+fun RallyQuickEntry(onClick:()->Unit,enabled:Boolean=true){
+    val c=MaterialTheme.colorScheme
+    Card(onClick=onClick,enabled=enabled,modifier=Modifier.fillMaxWidth(),
+        shape=RoundedCornerShape(20.dp),border=BorderStroke(1.dp,c.outlineVariant),
+        colors=CardDefaults.cardColors(containerColor=c.surface)){
+        Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(12.dp)){
+            Surface(shape=RoundedCornerShape(15.dp),color=c.tertiaryContainer){
+                Box(Modifier.size(48.dp),contentAlignment=Alignment.Center){
+                    Icon(painterResource(R.drawable.ic_award_wheel),null,
+                        tint=c.onTertiaryContainer,modifier=Modifier.size(28.dp))
+                }
+            }
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){
+                Text("Vial Rally",color=c.onSurface,fontSize=17.sp,fontWeight=FontWeight.Bold)
+                Text("Compite con tu auto del garaje.",color=c.onSurfaceVariant,fontSize=13.sp)
+            }
+            Surface(shape=RoundedCornerShape(12.dp),color=c.tertiaryContainer){
+                Text("Ir a pista",Modifier.padding(horizontal=12.dp,vertical=8.dp),
+                    color=c.onTertiaryContainer,fontSize=12.sp,fontWeight=FontWeight.Bold)
+            }
+        }
+    }
+}

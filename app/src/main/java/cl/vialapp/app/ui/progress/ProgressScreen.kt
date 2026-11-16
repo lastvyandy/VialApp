@@ -47,7 +47,8 @@ fun ProgressScreen(
     onOpenCollection: () -> Unit = {},
     licenseClass: String? = null,
     onPractice: () -> Unit = {},
-    onOpenLeague: () -> Unit = {}
+    onOpenLeague: () -> Unit = {},
+    onOpenGame: ((String) -> Unit)? = null
 ) {
 
     val context =
@@ -157,7 +158,7 @@ fun ProgressScreen(
 
 
         error.isNotEmpty() || stats == null || stats?.summary?.hasData != true -> {
-            EmptyProgressState(userKey, licenseClass, onPractice, onOpenCollection, error, onOpenLeague)
+            EmptyProgressState(userKey, licenseClass, onPractice, onOpenCollection, error, onOpenLeague, onOpenGame)
         }
 
 
@@ -170,7 +171,8 @@ fun ProgressScreen(
                 onOpenCollection = onOpenCollection,
                 licenseClass = licenseClass,
                 onPractice = onPractice,
-                onOpenLeague = onOpenLeague
+                onOpenLeague = onOpenLeague,
+                onOpenGame = onOpenGame
             )
         }
     }
@@ -185,7 +187,8 @@ private fun ProgressContent(
     onOpenCollection: () -> Unit,
     licenseClass: String?,
     onPractice: () -> Unit,
-    onOpenLeague: () -> Unit
+    onOpenLeague: () -> Unit,
+    onOpenGame: ((String) -> Unit)?
 ) {
 
     val summary =
@@ -276,7 +279,8 @@ private fun ProgressContent(
 
         item {
             ProgressGamificationSection(
-                userKey = userKey
+                userKey = userKey,
+                onOpenGame = onOpenGame
             )
         }
 
@@ -1195,7 +1199,8 @@ private fun EmptyProgressState(
     onPractice: () -> Unit,
     onOpenCollection: () -> Unit,
     error: String,
-    onOpenLeague: () -> Unit
+    onOpenLeague: () -> Unit,
+    onOpenGame: ((String) -> Unit)?
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(ProgressBackground),
@@ -1209,7 +1214,7 @@ private fun EmptyProgressState(
         item { ReadinessCard(userKey, licenseClass, onPractice) }
         item { LeagueEntry(onClick=onOpenLeague) }
         item { CollectionEntryCard(onClick = onOpenCollection) }
-        item { ProgressGamificationSection(userKey = userKey) }
+        item { ProgressGamificationSection(userKey = userKey,onOpenGame=onOpenGame) }
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),

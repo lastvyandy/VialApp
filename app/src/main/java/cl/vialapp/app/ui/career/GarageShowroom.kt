@@ -37,7 +37,7 @@ private val gold=Color(0xFFFFD88C)
 @Composable
 internal fun GarageShowroom(data:CareerState,enabled:Boolean,
     onAction:(String,String)->Unit,onPurchase:(String,String,String,Int)->Unit,
-    onDrive:()->Unit) {
+    onDrive:()->Unit,onRally:()->Unit) {
     val c=MaterialTheme.colorScheme
     var carId by rememberSaveable { mutableStateOf(data.equippedVehicle) }
     var paintId by rememberSaveable { mutableStateOf(data.equippedPaint) }
@@ -211,8 +211,11 @@ internal fun GarageShowroom(data:CareerState,enabled:Boolean,
                 }
                 Text((activeVehicle?.name?:"Compacto")+" · "+(activePaint?.name?:"Azul Vial"),color=c.onPrimaryContainer,fontWeight=FontWeight.SemiBold)
                 if(!previewIsActive) Text("Estás viendo una vista previa. En pista usarás el vehículo, la pintura y los accesorios equipados.",color=c.onPrimaryContainer,fontSize=12.sp)
-                Button(onClick=onDrive,enabled=enabled,modifier=Modifier.fillMaxWidth().heightIn(min=50.dp),
-                    shape=RoundedCornerShape(14.dp)){Text("Conducir en Carvier al volante",fontWeight=FontWeight.Bold)}
+                Button(onClick=onRally,enabled=enabled,modifier=Modifier.fillMaxWidth().heightIn(min=50.dp),
+                    shape=RoundedCornerShape(14.dp)){Text("Correr en Vial Rally",fontWeight=FontWeight.Bold)}
+                Text("Compite con tu vehículo equipado. Requiere licencia de competición.",fontSize=12.sp,color=c.onPrimaryContainer)
+                OutlinedButton(onClick=onDrive,enabled=enabled,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                    shape=RoundedCornerShape(14.dp)){Text("Carvier al volante",fontWeight=FontWeight.SemiBold)}
             }
         }
     }

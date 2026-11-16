@@ -132,6 +132,9 @@ fun CareerScreen(userKey:String, initiallyGarage:Boolean,onBack:()->Unit,onActiv
                 else OutlinedButton(onClick={garage=true},modifier=Modifier.weight(1f)){Text("Garaje")}
             }
         }
+        item(key="rally_entry") {
+            cl.vialapp.app.ui.games.RallyQuickEntry(onClick={onActivity("games/rally")},enabled=!busy)
+        }
         if(loading || busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         if(error.isNotBlank()) item {
             Surface(color=c.errorContainer,shape=RoundedCornerShape(14.dp)) {
@@ -158,7 +161,7 @@ fun CareerScreen(userKey:String, initiallyGarage:Boolean,onBack:()->Unit,onActiv
                     GarageShowroom(data,!busy&&!loading,
                         onAction={action,id->act(action,id)},
                         onPurchase={action,id,name,price->pending=PendingPurchase(action,id,name,price)},
-                        onDrive={onActivity("games/carvier")})
+                        onDrive={onActivity("games/carvier")},onRally={onActivity("games/rally")})
                 }
             }
             item { Text("Monedas virtuales sin valor monetario. Los vehículos y pinturas son cosméticos y no otorgan ventajas.",color=c.onSurfaceVariant,fontSize=12.sp) }
