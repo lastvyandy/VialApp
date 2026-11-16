@@ -36,7 +36,7 @@ private val glyphs=mapOf(
     'K' to "11011/11011/11110/11100/11110/11011/11011",
     'L' to "11000/11000/11000/11000/11000/11000/11111",
     'M' to "11011/11111/11111/11011/11011/11011/11011",
-    'N' to "11011/11111/11111/11011/11011/11011/11011",
+    'N' to "11011/11011/11111/11111/11011/11011/11011",
     'O' to "01110/11011/11011/11011/11011/11011/01110",
     'P' to "11110/11011/11011/11110/11000/11000/11000",
     'Q' to "01110/11011/11011/11011/11111/01110/00011",
@@ -116,9 +116,10 @@ private fun DrawScope.pixelText(text:String,x:Float,y:Float,unit:Float,color:Col
                 }
                 drawRect(c,Offset(x*tile,y*tile),Size(tile+.2f,tile+.2f))
             }
-            val u=min(size.width/320f,size.height/200f)
+            val available=(size.height-34.dp.toPx()).coerceAtLeast(1f)
+            val u=min(size.width/320f,available/176f)
             val ox=(size.width-320*u)/2
-            val oy=(size.height-200*u)/2
+            val oy=(available-176*u)/2
             fun t(text:String,x:Float,y:Float,scale:Float,c:Color,centered:Boolean=false){
                 pixelText(text,ox+x*u,oy+y*u,u*scale,c,centered)
             }
