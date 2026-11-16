@@ -72,9 +72,9 @@ internal data class RallyPad(val progress:Float,val lane:Float)
 internal data class RallyBox(val progress:Float,val lane:Float,val item:RallyItem)
 internal const val RALLY_COIN_COUNT=24
 internal fun rallyBoxes(track:RallyTrack):List<RallyBox>{
-    val count=(track.length/330f).roundToInt().coerceAtLeast(5)
-    val patterns=listOf(listOf(-.56f,.16f),listOf(.58f),listOf(-.58f,0f,.60f),
-        listOf(-.18f,.58f),listOf(-.62f),listOf(0f,.62f))
+    val count=(track.length/425f).roundToInt().coerceAtLeast(5)
+    val patterns=listOf(listOf(-.52f,.16f),listOf(.58f),listOf(-.58f,0f),
+        listOf(.25f),listOf(-.62f),listOf(0f,.62f))
     val items=RallyItem.values()
     var index=0
     return (0 until count).flatMap{i->
@@ -95,14 +95,17 @@ internal fun rallyRamps(track:RallyTrack):List<RallyRamp>{
     val candidates=(150 until (track.length.toInt()-170) step 35).map{it.toFloat()}
     fun gap(a:Float,b:Float)=abs(wrappedDelta(a-b,track.length))
     fun curve(p:Float)=abs(wrappedDelta(track.at(p+70f).second-track.at(p-45f).second,2f*PI.toFloat()))
-    val ranked=candidates.sortedBy{p->curve(p)+(if(boxes.any{gap(it.progress,p)<64f})3f else 0f)+(if(pads.any{gap(it.progress,p)<64f})3f else 0f)}
+    val eligible=candidates.filter{p->boxes.none{gap(it.progress,p)<64f}&&pads.none{gap(it.progress,p)<64f}}
+    val ranked=eligible.sortedBy{curve(it)}
     val chosen=mutableListOf<RallyRamp>()
+    fun add(p:Float){chosen+=RallyRamp(p,if((chosen.size+track.terrain)%2==0)-track.halfWidth*.48f else track.halfWidth*.48f)}
     val target=if(track.length>3000f)3 else 2
+    // Put the first jump in the opening sector, then use the best straights.
+    eligible.filter{it<track.length*.34f}.minByOrNull{curve(it)+abs(it-450f)/950f}?.let{add(it)}
     for(p in ranked){
         if(chosen.size>=target)break
         if(chosen.any{gap(it.progress,p)<370f})continue
-        if(boxes.any{gap(it.progress,p)<64f}||pads.any{gap(it.progress,p)<64f})continue
-        chosen+=RallyRamp(p,if((chosen.size+track.terrain)%2==0)-track.halfWidth*.48f else track.halfWidth*.48f)
+        add(p)
     }
     return chosen.sortedBy{it.progress}
 }
@@ -150,7 +153,7 @@ internal data class RallyFrame(val pos:V2,val angle:Float,val speed:Float,val pr
     val finished:Boolean=false,val place:Int=1,val lap:Int=1,val offroad:Boolean=false,val message:String="",
     val steering:Float=0f,val wrongWay:Boolean=false,
     val impacts:List<RallyImpact> = emptyList(),val enemyPulses:List<RallyPulse> = emptyList(),
-    val boost:Float=0f,val drafted:Boolean=false,val eventTime:Float=0f,val contacts:Int=0,val air:RallyAir=RallyAir())
+    val boost:Float=0f,val drafted:Boolean=false,val eventTime:Float=0f,val contacts:Int=0,val air:RallyAir=RallyAir(),val driftCharge:Float=0f)
 internal class RallyEngine(val track:RallyTrack,val mode:RallyMode,seed:Int=42){
     private val random=Random(seed)
     private val total=track.length*mode.laps
@@ -168,6 +171,7 @@ internal class RallyEngine(val track:RallyTrack,val mode:RallyMode,seed:Int=42){
     private val botPadLap=Array(5){IntArray(pads.size){-1}}
     private val contactCooldown=Array(6){FloatArray(6)}
     private var oilCooldown=0f
+    private var playerPickupDelay=0f
     private var f=RallyFrame(start.first,start.second,0f,0f,0f,3f,
         if(mode==RallyMode.TIME_TRIAL)emptyList() else List(5){i->Racer(listOf(38f,38f,0f,-38f,-38f)[i],if(i%2==0)-23f else 23f,0f)},
         if(mode==RallyMode.CHAOS)boxPositions else emptyList(),coinPositions,emptyList(),place=if(mode==RallyMode.TIME_TRIAL)1 else 3)
@@ -175,7 +179,7 @@ internal class RallyEngine(val track:RallyTrack,val mode:RallyMode,seed:Int=42){
     fun recover(){
         if(f.finished||f.countdown>0f||(!f.offroad&&!f.wrongWay))return
         val center=track.at(f.progress)
-        f=f.copy(pos=center.first,angle=center.second,speed=14f,elapsed=f.elapsed+4f,steering=0f,drift=0f,
+        f=f.copy(pos=center.first,angle=center.second,speed=14f,elapsed=f.elapsed+4f,steering=0f,drift=0f,driftCharge=0f,
             offroad=false,wrongWay=false,nitro=0f,boost=0f,air=RallyAir(),message="Recolocado · +4 s",eventTime=2f)
     }
     fun useItem(){
@@ -208,6 +212,7 @@ internal class RallyEngine(val track:RallyTrack,val mode:RallyMode,seed:Int=42){
         for(a in contactCooldown.indices)for(b in contactCooldown[a].indices)
             contactCooldown[a][b]=(contactCooldown[a][b]-d).coerceAtLeast(0f)
         oilCooldown=(oilCooldown-d).coerceAtLeast(0f)
+        playerPickupDelay=(playerPickupDelay-d).coerceAtLeast(0f)
         val playerLane=track.lateral(old.pos,old.progress)
         val drafted=old.speed>20f&&!old.air.airborne&&!old.offroad&&old.rivals.any{it.finish==0f&&it.progress-old.progress in 25f..100f&&abs(it.lane-playerLane)<14f}
         var boost=(old.boost-d).coerceAtLeast(0f)
@@ -229,6 +234,11 @@ internal class RallyEngine(val track:RallyTrack,val mode:RallyMode,seed:Int=42){
         val steeringGrip=if(old.air.airborne).28f else 1f
         var angle=old.angle+(turn*(1.18f+1.55f*(abs(speed)/165f).coerceIn(0f,1f))*(if(brake&&speed>35f)1.35f else 1f)*(.70f+.30f*track.grip)*(if(abs(speed)<2f)0f else direction)*steeringGrip+assist)*d
         val drift=if(brake&&abs(turn)>.21f&&speed>28f&&!old.air.airborne)turn*.35f else 0f
+        val charging=abs(drift)>.10f&&speed>65f&&!old.offroad
+        val driftCharge=if(charging)(old.driftCharge+d/.85f).coerceAtMost(1f)else 0f
+        if(!charging&&old.driftCharge>=.90f&&speed>48f&&!old.offroad&&!old.air.airborne){
+            boost=maxOf(boost,1.05f);notice("¡TURBO DE DERRAPE!")
+        }
         var p=old.pos+V2(cos(angle-drift),sin(angle-drift))*speed*d
         var road=track.nearest(p,old.progress)
         var off=road.distance>track.halfWidth
@@ -416,11 +426,11 @@ internal class RallyEngine(val track:RallyTrack,val mode:RallyMode,seed:Int=42){
             boxCooldown[k]=(boxCooldown[k]-d).coerceAtLeast(0f)
             val box=boxPositions[k]
             val lap=rallyPickupLap(progress,box.progress,track.length)
-            if(mode==RallyMode.CHAOS&&item==null&&air.height<9f&&boxCooldown[k]==0f&&lap>=0&&playerBoxLap[k]<lap&&
+            if(mode==RallyMode.CHAOS&&item==null&&playerPickupDelay<=0f&&air.height<9f&&boxCooldown[k]==0f&&lap>=0&&playerBoxLap[k]<lap&&
                 abs(wrappedDelta(progress-box.progress,track.length))<24f&&
                 (track.at(box.progress,box.lane).first-p).length()<18f){
                 item=box.item
-                boxCooldown[k]=2.3f;playerBoxLap[k]=lap;notice(item.label+" disponible")
+                boxCooldown[k]=2.3f;playerPickupDelay=3.5f;playerBoxLap[k]=lap;notice(item.label+" disponible")
             }
         }
         for(k in pads.indices){
@@ -448,7 +458,7 @@ internal class RallyEngine(val track:RallyTrack,val mode:RallyMode,seed:Int=42){
             item=item,nitro=nitro,shield=(old.shield-d).coerceAtLeast(0f),magnet=(old.magnet-d).coerceAtLeast(0f),
             integrity=integrity,collected=coins,drift=drift,hit=hurt,pulse=(old.pulse-d).coerceAtLeast(0f),
             finished=finish,offroad=off,message=message,steering=turn,wrongWay=wrongWay,
-            impacts=impacts.takeLast(18),enemyPulses=pulses.takeLast(5),boost=boost,drafted=drafted,eventTime=event,contacts=contacts,air=air)
+            impacts=impacts.takeLast(18),enemyPulses=pulses.takeLast(5),boost=boost,drafted=drafted,eventTime=event,contacts=contacts,air=air,driftCharge=driftCharge)
         return f
     }
     fun score():Int=if(!f.finished)0 else (1100+(6-f.place)*220+f.collected*35+f.integrity*3+

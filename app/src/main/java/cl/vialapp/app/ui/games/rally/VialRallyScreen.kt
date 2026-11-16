@@ -259,7 +259,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                             Text(if(f.speed<-.5f)"R · km/h" else "km/h",Modifier.padding(bottom=5.dp),fontSize=11.sp,color=Color.White)
                         }
                         Text("Fichas "+f.collected+"  ·  "+f.integrity+"% estado",color=Color.White,fontSize=11.sp)
-                        if(f.air.airborne||f.speed<-.5f||f.nitro>0f||f.boost>0f||f.drafted)Text(if(f.air.airborne)"¡EN EL AIRE!" else if(f.speed<-.5f)"REVERSA" else if(f.nitro>0f)"NITRO" else if(f.boost>0f)"TURBO" else "REBUFO",color=Color(0xFF70E9FF),fontSize=12.sp,fontWeight=FontWeight.Black)
+                        if(f.air.airborne||f.speed<-.5f||f.nitro>0f||f.boost>0f||f.drafted||f.driftCharge>0f)Text(if(f.air.airborne)"¡EN EL AIRE!" else if(f.speed<-.5f)"REVERSA" else if(f.driftCharge>0f)"DERRAPE "+(f.driftCharge*100f).roundToInt()+"%" else if(f.nitro>0f)"NITRO" else if(f.boost>0f)"TURBO" else "REBUFO",color=Color(0xFF70E9FF),fontSize=12.sp,fontWeight=FontWeight.Black)
                     }
                 }
             }

@@ -62,9 +62,9 @@ class RallyEngineTest {
     @Test fun chaosHasSparseVariedPickupsAndClassicHasNone(){
         for(t in RallyTracks.all){
             val boxes=rallyBoxes(t)
-            assertTrue(boxes.size in 10..30)
+            assertTrue(boxes.size in 7..18)
             assertEquals(6,boxes.map{it.item}.toSet().size)
-            assertTrue(boxes.groupBy{it.progress}.values.all{it.size in 1..3})
+            assertTrue(boxes.groupBy{it.progress}.values.all{it.size in 1..2})
             assertTrue(boxes.groupBy{it.progress}.values.map{it.size}.toSet().size>1)
             assertTrue(boxes.all{abs(it.lane)<t.halfWidth-8f})
             assertTrue(RallyEngine(t,RallyMode.CLASSIC).snapshot().boxes.isEmpty())
@@ -90,6 +90,7 @@ class RallyEngineTest {
         for(t in RallyTracks.all){
             val ramps=rallyRamps(t)
             assertTrue(ramps.size in 2..3)
+            assertTrue(ramps.first().progress<t.length*.34f)
             val ramp=ramps.first()
             assertEquals(ramp.height*.5f,rallyRampSurface(t,ramps,ramp.progress-ramp.run*.5f,ramp.lane),.01f)
             assertEquals(0f,rallyRampSurface(t,ramps,ramp.progress-ramp.run*.5f,-ramp.lane),.01f)
