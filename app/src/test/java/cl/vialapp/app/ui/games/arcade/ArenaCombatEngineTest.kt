@@ -59,9 +59,39 @@ class ArenaCombatEngineTest {
         error("Shield not reached")
     }
 
+    @Test fun shieldsLeaveLongerCombatSegmentsForEveryRival(){
+        for(maxHp in listOf(320,400,480)){
+            val first=ArenaShieldRules.threshold(maxHp,0)
+            val second=ArenaShieldRules.threshold(maxHp,1)
+            val answerDamage=ArenaShieldRules.answerDamage(maxHp)
+            assertEquals(maxHp*35/100,maxHp-first)
+            assertEquals(maxHp*30/100,first-answerDamage-second)
+            assertEquals(maxHp*15/100,second-answerDamage)
+        }
+        val e=reachShield()
+        assertEquals(208,e.snapshot().rivalHp)
+        e.act(20+e.snapshot().question!!.correct);tick(e,100);e.act(23)
+        val initial=e.snapshot().rivalHp
+        var hits=0
+        repeat(2400){
+            val f=e.snapshot()
+            if(f.phase!=ArenaPhase.KNOWLEDGE){
+                if(!f.isCinematic&&f.lock<=0f){
+                    if(f.distance>.25f)e.act(1)else e.act(if(f.lastHit==ArenaMove.HEAVY)2 else 3)
+                }
+                val next=e.step(1f/60f)
+                if(next.rivalHp<f.rivalHp)hits++
+            }
+        }
+        assertEquals(ArenaPhase.KNOWLEDGE,e.snapshot().phase)
+        assertEquals(80,e.snapshot().rivalHp)
+        assertEquals(96,initial-e.snapshot().rivalHp)
+        assertTrue(hits>=4)
+    }
+
     @Test fun answerCinematicAppliesDamageAtImpactExactlyOnce(){
         val e=reachShield();val before=e.snapshot()
-        assertEquals(256,before.rivalHp)
+        assertEquals(208,before.rivalHp)
         tick(e,120);e.act(3);assertEquals(before,e.snapshot())
         val q=before.question!!
         e.act(20+q.correct)
@@ -74,15 +104,15 @@ class ArenaCombatEngineTest {
         e.act(23);e.act(20+q.correct);e.act(3)
         tick(e,25)
         assertTrue(e.snapshot().answerApplied)
-        assertEquals(192,e.snapshot().rivalHp)
-        assertEquals(64,e.snapshot().shieldDamage)
+        assertEquals(176,e.snapshot().rivalHp)
+        assertEquals(32,e.snapshot().shieldDamage)
         assertEquals(before.elapsed,e.snapshot().elapsed,.001f)
         tick(e,60)
         assertEquals(ArenaPhase.KNOWLEDGE,e.snapshot().phase)
         assertEquals(1,e.snapshot().knowledgeCorrect)
-        assertEquals(192,e.snapshot().rivalHp)
+        assertEquals(176,e.snapshot().rivalHp)
         assertEquals(before.elapsed,e.snapshot().elapsed,.001f)
-        e.act(20+q.correct);assertEquals(192,e.snapshot().rivalHp)
+        e.act(20+q.correct);assertEquals(176,e.snapshot().rivalHp)
         e.act(23);assertEquals(ArenaPhase.RECOVER,e.snapshot().phase)
         assertNull(e.snapshot().question)
     }
@@ -107,9 +137,9 @@ class ArenaCombatEngineTest {
         assertNotEquals(q,retry.question)
         e.act(20+retry.question!!.correct);tick(e,100)
         assertEquals(1,e.snapshot().shieldsBroken)
-        assertEquals(192,e.snapshot().rivalHp)
+        assertEquals(176,e.snapshot().rivalHp)
     }
-    @Test fun allRivalsCanBeBeatenWithSixShieldsAndFortyPercentKnowledge(){
+    @Test fun allRivalsCanBeBeatenWithSixShieldsAndTwentyPercentKnowledge(){
         val e=ArenaCombatEngine(4)
         repeat(20000){
             val f=e.snapshot();if(f.finished)return@repeat
@@ -125,6 +155,6 @@ class ArenaCombatEngineTest {
         }
         assertTrue(e.snapshot().detail,e.snapshot().won)
         assertEquals(6,e.snapshot().knowledgeCorrect)
-        assertEquals(480,e.snapshot().shieldDamage)
+        assertEquals(240,e.snapshot().shieldDamage)
     }
 }

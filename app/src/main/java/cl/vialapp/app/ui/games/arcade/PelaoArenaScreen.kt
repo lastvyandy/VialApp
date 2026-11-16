@@ -194,7 +194,7 @@ private fun CombatHealth(name:String,hp:Int,max:Int,color:Color,modifier:Modifie
             if(current>0f)drawRoundRect(Brush.verticalGradient(listOf(color,color.copy(alpha=.64f))),size=Size(size.width*current,size.height),cornerRadius=corner)
             if(shields>0){
                 // Mark only thresholds that are still ahead of the player.
-                val marks=if(shields==2)listOf(.8f,.4f)else listOf(.4f)
+                val marks=if(shields==2)listOf(ArenaShieldRules.FIRST_PERCENT/100f,ArenaShieldRules.SECOND_PERCENT/100f)else listOf(ArenaShieldRules.SECOND_PERCENT/100f)
                 for(mark in marks){
                     val x=size.width*mark
                     drawLine(Color.White,Offset(x,0f),Offset(x,size.height),2.dp.toPx())

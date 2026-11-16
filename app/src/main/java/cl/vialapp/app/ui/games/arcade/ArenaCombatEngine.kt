@@ -3,6 +3,18 @@ package cl.vialapp.app.ui.games.arcade
 import kotlin.math.abs
 import kotlin.random.Random
 
+// Shared by combat, the health bar and the question result.
+internal object ArenaShieldRules{
+    const val FIRST_PERCENT=65
+    const val SECOND_PERCENT=25
+    const val ANSWER_PERCENT=10
+    fun threshold(maxHp:Int,broken:Int)=when(broken){
+        0->maxHp*FIRST_PERCENT/100
+        1->maxHp*SECOND_PERCENT/100
+        else->0
+    }
+    fun answerDamage(maxHp:Int)=maxHp*ANSWER_PERCENT/100
+}
 internal enum class ArenaPhase { APPROACH, WINDUP, STRIKE, RECOVER, ROUND_CLEAR, SHIELD_BREAK, KNOWLEDGE, ANSWER_IMPACT }
 internal enum class ArenaMove(val windup:Float,val lock:Float,val range:Float,val damage:Int){
     JAB(.055f,.26f,.235f,12), HEAVY(.14f,.43f,.30f,20), SPECIAL(.24f,.72f,.72f,42)
@@ -131,7 +143,7 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
             var f=s.copy(phaseTime=left)
             if(!f.answerApplied&&left<=ANSWER_TIME*.55f){
                 f=if(f.answerCorrect){
-                    val damage=f.rivalMax/5
+                    val damage=ArenaShieldRules.answerDamage(f.rivalMax)
                     f.copy(answerApplied=true,shieldsBroken=f.shieldsBroken+1,knowledgeCorrect=f.knowledgeCorrect+1,
                         shieldDamage=f.shieldDamage+damage,rivalHp=(f.rivalHp-damage).coerceAtLeast(1),
                         power=(f.power+25).coerceAtMost(100),score=f.score+damage*3+100,
@@ -179,8 +191,8 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
                 val chained=f.combo>=2&&f.lastHit!=m&&m!=ArenaMove.SPECIAL
                 val counter=f.phase==ArenaPhase.RECOVER||f.phase==ArenaPhase.WINDUP&&f.phaseTime>.14f
                 val damage=if(armored)4 else m.damage+(if(chained)7 else 0)+(if(counter)4 else 0)+(if(f.jumpHeight>.25f&&m==ArenaMove.HEAVY)5 else 0)
-                // Two mandatory shields each remove 20% of maximum HP via knowledge.
-                val threshold=when(f.shieldsBroken){0->f.rivalMax*4/5;1->f.rivalMax*2/5;else->0}
+                // Give players a longer uninterrupted combat segment before each mandatory challenge.
+                val threshold=ArenaShieldRules.threshold(f.rivalMax,f.shieldsBroken)
                 val dealt=minOf(damage,(f.rivalHp-threshold).coerceAtLeast(0))
                 val combo=f.combo+1
                 f=f.copy(rivalHp=f.rivalHp-dealt,score=f.score+dealt*3+combo.coerceAtMost(8)*8,

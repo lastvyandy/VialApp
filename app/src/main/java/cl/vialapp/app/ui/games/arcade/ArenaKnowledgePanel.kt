@@ -36,7 +36,7 @@ internal fun ArenaKnowledgePanel(f:ArenaCombatFrame,modifier:Modifier,enabled:Bo
                 KnowledgeArt(q.illustration,Modifier.fillMaxWidth().height(100.dp))
                 Text(q.prompt,color=Color.White,fontWeight=FontWeight.Bold,fontSize=17.sp,lineHeight=22.sp)
                 if(answered){
-                    Text(if(success)"¡Escudo destruido! −"+(f.rivalMax/5)+" HP al rival · +25 energía" else "El rival contraatacó · −8 HP",color=if(success)Color(0xFF86EFAC)else Color(0xFFFFB0B0),fontWeight=FontWeight.Bold)
+                    Text(if(success)"¡Escudo destruido! −"+ArenaShieldRules.answerDamage(f.rivalMax)+" HP al rival · +25 energía" else "El rival contraatacó · −8 HP",color=if(success)Color(0xFF86EFAC)else Color(0xFFFFB0B0),fontWeight=FontWeight.Bold)
                     Text(q.explanation,color=Color(0xFFDFEAFE),fontSize=13.sp,lineHeight=18.sp)
                 }
                 q.answers.forEachIndexed{index,label->
