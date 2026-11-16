@@ -88,8 +88,8 @@ internal fun AuthScreen(onLoginSuccess:(UserResponse)->Unit,onOfflineStudy:()->U
                 if(profile.isSuccessful&&user!=null){password="";onLoginSuccess(user)}
                 else{session.clearSession();ApiClient.clearCookies();error="No se pudo cargar tu perfil. Intenta nuevamente."}
             }catch(c:CancellationException){throw c}
-            catch(c:androidx.credentials.exceptions.GetCredentialCancellationException){/* user closed chooser */}
-            catch(c:androidx.credentials.exceptions.GetCredentialException){error="No se pudo iniciar sesión con Google. Comprueba Google Play Services."}
+            catch(c:GoogleSignInCancelled){/* user closed chooser */}
+            catch(c:GoogleSignInUnavailable){error="No se pudo iniciar sesión con Google. Comprueba Google Play Services."}
             catch(c:Exception){error=authNetworkError(c)}
             finally{loading=false}
         }

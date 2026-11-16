@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
                         if(response.isSuccessful&&updated!=null&&updated.id==user.id){pass="";onUserUpdated(updated);onBack()}
                         else message=when(response.code()){401->"Contraseña incorrecta o sesión vencida.";409->"La identidad Google ya está vinculada.";400->"Verifica que el correo Google coincida.";else->"No se pudo vincular Google."}
                     }catch(c:CancellationException){throw c}
-                    catch(c:androidx.credentials.exceptions.GetCredentialCancellationException){}
+                    catch(c:GoogleSignInCancelled){}
                     catch(_:Exception){message="No se pudo completar la vinculación."}
                     finally{busy=false}
                 }
