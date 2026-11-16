@@ -26,6 +26,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -94,13 +98,12 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     val rewards=LocalRewards.current
     val runId=remember{UUID.randomUUID().toString()}
     var revision by remember{mutableIntStateOf(0)}
-    var move by remember{mutableStateOf(Offset.Zero)}
-    var fire by remember{mutableStateOf(false)}
+    var drive by remember{mutableStateOf(DoomInput())}
     var paused by remember{mutableStateOf(false)}
     var exit by remember{mutableStateOf(false)}
     var reward by remember{mutableStateOf<GameRunResult?>(null)}
     var saving by remember{mutableStateOf(false)}
-    fun clear(){move=Offset.Zero;fire=false}
+    fun clear(){drive=DoomInput()}
     fun drain(){
         for(event in e.drainEvents()){
             audio?.play(when(event){
@@ -144,7 +147,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             carry+=((now-last)/1_000_000_000f).coerceIn(0f,.1f);last=now
             var updated=false
             while(carry>=1f/30f&&!e.finished&&e.pending==null){
-                e.step(1f/30f,DoomInput(-move.y,move.x,0f,fire));carry-=1f/30f;updated=true
+                e.step(1f/30f,drive);carry-=1f/30f;updated=true
             }
             if(updated){drain();revision++}
         }
@@ -178,32 +181,22 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             TextButton(onClick={clear();paused=!paused},enabled=!finished&&challenge==null,contentPadding=PaddingValues(horizontal=6.dp)){Text(if(paused)"SEGUIR" else "PAUSA",color=Gold,fontSize=11.sp)}
         }
         Box(Modifier.weight(1f).fillMaxWidth().border(2.dp,Color(0xFF69645B))){
-            AndroidView(factory={DoomView(it).apply{engine=e}},update={view->
-                view.engine=e
-                view.inputEnabled=!paused&&!finished&&challenge==null
-                view.onLook={delta->if(!paused&&!e.finished&&e.pending==null){e.look(delta);revision++}}
-                view.onTap={horizontal->if(!paused&&!e.finished&&e.pending==null&&e.touchInteract(horizontal)){clear();drain();revision++}}
-                if(tick>=0)view.invalidate()
-            },modifier=Modifier.fillMaxSize())
+            AndroidView(factory={DoomView(it).apply{engine=e}},update={view->view.engine=e;if(tick>=0)view.invalidate()},modifier=Modifier.fillMaxSize())
             if(e.messageTime>0f&&challenge==null&&!finished){
                 Text(e.message,Modifier.align(Alignment.TopCenter).padding(top=6.dp).background(Dark.copy(alpha=.84f),RoundedCornerShape(3.dp)).padding(horizontal=9.dp,vertical=4.dp),
                     color=Gold,fontSize=11.sp,textAlign=TextAlign.Center)
             }
             if(!paused&&!finished&&challenge==null){
-                DoomStick(move,Modifier.align(Alignment.BottomStart).padding(start=10.dp,bottom=9.dp).size(116.dp)){move=it}
+                DoomTouchControls(
+                    modifier=Modifier.fillMaxSize(),
+                    onInput={drive=it},
+                    onLook={delta->if(!paused&&!e.finished&&e.pending==null){e.look(delta);revision++}},
+                    onTap={horizontal->if(!paused&&!e.finished&&e.pending==null&&e.touchInteract(horizontal)){clear();drain();revision++}},
+                    onUse={clear();change{e.interact()}},
+                    onWeapon={change{e.cycleWeapon()}}
+                )
                 e.targetHint()?.let{hint->
-                    Text(hint,Modifier.align(Alignment.Center).offset(y=20.dp).background(Dark.copy(alpha=.83f),RoundedCornerShape(3.dp)).padding(horizontal=7.dp,vertical=3.dp),color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
-                }
-                Column(Modifier.align(Alignment.BottomEnd).padding(10.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(6.dp)){
-                    ActionKey("USAR"){clear();change{e.interact()}}
-                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                        ActionKey("ARMA"){change{e.cycleWeapon()}}
-                        Box(Modifier.size(85.dp).background(Red.copy(alpha=if(fire).85f else .42f),RoundedCornerShape(44.dp)).border(1.5.dp,Gold.copy(alpha=.48f),RoundedCornerShape(44.dp))
-                            .pointerInput(Unit){awaitEachGesture{val first=awaitFirstDown(requireUnconsumed=false);first.consume();fire=true
-                                try{do{val event=awaitPointerEvent();val p=event.changes.firstOrNull{it.id==first.id};p?.consume()}while(p?.pressed==true)}finally{fire=false}}},contentAlignment=Alignment.Center){
-                            Text("FIRE",fontSize=15.sp,fontWeight=FontWeight.Black,color=Color.White)
-                        }
-                    }
+                    Text(hint,Modifier.align(Alignment.Center).offset(y=19.dp).background(Dark.copy(alpha=.83f),RoundedCornerShape(3.dp)).padding(horizontal=7.dp,vertical=3.dp),color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
                 }
                 DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(7.dp).size(87.dp,67.dp))
             }
@@ -254,26 +247,90 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
         confirmButton={TextButton(onClick=onMenu){Text("SALIR")}},dismissButton={TextButton(onClick={exit=false;paused=false}){Text("SEGUIR")}})
 }
 
-@Composable private fun ActionKey(label:String,action:()->Unit){
-    Button(onClick=action,modifier=Modifier.height(34.dp),contentPadding=PaddingValues(horizontal=9.dp),shape=RoundedCornerShape(5.dp),colors=ButtonDefaults.buttonColors(containerColor=Metal.copy(alpha=.88f))){
-        Text(label,fontWeight=FontWeight.Bold,fontSize=11.sp,color=White)
+// A single gesture surface owns all pointers. Each thumb has an independent role.
+private enum class TouchRole{ MOVE,LOOK,FIRE,USE,WEAPON }
+private data class TouchContact(val role:TouchRole,val origin:Offset,var last:Offset,var travel:Float=0f)
+private data class TouchLayout(val move:Offset,val gun:Offset,val use:Offset,val weapon:Offset,val radius:Float,val w:Float,val h:Float){
+    fun role(p:Offset):TouchRole=when{
+        (p-gun).getDistance()<radius*.91f->TouchRole.FIRE
+        (p-use).getDistance()<radius*.55f->TouchRole.USE
+        (p-weapon).getDistance()<radius*.54f->TouchRole.WEAPON
+        p.x<w*.42f&&p.y>h*.43f->TouchRole.MOVE
+        else->TouchRole.LOOK
     }
 }
-@Composable private fun DoomStick(value:Offset,modifier:Modifier,horizontalOnly:Boolean=false,change:(Offset)->Unit){
-    val latest by rememberUpdatedState(change)
-    Canvas(modifier.pointerInput(horizontalOnly){awaitEachGesture{
-        val first=awaitFirstDown(requireUnconsumed=false)
-        val center=first.position
-        val radius=min(size.width,size.height)*.32f
-        fun track(p:Offset){val v=(p-center)/radius;val d=v.getDistance();val n=d.coerceAtLeast(1f);val result=if(d<.08f)Offset.Zero else v/n;latest(if(horizontalOnly)Offset(result.x,0f)else result)}
-        first.consume();track(first.position)
-        try{do{val event=awaitPointerEvent();val p=event.changes.firstOrNull{it.id==first.id};if(p?.pressed==true){track(p.position);p.consume()}}while(p?.pressed==true)}finally{latest(Offset.Zero)}
-    }}){
-        val r=size.minDimension*.46f
-        drawCircle(Dark.copy(alpha=.32f),r)
-        drawCircle(White.copy(alpha=.32f),r,style=androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
-        drawCircle(White.copy(alpha=.44f),r*.32f,center+value*r*.63f)
-        if(horizontalOnly){drawLine(White.copy(alpha=.55f),Offset(center.x-r*.78f,center.y),Offset(center.x+r*.78f,center.y),2.dp.toPx())}
+private fun touchLayout(w:Float,h:Float):TouchLayout{
+    val r=min(h*.30f,w*.116f)
+    return TouchLayout(Offset(r*1.35f,h-r*1.20f),Offset(w-r*1.04f,h-r*1.15f),
+        Offset(w-r*1.05f,h-r*2.62f),Offset(w-r*2.45f,h-r*.67f),r,w,h)
+}
+@Composable private fun DoomTouchControls(modifier:Modifier,onInput:(DoomInput)->Unit,onLook:(Float)->Unit,onTap:(Float)->Unit,onUse:()->Unit,onWeapon:()->Unit){
+    val input by rememberUpdatedState(onInput);val look by rememberUpdatedState(onLook);val tap by rememberUpdatedState(onTap)
+    val use by rememberUpdatedState(onUse);val weapon by rememberUpdatedState(onWeapon)
+    var stick by remember{mutableStateOf(Offset.Zero)}
+    var anchor by remember{mutableStateOf<Offset?>(null)}
+    var firing by remember{mutableStateOf(false)}
+    val labelPaint=remember{android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply{
+        color=android.graphics.Color.WHITE;textAlign=android.graphics.Paint.Align.CENTER;typeface=android.graphics.Typeface.create("sans-serif-condensed",android.graphics.Typeface.BOLD)
+    }}
+    Canvas(modifier.pointerInput(Unit){
+        val contacts=mutableMapOf<PointerId,TouchContact>()
+        fun publish(l:TouchLayout){
+            val movement=contacts.values.firstOrNull{it.role==TouchRole.MOVE}
+            val v=movement?.let{(it.last-it.origin)/(l.radius*.66f)}?:Offset.Zero
+            val d=v.getDistance()
+            stick=if(d<.055f)Offset.Zero else v/d.coerceAtLeast(1f)
+            anchor=movement?.origin
+            firing=contacts.values.any{it.role==TouchRole.FIRE}
+            input(DoomInput(-stick.y,stick.x,0f,firing))
+        }
+        try{
+            awaitEachGesture{
+                val first=awaitFirstDown(requireUnconsumed=false)
+                val l=touchLayout(size.width.toFloat(),size.height.toFloat())
+                fun down(id:PointerId,p:Offset){
+                    var role=l.role(p)
+                    if(role==TouchRole.MOVE&&contacts.values.any{it.role==TouchRole.MOVE})role=TouchRole.LOOK
+                    contacts[id]=TouchContact(role,p,p)
+                }
+                down(first.id,first.position);first.consume();publish(l)
+                do{
+                    val event=awaitPointerEvent()
+                    for(c in event.changes){
+                        if(c.pressed&&!c.previousPressed)down(c.id,c.position)
+                        val t=contacts[c.id]?:continue
+                        val delta=c.position-t.last
+                        t.travel+=delta.getDistance();t.last=c.position
+                        if(c.pressed&&t.role in setOf(TouchRole.LOOK,TouchRole.FIRE)&&delta.x!=0f)look(delta.x/l.w*3.55f)
+                        if(!c.pressed){
+                            contacts.remove(c.id)
+                            if(t.travel<l.radius*.16f)when(t.role){
+                                TouchRole.LOOK->tap((c.position.x/l.w*2f-1f).coerceIn(-1f,1f))
+                                TouchRole.USE->use()
+                                TouchRole.WEAPON->weapon()
+                                else->Unit
+                            }
+                        }
+                        c.consume()
+                    }
+                    publish(l)
+                }while(contacts.isNotEmpty())
+            }
+        }finally{contacts.clear();stick=Offset.Zero;anchor=null;firing=false;input(DoomInput())}
+    }){
+        val l=touchLayout(size.width,size.height)
+        val r=l.radius
+        val origin=anchor?:l.move
+        drawCircle(Color.Black.copy(alpha=.33f),r*.87f,origin)
+        drawCircle(White.copy(alpha=.35f),r*.87f,origin,style=Stroke(1.5.dp.toPx()))
+        drawCircle(White.copy(alpha=.48f),r*.29f,origin+stick*r*.60f)
+        fun pad(p:Offset,radius:Float,label:String,active:Boolean=false){
+            drawCircle(if(active)Red.copy(alpha=.90f) else Color.Black.copy(alpha=.42f),radius,p)
+            drawCircle((if(active)Gold else White).copy(alpha=.53f),radius,p,style=Stroke(1.5.dp.toPx()))
+            labelPaint.textSize=radius*.39f
+            drawIntoCanvas{it.nativeCanvas.drawText(label,p.x,p.y-(labelPaint.ascent()+labelPaint.descent())*.5f,labelPaint)}
+        }
+        pad(l.gun,r*.86f,"FIRE",firing);pad(l.use,r*.49f,"USAR");pad(l.weapon,r*.46f,"ARMA")
     }
 }
 @Composable private fun Meter(label:String,value:String,color:Color){
