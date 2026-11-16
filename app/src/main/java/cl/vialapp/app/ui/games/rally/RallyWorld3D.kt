@@ -76,6 +76,32 @@ internal fun makeRallyWorld(track:RallyTrack,p:RallyPalette):FloatArray{
             strip(s,e,l,r,.17f,if(i/3%2==0)p.curb else p.accent)
         }
         if(i%6<3)strip(s,e,-.65f,.65f,.09f,m.shade(p.curb,.81f))
+        // Guardrail posts in technical sections provide speed reference without invisible obstacles.
+        if(i%5==0){
+            val curve=wrappedDelta(track.at(s+40f).second-track.at(s-20f).second,2f*PI.toFloat())
+            if(abs(curve)>.30f){
+                val side=if(curve>0f)-1f else 1f
+                val q=track.at(s,side*(w+10f)).first
+                m.box(q.x,0f,q.y,1.5f,6f,1.5f,p.curb)
+                val q2=track.at(e+24f,side*(w+10f)).first
+                m.quad(q.v(3.7f),q2.v(3.7f),q2.v(6.2f),q.v(6.2f),p.rock)
+            }
+        }
+    }
+    // Turbo strips on straights; the same world coordinates drive the physics.
+    for(pad in rallyPads(track)){
+        val left=pad.lane-14f;val right=pad.lane+14f
+        strip(pad.progress-12f,pad.progress+12f,left,right,.22f,Color(0xFF197899))
+        for(k in 0..2){
+            val z=pad.progress-8f+k*7f
+            val a=track.at(z,left+2f).first.v(.29f)
+            val b=track.at(z+4f,pad.lane).first.v(.29f)
+            val c=track.at(z,right-2f).first.v(.29f)
+            val d=track.at(z+4f,right-2f).first.v(.29f)
+            val e=track.at(z+8f,pad.lane).first.v(.29f)
+            val f=track.at(z+4f,left+2f).first.v(.29f)
+            m.quad(a,b,e,f,Color(0xFF8DF9F4));m.quad(b,c,d,e,Color(0xFF8DF9F4))
+        }
     }
     // Checkerboard starting line, spanning the actual road.
     for(i in 0 until 12)for(j in 0..1){

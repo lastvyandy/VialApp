@@ -62,6 +62,7 @@ private val rivalLoadouts=listOf(
 private class RallyRenderer(private val track:RallyTrack,private val loadout:RallyLoadout,initial:RallyFrame):GLSurfaceView.Renderer{
     @Volatile var frame=initial
     private val palette=rallyPalette(track)
+    private val boxLanes=rallyBoxLanes(track)
     private data class Batch(val id:Int,val count:Int)
     private var program=0
     private var position=0;private var color=0;private var mvp=0;private var fog=0
@@ -69,6 +70,7 @@ private class RallyRenderer(private val track:RallyTrack,private val loadout:Ral
     private var cars=emptyList<Batch>()
     private var box=Batch(0,0);private var coin=Batch(0,0);private var shadow=Batch(0,0);private var oil=Batch(0,0)
     private var shield=Batch(0,0);private var flame=Batch(0,0);private var pulse=Batch(0,0)
+    private var spark=Batch(0,0);private var dust=Batch(0,0)
     private var neon:Batch?=null
     private val projection=FloatArray(16);private val camera=FloatArray(16)
     private val vp=FloatArray(16);private val model=FloatArray(16);private val matrix=FloatArray(16)
@@ -97,6 +99,8 @@ private class RallyRenderer(private val track:RallyTrack,private val loadout:Ral
         shield=upload(ringMesh(Color(0xFF6DEAFF),.10f))
         pulse=upload(ringMesh(Color(0xFFD5A4FF),.15f))
         flame=upload(RallyMeshBuilder().apply{cone(0f,0f,0f,1.8f,9f,Color(0xFF56D9FF),5)}.finish())
+        spark=upload(RallyMeshBuilder().apply{box(0f,0f,0f,.45f,1.1f,2.6f,Color(0xFFFFC66C))}.finish())
+        dust=upload(RallyMeshBuilder().apply{cone(0f,0f,0f,2.1f,3.6f,palette.shoulder,6)}.finish())
     }
     override fun onSurfaceChanged(gl:GL10?,width:Int,height:Int){
         GL.glViewport(0,0,width,height)
@@ -115,9 +119,13 @@ private class RallyRenderer(private val track:RallyTrack,private val loadout:Ral
         cameraX+= (f.pos.x-cameraX)*mix;cameraZ+=(f.pos.y-cameraZ)*mix
         cameraAngle+=wrappedDelta(f.angle-cameraAngle,2f*PI.toFloat())*(mix*.80f)
         val forwardX=cos(cameraAngle);val forwardZ=sin(cameraAngle)
-        val back=if(f.nitro>0f)72f else 61f
-        Matrix.setLookAtM(camera,0,cameraX-forwardX*back,33f,cameraZ-forwardZ*back,
-            cameraX+forwardX*43f,9f,cameraZ+forwardZ*43f,0f,1f,0f)
+        val fast=f.nitro>0f||f.boost>0f
+        val back=if(fast)67f else 51f
+        val shake=if(f.hit>0f)sin(f.hit*78f)*f.hit*3.7f else 0f
+        val driftSide=f.drift*7f+shake
+        Matrix.perspectiveM(projection,0,if(fast)65f else 58f,aspect,.9f,1700f)
+        Matrix.setLookAtM(camera,0,cameraX-forwardX*back-forwardZ*driftSide,if(fast)30f else 26f,cameraZ-forwardZ*back+forwardX*driftSide,
+            cameraX+forwardX*49f,8f,cameraZ+forwardZ*49f,0f,1f,0f)
         Matrix.multiplyMM(vp,0,projection,0,camera,0)
         GL.glUseProgram(program)
         GL.glUniform3f(fog,palette.fog.red,palette.fog.green,palette.fog.blue)
@@ -126,29 +134,52 @@ private class RallyRenderer(private val track:RallyTrack,private val loadout:Ral
         for(o in f.oils)draw(oil,o.pos.x,0f,o.pos.y,sx=13f,sy=1f,sz=10f)
         for(b in f.boxes){
             val p=track.at(b).first
-            if(near(p,f.pos,740f))draw(box,p.x,8f+sin(f.elapsed*4f+b)*1.7f,p.y,f.elapsed*85f)
+            if(near(p,f.pos,740f))for((i,lane) in boxLanes.withIndex()){
+                val at=track.at(b,lane).first
+                draw(box,at.x,9.2f+sin(f.elapsed*5f+b+i)*1.5f,at.y,f.elapsed*85f+i*30f,1.18f,1.18f,1.18f)
+            }
         }
         for(b in f.coins){
-            val i=((b/track.length)*18f).toInt()
+            val i=((b/track.length)*32f).toInt()
             val p=track.at(b,if(i%2==0)-21f else 21f).first
             if(near(p,f.pos,570f))draw(coin,p.x,5f+sin(f.elapsed*5f+b),p.y,f.elapsed*155f)
         }
         for((i,r) in f.rivals.withIndex()){
             val at=track.at(r.progress,r.lane)
             if(near(at.first,f.pos,780f)){
-                drawCar(cars[(i+1)%cars.size],at.first,at.second)
-                if(r.slowed>0f)draw(shield,at.first.x,9f,at.first.y,sx=15f,sy=1f,sz=15f)
+                drawCar(cars[(i+1)%cars.size],at.first,at.second+(r.targetLane-r.lane)*.012f)
+                if(r.slowed>0f)draw(pulse,at.first.x,9f,at.first.y,sx=15f,sy=1f,sz=15f)
+                if(r.shield>0f)draw(shield,at.first.x,8f,at.first.y,sx=17f,sy=1f,sz=17f)
+                if(r.nitro>0f)drawExhaust(at.first,at.second,f.elapsed)
             }
         }
         neon?.let{draw(it,f.pos.x,.10f,f.pos.y,sx=9f,sy=1f,sz=15f)}
         drawCar(cars[0],f.pos,f.angle)
-        if(f.nitro>0f){
+        if(fast)drawExhaust(f.pos,f.angle,f.elapsed)
+        if(f.offroad||abs(f.drift)>.12f){
             val bx=-cos(f.angle);val bz=-sin(f.angle)
-            for(side in listOf(-1f,1f)){
-                val x=f.pos.x+bx*15f-bz*side*4f
-                val z=f.pos.y+bz*15f+bx*side*4f
-                draw(flame,x,2.7f,z,90f-f.angle*180f/PI.toFloat(),1f,1f+sin(f.elapsed*50f)*.20f,1f,90f)
+            for(i in 0..6){
+                val distance=15f+i*3.8f
+                val side=sin(f.elapsed*13f+i*2f)*5f
+                draw(dust,f.pos.x+bx*distance-bz*side,1f,f.pos.y+bz*distance+bx*side,
+                    i*47f,1f+i*.23f,.65f+i*.17f,1f+i*.22f)
             }
+        }
+        for(impact in f.impacts){
+            if(!near(impact.pos,f.pos,320f))continue
+            val progress=(1f-impact.life/.48f).coerceIn(0f,1f)
+            for(i in 0..6){
+                val a=i*2f*PI.toFloat()/7f
+                val radius=5f+progress*21f
+                val y=4f+sin(progress*PI.toFloat())*11f
+                val scale=(1f-progress).coerceAtLeast(.15f)
+                draw(spark,impact.pos.x+cos(a)*radius,y,impact.pos.y+sin(a)*radius,
+                    90f-a*180f/PI.toFloat(),scale,scale,scale)
+            }
+        }
+        for(ep in f.enemyPulses){
+            val radius=18f+(.65f-ep.life)*155f
+            draw(pulse,ep.pos.x,3f,ep.pos.y,sx=radius,sy=1f,sz=radius)
         }
         if(f.shield>0f)draw(shield,f.pos.x,8f,f.pos.y,f.elapsed*45f,17f,1f,17f)
         if(f.pulse>0f){
@@ -157,6 +188,13 @@ private class RallyRenderer(private val track:RallyTrack,private val loadout:Ral
         }
         GL.glDisableVertexAttribArray(position);GL.glDisableVertexAttribArray(color)
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER,0)
+    }
+    private fun drawExhaust(p:V2,angle:Float,elapsed:Float){
+        val bx=-cos(angle);val bz=-sin(angle)
+        for(side in listOf(-1f,1f)){
+            val x=p.x+bx*15f-bz*side*4f;val z=p.y+bz*15f+bx*side*4f
+            draw(flame,x,2.7f,z,90f-angle*180f/PI.toFloat(),1f,1.2f+sin(elapsed*50f)*.20f,1f,90f)
+        }
     }
     private fun near(a:V2,b:V2,r:Float):Boolean{val d=a-b;return d.dot(d)<r*r}
     private fun drawCar(batch:Batch,p:V2,angle:Float){

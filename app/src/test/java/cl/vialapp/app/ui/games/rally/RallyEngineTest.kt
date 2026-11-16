@@ -59,4 +59,42 @@ class RallyEngineTest {
         assertFalse(r.wrongWay)
         assertEquals(0,e.score())
     }
+    @Test fun chaosHasEarlyFullWidthPickupRowsAndClassicHasNone(){
+        for(t in RallyTracks.all){
+            val rows=rallyBoxRows(t)
+            assertTrue(rows.size>=14)
+            assertEquals(86f,rows.first(),.001f)
+            assertTrue(rows.zipWithNext().all{(a,b)->b-a<=175.1f})
+            val lanes=rallyBoxLanes(t)
+            assertEquals(4,lanes.size)
+            assertTrue(lanes.zipWithNext().all{(a,b)->b-a<38f})
+            assertTrue(RallyEngine(t,RallyMode.CLASSIC).snapshot().boxes.isEmpty())
+            assertEquals(rows,RallyEngine(t,RallyMode.CHAOS).snapshot().boxes)
+        }
+    }
+    @Test fun rivalsChangeLaneAndPickUpItems(){
+        val e=RallyEngine(track,RallyMode.CHAOS,7)
+        start(e)
+        val original=e.snapshot().rivals.map{it.lane}
+        var moved=false
+        var itemSeen=false
+        repeat(600){
+            val f=e.step(tick,0f,false,false)
+            moved=moved||f.rivals.withIndex().any{(i,r)->abs(r.lane-original[i])>4f}
+            itemSeen=itemSeen||f.rivals.any{it.item!=null||it.nitro>0f||it.shield>0f}
+        }
+        assertTrue(moved)
+        assertTrue(itemSeen)
+        assertEquals(0,e.score())
+    }
+    @Test fun firstCircuitHasLeftAndRightTurns(){
+        for(t in RallyTracks.all){
+            val turns=(0..100).map{i->
+                val p=t.length*i/100f
+                wrappedDelta(t.at(p+45f).second-t.at(p-45f).second,2f*PI.toFloat())
+            }
+            assertTrue(turns.any{it>.24f})
+            assertTrue(turns.any{it<-.24f})
+        }
+    }
 }

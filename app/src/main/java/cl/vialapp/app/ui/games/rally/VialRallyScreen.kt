@@ -27,6 +27,9 @@ import kotlin.math.abs
 import kotlin.math.PI
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import cl.vialapp.app.ui.games.arcade.ArenaAudio
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -127,6 +130,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                 TextButton(onClick=onGarage){Text("Garaje ›",color=Gold)}
             }
             Text("Modo",color=Color.White,fontWeight=FontWeight.Bold)
+            Text(when(mode){RallyMode.CHAOS->"Cajas frecuentes, ataques rivales y turbo.";RallyMode.CLASSIC->"Choques, rebufos y turbo sin objetos.";RallyMode.TIME_TRIAL->"Corre contra el reloj y domina las curvas."},color=Color(0xFFB9CBDD),fontSize=12.sp)
             Row(horizontalArrangement=Arrangement.spacedBy(5.dp)){
                 for(m in RallyMode.entries)FilterChip(selected=mode==m,onClick={mode=m},label={Text(m.title,fontSize=11.sp)},modifier=Modifier.weight(1f))
             }
@@ -138,7 +142,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                         RallyPreview(t,Modifier.size(80.dp,57.dp).clip(RoundedCornerShape(8.dp)))
                         Column(Modifier.weight(1f)){
                             Text(t.name,color=Color.White,fontWeight=FontWeight.Bold,fontSize=14.sp)
-                            val best=prefs.getInt(t.id+"_"+mode.name,0)
+                            val best=prefs.getInt("v3_"+t.id+"_"+mode.name,0)
                             Text(if(ready)if(best>0)"Récord: "+formatTime(best/1000f) else "Disponible" else "Bloqueado · nivel "+t.level,color=if(ready)Green else Gold,fontSize=11.sp)
                         }
                         if(track.id==t.id)Text("✓",color=Green,fontWeight=FontWeight.Bold)
@@ -166,6 +170,14 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
     val rewards=LocalRewards.current
     val context=LocalContext.current
     RallyLandscape()
+    val haptic=LocalHapticFeedback.current
+    val audio=remember(context){runCatching{ArenaAudio(context)}.getOrNull()}
+    var sounds by remember{mutableStateOf(true)}
+    var previousContacts by remember(engine){mutableIntStateOf(0)}
+    DisposableEffect(audio){onDispose{audio?.close()}}
+    LaunchedEffect(f.contacts){if(f.contacts>previousContacts){haptic.performHapticFeedback(HapticFeedbackType.LongPress);if(sounds)audio?.play("heavy")};previousContacts=f.contacts}
+    LaunchedEffect(f.item){if(f.item!=null&&sounds)audio?.play("block")}
+    LaunchedEffect(f.nitro>0f||f.boost>0f){if((f.nitro>0f||f.boost>0f)&&sounds)audio?.play("power")}
     fun clearInputs(){left=false;right=false;gas=false;brake=false}
     fun leave(){if(f.finished&&!saving)onMenu()else if(!f.finished){clearInputs();paused=true;exit=true}}
     BackHandler {leave()}
@@ -195,7 +207,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
     LaunchedEffect(f.finished){
         if(f.finished){
             saving=true
-            val key=engine.track.id+"_"+engine.mode.name
+            val key="v3_"+engine.track.id+"_"+engine.mode.name
             val ms=(f.elapsed*1000).roundToInt().coerceAtLeast(1)
             val old=prefs.getInt(key,0)
             if(old==0||ms<old)prefs.edit().putInt(key,ms).apply()
@@ -234,6 +246,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                 Column(horizontalAlignment=Alignment.End){
                     FilledTonalButton(onClick=::leave,modifier=Modifier.height(36.dp),contentPadding=PaddingValues(horizontal=13.dp)){Text("Salir",fontSize=12.sp)}
                     if(!f.finished)FilledTonalButton(onClick={clearInputs();paused=!paused},modifier=Modifier.height(36.dp),contentPadding=PaddingValues(horizontal=13.dp)){Text(if(paused)"Seguir" else "Pausa",fontSize=12.sp)}
+                    TextButton(onClick={sounds=!sounds},modifier=Modifier.height(30.dp),contentPadding=PaddingValues(horizontal=4.dp)){Text(if(sounds)"Sonido ON" else "Sonido OFF",color=Color.White,fontSize=10.sp)}
                 }
             }
         }
@@ -246,9 +259,13 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                             Text("km/h",Modifier.padding(bottom=5.dp),fontSize=11.sp,color=Color.White)
                         }
                         Text("Fichas "+f.collected+"  ·  "+f.integrity+"% estado",color=Color.White,fontSize=11.sp)
-                        if(f.nitro>0f)Text("NITRO",color=Color(0xFF70E9FF),fontSize=12.sp,fontWeight=FontWeight.Black)
+                        if(f.nitro>0f||f.boost>0f||f.drafted)Text(if(f.nitro>0f)"NITRO" else if(f.boost>0f)"TURBO" else "REBUFO",color=Color(0xFF70E9FF),fontSize=12.sp,fontWeight=FontWeight.Black)
                     }
                 }
+            }
+            if(f.eventTime>0f&&!f.offroad&&!f.wrongWay&&!paused){
+                Text(f.message.uppercase(),Modifier.align(Alignment.TopCenter).padding(top=84.dp),
+                    color=if(f.hit>0f)Color(0xFFFF9C79)else Gold,fontSize=19.sp,fontWeight=FontWeight.Black)
             }
             val active=landscapeReady&&!paused&&!exit&&f.countdown<=0f
             Row(Modifier.align(Alignment.BottomStart).padding(13.dp),horizontalArrangement=Arrangement.spacedBy(9.dp)){
@@ -258,7 +275,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
             Column(Modifier.align(Alignment.BottomEnd).padding(13.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(7.dp)){
                 Button(onClick={engine.useItem();f=engine.snapshot()},enabled=active&&f.item!=null,
                     modifier=Modifier.height(42.dp).widthIn(min=88.dp),contentPadding=PaddingValues(horizontal=10.dp),
-                    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF8557B9))){Text(f.item?.label?:"Objeto",fontWeight=FontWeight.Bold,fontSize=12.sp)}
+                    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF8557B9))){Text(f.item?.label?.uppercase()?:"SIN OBJETO",fontWeight=FontWeight.Black,fontSize=12.sp)}
                 Row(horizontalArrangement=Arrangement.spacedBy(9.dp),verticalAlignment=Alignment.Bottom){
                     Pedal("FRENO",brake,active,Modifier.size(64.dp,70.dp),true){brake=it}
                     Pedal("GAS",gas,active,Modifier.size(76.dp,88.dp)){gas=it}
@@ -288,7 +305,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
             Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(7.dp),horizontalAlignment=Alignment.CenterHorizontally){
                 Text(if(f.place==1&&engine.mode!=RallyMode.TIME_TRIAL)"¡VICTORIA!" else "¡META!",fontSize=30.sp,color=Gold,fontWeight=FontWeight.Black)
                 Text(if(engine.mode==RallyMode.TIME_TRIAL)formatTime(f.elapsed) else "Posición ${f.place} de 6 · "+formatTime(f.elapsed),color=Color.White)
-                Text("${engine.score()} puntos",color=Green,fontWeight=FontWeight.Bold)
+                Text("${engine.score()} puntos · ${f.contacts} contactos",color=Green,fontWeight=FontWeight.Bold)
                 if(saving)CircularProgressIndicator(Modifier.size(22.dp))
                 else Text(reward?.let{if(it.syncedWithBackend)"+${it.xpAwarded} XP · +${it.coinsAwarded} monedas" else "Récord local · recompensa no confirmada"}?:"Resultado local",color=Color.White,fontSize=12.sp)
                 Button(onClick=onMenu,enabled=!saving){Text("Volver a circuitos")}

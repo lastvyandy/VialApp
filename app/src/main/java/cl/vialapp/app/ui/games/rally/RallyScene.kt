@@ -125,7 +125,7 @@ private fun scenery(track:RallyTrack):List<Scenery>{
                         }
                         // Same alternating lateral placements as the collection logic.
                         for(b in f.coins){
-                            val index=((b/track.length)*18f).toInt()
+                            val index=((b/track.length)*32f).toInt()
                             val p=track.at(b,if(index%2==0)-21f else 21f).first.o()
                             drawCircle(Color(0xFFFFC64E),5f,p);drawCircle(Color(0xFFFFEBA7),3.7f,p,style=Stroke(1f))
                         }
