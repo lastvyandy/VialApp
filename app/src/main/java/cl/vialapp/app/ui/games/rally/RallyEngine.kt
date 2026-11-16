@@ -68,7 +68,8 @@ internal data class RallyFrame(val pos:V2,val angle:Float,val speed:Float,val pr
     val countdown:Float,val rivals:List<Racer>,val boxes:List<Float>,val coins:List<Float>,val oils:List<Oil>,
     val item:RallyItem?=null,val nitro:Float=0f,val shield:Float=0f,val magnet:Float=0f,
     val integrity:Int=100,val collected:Int=0,val drift:Float=0f,val hit:Float=0f,val pulse:Float=0f,
-    val finished:Boolean=false,val place:Int=1,val lap:Int=1,val offroad:Boolean=false,val message:String="")
+    val finished:Boolean=false,val place:Int=1,val lap:Int=1,val offroad:Boolean=false,val message:String="",
+    val steering:Float=0f,val wrongWay:Boolean=false)
 internal class RallyEngine(val track:RallyTrack,val mode:RallyMode,seed:Int=42){
     private val random=Random(seed)
     private val total=track.length*mode.laps
@@ -81,9 +82,15 @@ internal class RallyEngine(val track:RallyTrack,val mode:RallyMode,seed:Int=42){
     private var coinCooldown=FloatArray(coinPositions.size)
     private var collisionCooldown=0f
     private var f=RallyFrame(start.first,start.second,0f,0f,0f,3f,
-        if(mode==RallyMode.TIME_TRIAL)emptyList() else List(5){i->Racer(-30f- i*30f,if(i%2==0)-18f else 18f,0f)},
-        if(mode==RallyMode.CHAOS)availableBoxes.toList()else emptyList(),availableCoins.toList(),emptyList())
+        if(mode==RallyMode.TIME_TRIAL)emptyList() else List(5){i->Racer(listOf(38f,38f,0f,-38f,-38f)[i],if(i%2==0)-23f else 23f,0f)},
+        if(mode==RallyMode.CHAOS)availableBoxes.toList()else emptyList(),availableCoins.toList(),emptyList(),place=if(mode==RallyMode.TIME_TRIAL)1 else 3)
     fun snapshot()=f
+    fun recover(){
+        if(f.finished||f.countdown>0f||(!f.offroad&&!f.wrongWay))return
+        val center=track.at(f.progress)
+        f=f.copy(pos=center.first,angle=center.second,speed=14f,elapsed=f.elapsed+4f,steering=0f,drift=0f,
+            offroad=false,wrongWay=false,nitro=0f,message="Recolocado · +4 s")
+    }
     fun useItem(){
         if(f.finished||f.countdown>0f)return
         val item=f.item?:return
@@ -102,18 +109,23 @@ internal class RallyEngine(val track:RallyTrack,val mode:RallyMode,seed:Int=42){
         if(f.countdown>0f){f=f.copy(countdown=(f.countdown-d).coerceAtLeast(0f));return f}
         val old=f
         val maxSpeed=(if(old.nitro>0f)166f else 118f)*(if(old.integrity<30).80f else 1f)
-        val speed=(old.speed+(if(brake)-180f else if(throttle)78f else -34f)*d).coerceIn(0f,maxSpeed)
-        val turn=steer.coerceIn(-1f,1f)
-        val angle=old.angle+turn*d*(.65f+1.65f*(speed/118f).coerceIn(0f,1f))*(if(brake&&speed>35f)1.30f else 1f)*track.grip*(if(speed<4f)0f else 1f)
-        val drift=if(brake&&abs(turn)>.3f&&speed>35f)turn*.24f else 0f
+        val acceleration=when{brake&&throttle->-36f;brake->-115f;throttle->78f;else->-21f}
+        val speed=(old.speed+acceleration*d).coerceIn(0f,maxSpeed)
+        val turn=old.steering+(steer.coerceIn(-1f,1f)-old.steering)*(d*12f).coerceAtMost(1f)
+        val roadHeading=track.at(old.progress+22f).second
+        val difference=wrappedDelta(roadHeading-old.angle,2f*PI.toFloat())
+        val assist=if(!old.offroad&&abs(difference)<.65f&&speed>15f)difference*.6f else 0f
+        val angle=old.angle+(turn*(.90f+1.02f*(speed/118f).coerceIn(0f,1f))*(if(brake&&speed>35f)1.32f else 1f)*track.grip*(if(speed<2f)0f else 1f)+assist)*d
+        val drift=if(brake&&abs(turn)>.21f&&speed>28f)turn*.30f else 0f
         val pos=old.pos+V2(cos(angle-drift),sin(angle-drift))*speed*d
         val road=track.nearest(pos,old.progress)
         val off=road.distance>track.halfWidth
         var p=pos
-        var v=if(off)(speed-94f*d).coerceAtLeast(0f) else speed
+        var v=if(off)(speed-36f*d).coerceIn(0f,55f) else speed
         // Soft shoulder: avoid lost cars off the map, without snapping them along the race.
         if(road.distance>track.halfWidth+35f){val dir=p-road.center;p=road.center+dir*((track.halfWidth+35f)/dir.length().coerceAtLeast(1f));v*=.72f}
-        var progress=road.progress.coerceAtLeast(-track.length*.15f)
+        var progress=(old.progress+(road.progress-old.progress).coerceIn(-speed*d*1.6f-1f,speed*d*1.6f+1f)).coerceAtLeast(-track.length*.15f)
+        val wrongWay=abs(wrappedDelta(angle-track.at(progress).second,2f*PI.toFloat()))>1.85f
         val elapsed=old.elapsed+d
         collisionCooldown=(collisionCooldown-d).coerceAtLeast(0f)
         var integrity=old.integrity
@@ -162,7 +174,7 @@ internal class RallyEngine(val track:RallyTrack,val mode:RallyMode,seed:Int=42){
             coins=coinPositions.filterIndexed{i,_->coinCooldown[i]==0f},oils=old.oils.map{it.copy(life=it.life-d)}.filter{it.life>0f},
             item=item,nitro=(old.nitro-d).coerceAtLeast(0f),shield=(old.shield-d).coerceAtLeast(0f),
             magnet=(old.magnet-d).coerceAtLeast(0f),integrity=integrity,collected=coins,drift=drift,hit=hurt,
-            pulse=(old.pulse-d).coerceAtLeast(0f),finished=finish,offroad=off,message=message)
+            pulse=(old.pulse-d).coerceAtLeast(0f),finished=finish,offroad=off,message=message,steering=turn,wrongWay=wrongWay)
         return f
     }
     fun score():Int=if(!f.finished)0 else (1100+(6-f.place)*220+f.collected*35+f.integrity*3+

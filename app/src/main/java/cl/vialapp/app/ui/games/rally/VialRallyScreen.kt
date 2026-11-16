@@ -13,7 +13,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
+import android.app.Activity
+import android.content.pm.ActivityInfo
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import kotlin.math.abs
+import kotlin.math.PI
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -59,8 +70,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
     var track by remember{mutableStateOf(RallyTracks.all.first())}
     var mode by remember{mutableStateOf(RallyMode.CHAOS)}
     var engine by remember{mutableStateOf<RallyEngine?>(null)}
-    var player by remember{mutableStateOf<ImageBitmap?>(null)}
-    var bots by remember{mutableStateOf<List<ImageBitmap>>(emptyList())}
+    var loadout by remember{mutableStateOf<RallyLoadout?>(null)}
     var coins by remember{mutableStateOf<Int?>(null)}
     LaunchedEffect(userKey,refresh){
         loading=true;checkFailed=false
@@ -82,21 +92,13 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                 }
             }else checkFailed=true
         }catch(e:CancellationException){throw e}catch(_:Exception){checkFailed=true}
-        val selectedStyle=style;val selectedColor=color;val selectedKit=kit
-        val sprites=withContext(Dispatchers.Default){
-            rasterizeRoadCar(selectedStyle,selectedColor,selectedKit) to listOf(
-                rasterizeRoadCar("sport",Color(0xFFE46D61),GarageKit()),
-                rasterizeRoadCar("hatch",Color(0xFFECC45E),GarageKit()),
-                rasterizeRoadCar("sedan",Color(0xFF79CD9B),GarageKit()),
-                rasterizeRoadCar("suv",Color(0xFFAF9CE8),GarageKit()),
-                rasterizeRoadCar("compact",Color(0xFFF0F2F5),GarageKit()))
-        }
-        player=sprites.first;bots=sprites.second;loading=false
+        loadout=RallyLoadout(style,color,kit)
+        loading=false
     }
     val current=engine
-    val sprite=player
-    if(current!=null&&sprite!=null){
-        RallyRace(current,sprite,bots,kit.neonColor(),store,session,prefs,
+    val car=loadout
+    if(current!=null&&car!=null){
+        RallyRace(current,car,store,session,prefs,
             onMenu={engine=null;level=store.snapshot().level;refresh++})
         return
     }
@@ -104,7 +106,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
     Column(Modifier.fillMaxSize().background(Dark).verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         TextButton(onClick=onBack){Text("‹ Minijuegos",color=Color.White)}
         Text("VIAL RALLY",fontSize=34.sp,fontWeight=FontWeight.Black,color=Gold)
-        Text("Circuitos cerrados · competición arcade",color=Color(0xFFB9CBDD),fontSize=13.sp)
+        Text("Carreras 3D · teléfono en horizontal",color=Color(0xFFB9CBDD),fontSize=13.sp)
         RallyPreview(track,Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(18.dp)))
         if(unlocked<3){
             Text("Licencia de competición",color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold)
@@ -143,14 +145,14 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                     }
                 }
             }
-            Button(onClick={engine=RallyEngine(track,mode,System.nanoTime().toInt())},enabled=!loading&&sprite!=null&&level>=track.level,modifier=Modifier.fillMaxWidth().height(52.dp)){
+            Button(onClick={engine=RallyEngine(track,mode,System.nanoTime().toInt())},enabled=!loading&&car!=null&&level>=track.level,modifier=Modifier.fillMaxWidth().height(52.dp)){
                 Text(if(loading)"Preparando…" else "¡A CORRER!",fontWeight=FontWeight.Black)
             }
             Text("Los objetos aparecen en el modo caótico. Las monedas de pista suman puntos; el saldo real se actualiza con las recompensas confirmadas por VialApp.",color=Color(0xFFB7C7D9),fontSize=12.sp)
         }
     }
 }
-@Composable private fun RallyRace(engine:RallyEngine,player:ImageBitmap,bots:List<ImageBitmap>,neon:Color?,store:GameProgressStore,session:SessionManager,prefs:android.content.SharedPreferences,onMenu:()->Unit){
+@Composable private fun RallyRace(engine:RallyEngine,loadout:RallyLoadout,store:GameProgressStore,session:SessionManager,prefs:android.content.SharedPreferences,onMenu:()->Unit){
     var f by remember(engine){mutableStateOf(engine.snapshot())}
     var left by remember(engine){mutableStateOf(false)}
     var right by remember(engine){mutableStateOf(false)}
@@ -163,17 +165,22 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
     val runId=remember(engine){UUID.randomUUID().toString()}
     val rewards=LocalRewards.current
     val context=LocalContext.current
+    RallyLandscape()
     fun clearInputs(){left=false;right=false;gas=false;brake=false}
     fun leave(){if(f.finished&&!saving)onMenu()else if(!f.finished){clearInputs();paused=true;exit=true}}
     BackHandler {leave()}
     DisposableEffect(context,engine){
-        val lifecycle=(context as? LifecycleOwner)?.lifecycle
+        var ownerContext=context
+        while(ownerContext is android.content.ContextWrapper&&ownerContext !is LifecycleOwner)ownerContext=ownerContext.baseContext
+        val lifecycle=(ownerContext as? LifecycleOwner)?.lifecycle
         val observer=LifecycleEventObserver{_,event->if(event==Lifecycle.Event.ON_PAUSE){clearInputs();paused=true}}
         lifecycle?.addObserver(observer)
         onDispose{lifecycle?.removeObserver(observer)}
     }
-    LaunchedEffect(engine,paused,f.finished){
-        if(paused||f.finished)return@LaunchedEffect
+    val configuration=LocalConfiguration.current
+    val landscapeReady=configuration.screenWidthDp>=configuration.screenHeightDp
+    LaunchedEffect(engine,paused,f.finished,landscapeReady){
+        if(paused||f.finished||!landscapeReady)return@LaunchedEffect
         var last=withFrameNanos{it};var carry=0f
         val tick=1f/60f
         while(!paused&&!f.finished){
@@ -197,60 +204,129 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                 reward=if(token!=null)store.recordRunRemote(ApiClient.api,token,GameProgressStore.VIAL_RALLY,engine.score(),ceil(f.elapsed.toDouble()).toInt(),eventId=runId)
                 else GameRunResult(store.recordLocalHighScore(GameProgressStore.VIAL_RALLY,engine.score()),0,0,false)
                 reward?.takeIf{it.syncedWithBackend}?.let{rewards.show("Carrera completada",it.coinsAwarded,it.xpAwarded)}
+            }catch(e:CancellationException){throw e}catch(_:Exception){
+                reward=GameRunResult(store.recordLocalHighScore(GameProgressStore.VIAL_RALLY,engine.score()),0,0,false)
             }finally{saving=false}
         }
     }
     if(exit)AlertDialog(onDismissRequest={exit=false;paused=false},title={Text("¿Abandonar carrera?")},text={Text("No se otorgarán recompensas.")},
         confirmButton={TextButton(onClick=onMenu){Text("Salir")}},dismissButton={TextButton(onClick={exit=false;paused=false}){Text("Continuar")}})
-    Column(Modifier.fillMaxSize().background(Dark).padding(10.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-            TextButton(onClick=::leave){Text("‹ Salir",color=Color.White)}
-            Text(engine.track.name,modifier=Modifier.weight(1f),color=Gold,fontWeight=FontWeight.Bold,fontSize=14.sp)
-            if(!f.finished)TextButton(onClick={clearInputs();paused=!paused}){Text(if(paused)"Seguir" else "Pausa",color=Color.White)}
-        }
-        Row(horizontalArrangement=Arrangement.SpaceBetween,modifier=Modifier.fillMaxWidth()){
-            Text(if(engine.mode==RallyMode.TIME_TRIAL)"CRONO" else "${f.place}/6 POS",color=Gold,fontWeight=FontWeight.Black,fontSize=18.sp)
-            Text("${f.lap}/${engine.mode.laps} VUELTA",color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold)
-            Text(formatTime(f.elapsed),color=Color.White,fontWeight=FontWeight.Bold)
-        }
-        Box(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(15.dp))){
-            RallyScene(engine.track,f,player,bots,neon,Modifier.fillMaxSize())
-            if(f.countdown>0&&!f.finished)Text(ceil(f.countdown).toInt().toString(),Modifier.align(Alignment.Center),fontSize=76.sp,color=Color.White,fontWeight=FontWeight.Black)
-            if(paused&&!f.finished)Surface(Modifier.align(Alignment.Center),color=Dark,shape=RoundedCornerShape(14.dp)){
-                Button(onClick={paused=false},modifier=Modifier.padding(12.dp)){Text("Continuar")}
+    Box(Modifier.fillMaxSize().background(Dark)){
+        Rally3D(engine.track,f,loadout,Modifier.fillMaxSize())
+        // A racing HUD over the scene; the controls never reduce the viewport.
+        Row(Modifier.align(Alignment.TopStart).fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),
+            horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.Top){
+            Surface(color=Dark.copy(alpha=.86f),shape=RoundedCornerShape(12.dp)){
+                Row(Modifier.padding(horizontal=12.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)){
+                    Column{
+                        Text(if(engine.mode==RallyMode.TIME_TRIAL)"CRONO" else "${f.place} / 6",color=Gold,fontSize=25.sp,fontWeight=FontWeight.Black)
+                        Text(if(engine.mode==RallyMode.TIME_TRIAL)"CONTRARRELOJ" else "POSICIÓN",color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold)
+                    }
+                    Column{
+                        Text("VUELTA ${f.lap}/${engine.mode.laps}",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)
+                        Text(formatTime(f.elapsed),color=Green,fontSize=18.sp,fontWeight=FontWeight.Black)
+                        LinearProgressIndicator(progress={(f.progress/(engine.track.length*engine.mode.laps)).coerceIn(0f,1f)},modifier=Modifier.width(94.dp).height(4.dp),color=Green,trackColor=Panel)
+                    }
+                }
             }
-            if(f.finished)Surface(Modifier.align(Alignment.Center).fillMaxWidth(.88f),color=Dark,shape=RoundedCornerShape(18.dp)){
-                Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(9.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                    Text("¡META!",fontSize=35.sp,color=Gold,fontWeight=FontWeight.Black)
-                    Text(if(engine.mode==RallyMode.TIME_TRIAL)formatTime(f.elapsed) else "Posición ${f.place} de 6",color=Color.White)
-                    Text("${engine.score()} puntos",color=Green,fontWeight=FontWeight.Bold)
-                    if(saving)CircularProgressIndicator(Modifier.size(22.dp))
-                    else Text(reward?.let{if(it.syncedWithBackend)"+${it.xpAwarded} XP · +${it.coinsAwarded} monedas" else "Récord local · recompensa no confirmada"}?:"Resultado local",color=Color.White,fontSize=12.sp)
-                    Button(onClick=onMenu,enabled=!saving){Text("Volver a circuitos")}
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.Top){
+                RallyMinimap(engine.track,f,Modifier.size(82.dp).clip(RoundedCornerShape(12.dp)).background(Dark.copy(alpha=.86f)))
+                Column(horizontalAlignment=Alignment.End){
+                    FilledTonalButton(onClick=::leave,modifier=Modifier.height(36.dp),contentPadding=PaddingValues(horizontal=13.dp)){Text("Salir",fontSize=12.sp)}
+                    if(!f.finished)FilledTonalButton(onClick={clearInputs();paused=!paused},modifier=Modifier.height(36.dp),contentPadding=PaddingValues(horizontal=13.dp)){Text(if(paused)"Seguir" else "Pausa",fontSize=12.sp)}
                 }
             }
         }
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
-            Text((f.speed*1.55f).roundToInt().toString()+" km/h",color=Gold,fontSize=21.sp,fontWeight=FontWeight.Black)
-            Text("Fichas: "+f.collected,color=Color.White,fontSize=12.sp)
-            Text("Estado: "+f.integrity+"%",color=Green,fontSize=12.sp)
-        }
-        LinearProgressIndicator(progress={(f.progress/(engine.track.length*engine.mode.laps)).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth(),color=Green,trackColor=Panel)
         if(!f.finished){
-            Text(if(f.offroad)"FUERA DE PISTA · reduce velocidad" else if(f.nitro>0)"¡NITRO!" else f.message.ifBlank{"Mantén el acelerador y gira en las curvas"},color=Color(0xFFC3D5E4),fontSize=11.sp,maxLines=1)
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp),verticalAlignment=Alignment.CenterVertically){
-                Pedal("◀",left,!paused,Modifier.weight(1f)){left=it}
-                Pedal("▶",right,!paused,Modifier.weight(1f)){right=it}
-                Button(onClick={engine.useItem();f=engine.snapshot()},enabled=!paused&&f.item!=null,modifier=Modifier.weight(1.35f).height(58.dp),contentPadding=PaddingValues(3.dp)){Text(f.item?.label?:"Objeto",fontSize=10.sp)}
-                Pedal("FRENO",brake,!paused,Modifier.weight(1f),true){brake=it}
-                Pedal("GAS",gas,!paused,Modifier.weight(1f),false){gas=it}
+            Column(Modifier.align(Alignment.BottomCenter).padding(bottom=10.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                Surface(color=Dark.copy(alpha=.84f),shape=RoundedCornerShape(14.dp)){
+                    Column(Modifier.padding(horizontal=14.dp,vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                        Row(verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                            Text((f.speed*1.55f).roundToInt().toString(),fontSize=32.sp,fontWeight=FontWeight.Black,color=Gold)
+                            Text("km/h",Modifier.padding(bottom=5.dp),fontSize=11.sp,color=Color.White)
+                        }
+                        Text("Fichas "+f.collected+"  ·  "+f.integrity+"% estado",color=Color.White,fontSize=11.sp)
+                        if(f.nitro>0f)Text("NITRO",color=Color(0xFF70E9FF),fontSize=12.sp,fontWeight=FontWeight.Black)
+                    }
+                }
+            }
+            val active=landscapeReady&&!paused&&!exit&&f.countdown<=0f
+            Row(Modifier.align(Alignment.BottomStart).padding(13.dp),horizontalArrangement=Arrangement.spacedBy(9.dp)){
+                Pedal("◀",left,active,Modifier.size(76.dp)){left=it}
+                Pedal("▶",right,active,Modifier.size(76.dp)){right=it}
+            }
+            Column(Modifier.align(Alignment.BottomEnd).padding(13.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(7.dp)){
+                Button(onClick={engine.useItem();f=engine.snapshot()},enabled=active&&f.item!=null,
+                    modifier=Modifier.height(42.dp).widthIn(min=88.dp),contentPadding=PaddingValues(horizontal=10.dp),
+                    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF8557B9))){Text(f.item?.label?:"Objeto",fontWeight=FontWeight.Bold,fontSize=12.sp)}
+                Row(horizontalArrangement=Arrangement.spacedBy(9.dp),verticalAlignment=Alignment.Bottom){
+                    Pedal("FRENO",brake,active,Modifier.size(64.dp,70.dp),true){brake=it}
+                    Pedal("GAS",gas,active,Modifier.size(76.dp,88.dp)){gas=it}
+                }
+            }
+            if(f.offroad||f.wrongWay){
+                Surface(Modifier.align(Alignment.TopCenter).padding(top=92.dp),shape=RoundedCornerShape(10.dp),color=Dark.copy(alpha=.9f)){
+                    Row(Modifier.padding(horizontal=9.dp,vertical=3.dp),verticalAlignment=Alignment.CenterVertically){
+                        Text(if(f.wrongWay)"SENTIDO CONTRARIO" else "FUERA DE PISTA",color=Gold,fontSize=11.sp,fontWeight=FontWeight.Black)
+                        TextButton(onClick={clearInputs();engine.recover();f=engine.snapshot()},enabled=active,contentPadding=PaddingValues(horizontal=12.dp)){Text("Recolocar · +4 s",color=Color.White,fontSize=11.sp)}
+                    }
+                }
+            }
+        }
+        if(!landscapeReady&&!f.finished)Surface(Modifier.align(Alignment.Center),color=Dark,shape=RoundedCornerShape(16.dp)){
+            Text("Gira el teléfono para correr",Modifier.padding(18.dp),color=Color.White,fontWeight=FontWeight.Bold)
+        }
+        else if(f.countdown>0f&&!f.finished)Text(ceil(f.countdown).toInt().toString(),Modifier.align(Alignment.Center),fontSize=100.sp,color=Color.White,fontWeight=FontWeight.Black)
+        else if(f.elapsed<.75f&&!f.finished)Text("¡YA!",Modifier.align(Alignment.Center),color=Green,fontSize=72.sp,fontWeight=FontWeight.Black)
+        if(paused&&!f.finished&&!exit)Surface(Modifier.align(Alignment.Center),color=Dark,shape=RoundedCornerShape(16.dp)){
+            Column(Modifier.padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)){
+                Text("EN PAUSA",color=Color.White,fontWeight=FontWeight.Black,fontSize=24.sp)
+                Button(onClick={paused=false}){Text("Continuar")}
+            }
+        }
+        if(f.finished)Surface(Modifier.align(Alignment.Center).widthIn(max=340.dp).fillMaxWidth(.72f),color=Dark,shape=RoundedCornerShape(18.dp)){
+            Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(7.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                Text(if(f.place==1&&engine.mode!=RallyMode.TIME_TRIAL)"¡VICTORIA!" else "¡META!",fontSize=30.sp,color=Gold,fontWeight=FontWeight.Black)
+                Text(if(engine.mode==RallyMode.TIME_TRIAL)formatTime(f.elapsed) else "Posición ${f.place} de 6 · "+formatTime(f.elapsed),color=Color.White)
+                Text("${engine.score()} puntos",color=Green,fontWeight=FontWeight.Bold)
+                if(saving)CircularProgressIndicator(Modifier.size(22.dp))
+                else Text(reward?.let{if(it.syncedWithBackend)"+${it.xpAwarded} XP · +${it.coinsAwarded} monedas" else "Récord local · recompensa no confirmada"}?:"Resultado local",color=Color.White,fontSize=12.sp)
+                Button(onClick=onMenu,enabled=!saving){Text("Volver a circuitos")}
             }
         }
     }
 }
+
+/** Restore the exact previous orientation when leaving a race. */
+@Composable private fun RallyLandscape(){
+    val context=LocalContext.current
+    DisposableEffect(context){
+        var ctx=context
+        while(ctx is android.content.ContextWrapper&&ctx !is Activity)ctx=ctx.baseContext
+        val activity=ctx as? Activity
+        val previous=activity?.requestedOrientation
+        activity?.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        onDispose{if(activity!=null&&previous!=null)activity.requestedOrientation=previous}
+    }
+}
+
+@Composable private fun RallyMinimap(track:RallyTrack,frame:RallyFrame,modifier:Modifier){
+    val path=remember(track){Path().apply{moveTo(track.nodes.first().x,track.nodes.first().y);for(p in track.nodes.drop(1))lineTo(p.x,p.y);close()}}
+    val bounds=remember(track){floatArrayOf(track.nodes.minOf{it.x},track.nodes.maxOf{it.x},track.nodes.minOf{it.y},track.nodes.maxOf{it.y})}
+    Canvas(modifier.padding(8.dp)){
+        val u=minOf(size.width/(bounds[1]-bounds[0]+60f),size.height/(bounds[3]-bounds[2]+60f))
+        translate(size.width/2,size.height/2){scale(u,u,pivot=Offset.Zero){
+            translate(-(bounds[0]+bounds[1])/2,-(bounds[2]+bounds[3])/2){
+                drawPath(path,Color(0xFFB6CBDD),style=Stroke(14f,cap=StrokeCap.Round,join=androidx.compose.ui.graphics.StrokeJoin.Round))
+                for(r in frame.rivals){val p=track.at(r.progress,r.lane).first;drawCircle(Color(0xFFFFA072),14f,Offset(p.x,p.y))}
+                drawCircle(Green,20f,Offset(frame.pos.x,frame.pos.y));drawCircle(Color.White,20f,Offset(frame.pos.x,frame.pos.y),style=Stroke(4f))
+            }
+        }}
+    }
+}
 @Composable private fun Pedal(label:String,pressed:Boolean,enabled:Boolean,modifier:Modifier,red:Boolean=false,change:(Boolean)->Unit){
     val latest by rememberUpdatedState(change)
-    Box(modifier.height(64.dp).clip(RoundedCornerShape(13.dp)).background(if(pressed)if(red)Color(0xFFC05C59)else Color(0xFF287F69)else Panel)
+    Box(modifier.clip(RoundedCornerShape(25.dp)).background(if(pressed)if(red)Color(0xFFC05C59)else Color(0xFF287F69)else Panel.copy(alpha=.79f)).border(1.5.dp,Color.White.copy(alpha=.42f),RoundedCornerShape(25.dp))
         .pointerInput(enabled){
             if(enabled)awaitEachGesture{
                 val first=awaitFirstDown(requireUnconsumed=false)
@@ -262,7 +338,7 @@ fun VialRallyScreen(userKey:String,onBack:()->Unit,onGarage:()->Unit,onExams:()-
                     p.consume()
                 }while(true)}finally{latest(false)}
             }
-        },contentAlignment=Alignment.Center){Text(label,color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Black)}
+        },contentAlignment=Alignment.Center){Text(label,color=Color.White,fontSize=if(label=="◀"||label=="▶")25.sp else 13.sp,fontWeight=FontWeight.Black)}
 }
 private fun formatTime(seconds:Float):String{
     val ms=(seconds.coerceAtLeast(0f)*1000f).toInt()
