@@ -4,7 +4,8 @@ import kotlin.math.*
 import kotlin.random.Random
 
 internal enum class DoomWeapon(val title:String,val delay:Float,val damage:Int,val reach:Float,val spread:Float){
-    PISTOL("PISTOLA",.27f,24,12f,.055f), SHOTGUN("ESCOPETA",.72f,74,7f,.17f), PLASMA("PELAOTRÓN",.15f,21,11f,.09f)
+    PISTOL("PISTOLA",.27f,24,12f,.055f), SHOTGUN("ESCOPETA",.72f,74,7f,.17f), PLASMA("PELAOTRÓN",.15f,21,11f,.09f),
+    MINIGUN("MINIGUN",.105f,19,13f,.085f), ROCKET("LANZACOHETES",.82f,150,18f,.045f)
 }
 internal enum class DoomKind(val hp:Int,val speed:Float,val attack:Float,val damage:Int){
     GUARD(55,.85f,1.65f,9), DRONE(38,1.3f,1.9f,7), BOSS(310,.65f,1.22f,13),
@@ -13,17 +14,18 @@ internal enum class DoomKind(val hp:Int,val speed:Float,val attack:Float,val dam
 internal enum class DoomWeaponPhase { READY, LOWERING, RAISING, FIRING, PUMPING, RELOADING }
 internal data class DoomExplosive(val x:Float,val y:Float,val crate:Boolean,var hp:Int=24,var exploded:Boolean=false)
 internal data class DoomExplosion(val x:Float,val y:Float,var time:Float=.52f)
-internal enum class DoomLootKind { COIN, AMMO, SHELLS, CELL, MEDKIT, ARMOR, SHOTGUN, PLASMA, KEY }
+internal enum class DoomLootKind { COIN, AMMO, SHELLS, CELL, MEDKIT, ARMOR, SHOTGUN, PLASMA, KEY, MINIGUN, ROCKET, BELT, ROCKET_AMMO }
 internal data class DoomEnemy(val id:Int,val kind:DoomKind,var x:Float,var y:Float,var hp:Int=kind.hp,var cooldown:Float=.8f,var flash:Float=0f,var alert:Boolean=false,var attackFlash:Float=0f,var pattern:Int=0,var deathAge:Float=0f)
 internal data class DoomLoot(val kind:DoomLootKind,val x:Float,val y:Float,var taken:Boolean=false)
 internal enum class DoomDecorKind { BARREL, CRATE, TERMINAL, LAMP, WRECK }
 internal data class DoomDecor(val kind:DoomDecorKind,val x:Float,val y:Float,val scale:Float,val lift:Float=0f)
+internal data class DoomRocket(var x:Float,var y:Float,val vx:Float,val vy:Float,var life:Float=2.2f)
 internal data class DoomBolt(var x:Float,var y:Float,val vx:Float,val vy:Float,val damage:Int,var life:Float=3f)
 internal data class DoomChallenge(val prompt:String,val answers:List<String>,val correct:Int,val explanation:String)
 internal data class DoomDoor(val x:Int,val y:Int,val kind:Int,val question:DoomChallenge?=null,var open:Boolean=false)
 internal data class DoomRay(val distance:Float,val cell:Int,val u:Float,val side:Int,val mapX:Int=-1,val mapY:Int=-1)
 internal data class DoomInput(val forward:Float=0f,val strafe:Float=0f,val turn:Float=0f,val fire:Boolean=false)
-internal enum class DoomEvent { SHOT, BLAST, PLASMA, HIT, HURT, COIN, LOOT, SWITCH, DOOR, CORRECT, WRONG, VICTORY, DEFEAT, SECRET, EXPLOSION, RELOAD, ENEMY_SHOT, ENEMY_DEATH, MACHINE_DEATH }
+internal enum class DoomEvent { SHOT, BLAST, PLASMA, HIT, HURT, COIN, LOOT, SWITCH, DOOR, CORRECT, WRONG, VICTORY, DEFEAT, SECRET, EXPLOSION, RELOAD, ENEMY_SHOT, ENEMY_DEATH, MACHINE_DEATH, MINIGUN_SHOT, ROCKET_SHOT }
 internal enum class DoomFaceState(val asset:String){
     NORMAL("02_normal_frente"),RIGHT("03_normal_mirando_derecha_v1"),LEFT("10_normal_mirando_izquierda_v2"),
     ANGRY("11_enojado_frente"),HURT("12_herido_frente"),HURT_RIGHT("13_herido_mirando_derecha"),
@@ -42,18 +44,21 @@ internal fun doomFaceState(hp:Int,look:Int,angry:Boolean,berserk:Boolean):DoomFa
     }
 }
 internal class DoomEngine(seed:Int=19,val level:Int=1){
-    val levelTitle get()=if(level==2)"TUNEL BAJO CONTROL" else "ESTACIONAMIENTO INFERNAL"
-    val exitX get()=if(level==2)1 else 20
-    val exitY get()=if(level==2)13 else 13
+    val levelTitle get()=when(level){2->"TUNEL BAJO CONTROL";3->"LA FORTALEZA VIAL";else->"ESTACIONAMIENTO INFERNAL"}
+    val exitX get()=when(level){2->1;3->28;else->20}
+    val exitY get()=if(level==3)19 else 13
+    val bossMaxHp get()=if(level==3)560 else DoomKind.BOSS.hp
+    val bossHealth get()=enemies.firstOrNull{it.kind==DoomKind.BOSS}?.hp?:0
     val secretTotal get()=doors.count{it.kind==3}
-    val width=22
-    val height=17
+    val width=if(level==3)30 else 22
+    val height=if(level==3)23 else 17
     private val grid=IntArray(width*height){1}
     private val random=Random(seed)
     val doors=mutableListOf<DoomDoor>()
     val enemies=mutableListOf<DoomEnemy>()
     val loot=mutableListOf<DoomLoot>()
     val bolts=mutableListOf<DoomBolt>()
+    val rockets=mutableListOf<DoomRocket>()
     val decor=mutableListOf<DoomDecor>()
     val explosives=mutableListOf<DoomExplosive>()
     val explosions=mutableListOf<DoomExplosion>()
@@ -67,10 +72,10 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     var kills=0;private set
     var elapsed=0f;private set
     var weapon=DoomWeapon.PISTOL;private set
-    private val ammo= intArrayOf(44,0,0)
-    private val owned=booleanArrayOf(true,false,false)
-    private val magazineSize=intArrayOf(10,2,18)
-    private val magazine=intArrayOf(10,0,0)
+    private val ammo= intArrayOf(44,0,0,0,0)
+    private val owned=booleanArrayOf(true,false,false,false,false)
+    private val magazineSize=intArrayOf(10,2,18,36,1)
+    private val magazine=intArrayOf(10,0,0,0,0)
     var weaponPhase=DoomWeaponPhase.READY;private set
     var weaponProgress=0f;private set
     private var queuedWeapon:DoomWeapon?=null
@@ -174,7 +179,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             DoomDecor(DoomDecorKind.CRATE,20.5f,8.5f,.72f),
             DoomDecor(DoomDecorKind.BARREL,16.5f,15.5f,.74f)
         )
-        }else{
+        }else if(level==2){
             // A winding tunnel with two mandatory checkpoints and an optional supply bunker.
             room(1,1,5,5,3);room(7,1,15,5,2);room(17,1,20,5,4)
             room(17,7,20,15,1);room(7,7,15,15,3);room(1,7,5,15,4)
@@ -203,7 +208,55 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             for((xx,yy) in listOf(2.5f to 1.5f,8.5f to 1.5f,14.5f to 1.5f,19.5f to 1.5f,17.5f to 7.5f,12.5f to 7.5f,2.5f to 7.5f))decor+=DoomDecor(DoomDecorKind.LAMP,xx,yy,.45f,.84f)
             grid[exitY*width+exitX]=6
             message="Carvier: Reactiva los controles del túnel y consigue la credencial."
+        }else{
+            require(level==3)
+            buildFortress()
         }
+    }
+    private fun buildFortress(){
+        // Three mandatory checkpoints along a dogleg route, two independent supply secrets.
+        fun room(x1:Int,y1:Int,x2:Int,y2:Int,wall:Int){
+            for(yy in y1-1..y2+1)for(xx in x1-1..x2+1)
+                if(xx in 0 until width&&yy in 0 until height&&grid[yy*width+xx]!=0)grid[yy*width+xx]=wall
+            for(yy in y1..y2)for(xx in x1..x2)grid[yy*width+xx]=0
+        }
+        room(1,1,6,6,4);room(8,1,19,6,2);room(21,1,28,6,3)
+        room(8,8,19,14,4);room(21,8,28,14,1)
+        room(1,16,6,21,3);room(8,16,19,21,2);room(21,16,28,21,4)
+        fun gate(xx:Int,yy:Int,kind:Int,q:DoomChallenge?=null){doors+=DoomDoor(xx,yy,kind,q);grid[yy*width+xx]=5}
+        gate(7,3,1,DoomChallenge("Al conducir con lluvia intensa, ¿qué conviene hacer?",listOf("Acercarse al de adelante","Reducir velocidad y aumentar distancia","Frenar bruscamente"),1,"La lluvia reduce la adherencia: baja la velocidad y deja más distancia."))
+        gate(20,3,3,DoomChallenge("¿Para qué sirve el cinturón de seguridad?",listOf("Solo evita multas","Permite conducir más rápido","Reduce el riesgo de lesiones en un choque"),2,"El cinturón reduce el riesgo de lesiones y debe usarse en cada viaje."))
+        gate(14,7,1,DoomChallenge("Si notas que tienes sueño al conducir, ¿qué haces?",listOf("Detenerme en un lugar seguro y descansar","Subir la música y seguir","Aumentar la velocidad"),0,"Detente en un lugar seguro y descansa. La fatiga reduce la capacidad de reacción."))
+        gate(20,11,0)
+        gate(14,15,1,DoomChallenge("Si escuchas una ambulancia de emergencia acercándose, ¿qué haces?",listOf("Competir con ella","Facilitar su paso sin maniobras peligrosas","Detenerme en cualquier lugar"),1,"Facilita el paso de vehículos de emergencia de forma segura."))
+        gate(7,19,3,DoomChallenge("¿Qué debes hacer antes de cambiar de pista?",listOf("Señalizar y comprobar espejos y punto ciego","Solo tocar la bocina","Girar inmediatamente"),0,"Comprueba espejos y punto ciego y señaliza antes de cambiar de pista."))
+        gate(20,19,2)
+        for((xx,yy) in listOf(4 to 2,9 to 2,12 to 5,17 to 4,22 to 2,26 to 5,9 to 9,11 to 13,16 to 9,18 to 13,23 to 9,26 to 12,3 to 17,5 to 21,9 to 17,12 to 20,17 to 17,22 to 17,26 to 17,23 to 21,27 to 21))grid[yy*width+xx]=2
+        fun foe(k:DoomKind,xx:Float,yy:Float){
+            val life=if(k==DoomKind.BOSS)bossMaxHp else (k.hp*1.13f).roundToInt()
+            enemies+=DoomEnemy(enemies.size,k,xx,yy,hp=life,cooldown=1.1f+random.nextFloat()*.7f)
+        }
+        foe(DoomKind.GUARD,5.2f,3.5f);foe(DoomKind.RUNNER,5.5f,5.5f);foe(DoomKind.DRONE,2.5f,5.5f)
+        foe(DoomKind.GUARD,10.5f,3.5f);foe(DoomKind.SHOTGUNNER,12.5f,2.5f);foe(DoomKind.DRONE,16.5f,2.5f);foe(DoomKind.HEAVY,18.5f,4.5f);foe(DoomKind.RUNNER,17.5f,5.5f)
+        foe(DoomKind.HEAVY,24.5f,3.5f);foe(DoomKind.DRONE,27.5f,4.5f);foe(DoomKind.RUNNER,25.5f,5.5f)
+        foe(DoomKind.GUARD,14.5f,9.5f);foe(DoomKind.SHOTGUNNER,10.5f,10.5f);foe(DoomKind.DRONE,9.5f,12.5f);foe(DoomKind.RUNNER,13.5f,13.5f);foe(DoomKind.HEAVY,17.5f,11.5f);foe(DoomKind.SHOTGUNNER,18.5f,10.5f)
+        foe(DoomKind.HEAVY,24.5f,10.5f);foe(DoomKind.GUARD,22.5f,13.5f);foe(DoomKind.DRONE,27.5f,10.5f);foe(DoomKind.RUNNER,26.5f,14.5f);foe(DoomKind.SHOTGUNNER,28.5f,13.5f)
+        foe(DoomKind.HEAVY,10.5f,19.5f);foe(DoomKind.RUNNER,13.5f,17.5f);foe(DoomKind.DRONE,17.5f,20.5f);foe(DoomKind.SHOTGUNNER,18.5f,18.5f)
+        foe(DoomKind.HEAVY,4.5f,18.5f);foe(DoomKind.DRONE,2.5f,20.5f)
+        foe(DoomKind.HEAVY,24.5f,18.5f);foe(DoomKind.SHOTGUNNER,22.5f,20.5f);foe(DoomKind.RUNNER,26.5f,20.5f);foe(DoomKind.DRONE,27.5f,16.5f);foe(DoomKind.BOSS,26.5f,19.5f)
+        fun supply(k:DoomLootKind,xx:Float,yy:Float){loot+=DoomLoot(k,xx,yy)}
+        supply(DoomLootKind.SHOTGUN,3.5f,3.5f);supply(DoomLootKind.SHELLS,3.5f,5.5f);supply(DoomLootKind.ARMOR,2.5f,2.5f)
+        supply(DoomLootKind.MINIGUN,8.5f,3.5f);supply(DoomLootKind.BELT,10.5f,6.5f);supply(DoomLootKind.MEDKIT,14.5f,2.5f);supply(DoomLootKind.BELT,18.5f,2.5f);supply(DoomLootKind.SHELLS,14.5f,6.5f)
+        supply(DoomLootKind.PLASMA,23.5f,3.5f);supply(DoomLootKind.CELL,27.5f,2.5f);supply(DoomLootKind.ARMOR,25.5f,5.5f);supply(DoomLootKind.COIN,26.5f,3.5f)
+        supply(DoomLootKind.ROCKET,14.5f,8.5f);supply(DoomLootKind.ROCKET_AMMO,12.5f,11.5f);supply(DoomLootKind.MEDKIT,10.5f,14.5f);supply(DoomLootKind.BELT,15.5f,13.5f);supply(DoomLootKind.ROCKET_AMMO,19.5f,11.5f)
+        supply(DoomLootKind.KEY,27.5f,13.5f);supply(DoomLootKind.COIN,24.5f,13.5f);supply(DoomLootKind.ARMOR,23.5f,14.5f);supply(DoomLootKind.BELT,25.5f,11.5f);supply(DoomLootKind.MEDKIT,27.5f,8.5f)
+        supply(DoomLootKind.MEDKIT,14.5f,16.5f);supply(DoomLootKind.ROCKET_AMMO,18.5f,19.5f);supply(DoomLootKind.BELT,15.5f,20.5f);supply(DoomLootKind.SHELLS,10.5f,18.5f)
+        supply(DoomLootKind.PLASMA,3.5f,19.5f);supply(DoomLootKind.CELL,2.5f,17.5f);supply(DoomLootKind.ARMOR,2.5f,21.5f);supply(DoomLootKind.COIN,5.5f,18.5f)
+        supply(DoomLootKind.MEDKIT,21.5f,19.5f);supply(DoomLootKind.ROCKET_AMMO,25.5f,16.5f);supply(DoomLootKind.BELT,24.5f,21.5f);supply(DoomLootKind.COIN,27.5f,20.5f)
+        for((xx,yy) in listOf(6.2f to 5.5f,11.5f to 4.5f,18.5f to 5.5f,24.5f to 5.5f,10.5f to 12.5f,17.5f to 10.5f,22.5f to 10.5f,28.5f to 11.5f,11.5f to 18.5f,17.5f to 21.5f,23.5f to 18.5f,27.5f to 18.5f))explosives+=DoomExplosive(xx,yy,explosives.size%2==0)
+        for((xx,yy) in listOf(2.5f to 1.5f,10.5f to 1.5f,16.5f to 1.5f,22.5f to 1.5f,10.5f to 8.5f,18.5f to 8.5f,22.5f to 8.5f,2.5f to 16.5f,9.5f to 16.5f,18.5f to 16.5f,21.5f to 16.5f,28.5f to 16.5f))decor+=DoomDecor(DoomDecorKind.LAMP,xx,yy,.42f,.84f)
+        grid[exitY*width+exitX]=6
+        message="Carvier: La fortaleza está infestada. Recupera la credencial y destruye el núcleo."
     }
     fun cell(cx:Int,cy:Int):Int{
         if(cx !in 0 until width||cy !in 0 until height)return 1
@@ -252,7 +305,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     }
     fun reload(){
         if(finished||pending!=null||weaponPhase!=DoomWeaponPhase.READY||magazineAmmo>=min(ammunition,magazineSize[weapon.ordinal])||ammunition<=0)return
-        phase(DoomWeaponPhase.RELOADING,when(weapon){DoomWeapon.PISTOL->.54f;DoomWeapon.SHOTGUN->.65f;DoomWeapon.PLASMA->.46f})
+        phase(DoomWeaponPhase.RELOADING,when(weapon){DoomWeapon.PISTOL->.54f;DoomWeapon.SHOTGUN->.65f;DoomWeapon.PLASMA->.46f;DoomWeapon.MINIGUN->.92f;DoomWeapon.ROCKET->.66f})
         events+=DoomEvent.RELOAD
     }
     private fun advanceWeapon(dt:Float){
@@ -355,8 +408,9 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         if(magazineAmmo<=0){reload();return}
         ammo[w.ordinal]--;magazine[w.ordinal]--;fireCooldown=w.delay;shotFlash=.10f;faceFire=.36f
         reloadAfterShot=magazineAmmo<=0&&ammunition>0
-        phase(DoomWeaponPhase.FIRING,when(w){DoomWeapon.PISTOL->.16f;DoomWeapon.SHOTGUN->.33f;DoomWeapon.PLASMA->.12f})
-        events+=when(w){DoomWeapon.PISTOL->DoomEvent.SHOT;DoomWeapon.SHOTGUN->DoomEvent.BLAST;DoomWeapon.PLASMA->DoomEvent.PLASMA}
+        phase(DoomWeaponPhase.FIRING,when(w){DoomWeapon.PISTOL->.16f;DoomWeapon.SHOTGUN->.33f;DoomWeapon.PLASMA->.12f;DoomWeapon.MINIGUN->.082f;DoomWeapon.ROCKET->.26f})
+        events+=when(w){DoomWeapon.PISTOL->DoomEvent.SHOT;DoomWeapon.SHOTGUN->DoomEvent.BLAST;DoomWeapon.PLASMA->DoomEvent.PLASMA;DoomWeapon.MINIGUN->DoomEvent.MINIGUN_SHOT;DoomWeapon.ROCKET->DoomEvent.ROCKET_SHOT}
+        if(w==DoomWeapon.ROCKET){rockets+=DoomRocket(x,y,cos(angle)*9f,sin(angle)*9f);return}
         val candidates=enemies.filter{e->e.hp>0&&hypot(e.x-x,e.y-y)<=w.reach&&visible(x,y,e.x,e.y)}
             .map{e->e to abs(atan2(sin(atan2(e.y-y,e.x-x)-angle),cos(atan2(e.y-y,e.x-x)-angle)))}
             .filter{(e,a)->a<=w.spread+.23f/hypot(e.x-x,e.y-y).coerceAtLeast(.4f)}
@@ -389,6 +443,10 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
                 DoomLootKind.SHOTGUN->{owned[1]=true;ammo[1]+=12;magazine[1]=min(ammo[1],magazineSize[1]);selectWeapon(DoomWeapon.SHOTGUN);faceGrin=1.25f;tell("Escopeta adquirida.")}
                 DoomLootKind.PLASMA->{owned[2]=true;ammo[2]+=45;magazine[2]=min(ammo[2],magazineSize[2]);selectWeapon(DoomWeapon.PLASMA);faceGrin=1.25f;tell("¡Pelaotrón adquirido!")}
                 DoomLootKind.KEY->{hasKey=true;tell("Credencial del centro de control adquirida.")}
+                DoomLootKind.MINIGUN->{owned[3]=true;ammo[3]+=108;magazine[3]=min(ammo[3],magazineSize[3]);selectWeapon(DoomWeapon.MINIGUN);faceGrin=1.25f;tell("¡Minigun adquirida!")}
+                DoomLootKind.ROCKET->{owned[4]=true;ammo[4]+=6;magazine[4]=1;selectWeapon(DoomWeapon.ROCKET);faceGrin=1.25f;tell("¡Lanzacohetes adquirido!")}
+                DoomLootKind.BELT->ammo[3]+=72
+                DoomLootKind.ROCKET_AMMO->ammo[4]+=4
             }
             if(l.kind!=DoomLootKind.COIN)events+=DoomEvent.LOOT
         }
@@ -409,6 +467,23 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         if(!solid(x,y+dy)&&enemies.none{it.hp>0&&hypot(it.x-x,it.y-y-dy)<.36f})y+=dy
         if(abs(dx)+abs(dy)>.001f)walk+=d*9f
         collect();if(input.fire)shoot()
+        val rocketIterator=rockets.iterator()
+        while(rocketIterator.hasNext()){
+            val rocket=rocketIterator.next();rocket.life-=d
+            // Smaller substeps keep fast rockets from tunnelling through walls or targets.
+            var impact=false
+            repeat(3){
+                if(!impact){
+                    val nx=rocket.x+rocket.vx*d/3;val ny=rocket.y+rocket.vy*d/3
+                    if(solid(nx,ny,.035f)){impact=true}
+                    else{
+                        rocket.x=nx;rocket.y=ny
+                        if(enemies.any{it.hp>0&&hypot(it.x-nx,it.y-ny)<.38f}||explosives.any{!it.exploded&&hypot(it.x-nx,it.y-ny)<.32f})impact=true
+                    }
+                }
+            }
+            if(impact||rocket.life<=0f){rocketIterator.remove();explosion(rocket.x,rocket.y,2.65f,DoomWeapon.ROCKET.damage)}
+        }
         for(e in enemies){
             if(e.hp<=0)continue
             e.flash=(e.flash-d).coerceAtLeast(0f);e.attackFlash=(e.attackFlash-d).coerceAtLeast(0f);e.cooldown-=d
@@ -420,25 +495,26 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
                 enemyDied(e);explosion(e.x,e.y,1.65f,64);continue
             }
             val desired=when(e.kind){DoomKind.DRONE->2.7f;DoomKind.SHOTGUNNER->2.1f;DoomKind.HEAVY->3f;DoomKind.RUNNER->.55f;else->1.35f}
-            val lateral=if(e.kind==DoomKind.DRONE)sin(elapsed*2.7f+e.id)*.82f else 0f
+            val lateral=if(e.kind==DoomKind.DRONE||level==3&&e.kind==DoomKind.BOSS)sin(elapsed*2.7f+e.id)*.82f else 0f
+            val difficulty=if(level==3)1.17f else 1f
             if(distance>.05f&&(distance>desired||lateral!=0f)){
                 val approach=if(distance>desired)1f else 0f
-                val vx=((x-e.x)*approach-(y-e.y)*lateral)/distance*e.kind.speed*d
-                val vy=((y-e.y)*approach+(x-e.x)*lateral)/distance*e.kind.speed*d
+                val vx=((x-e.x)*approach-(y-e.y)*lateral)/distance*e.kind.speed*d*difficulty
+                val vy=((y-e.y)*approach+(x-e.x)*lateral)/distance*e.kind.speed*d*difficulty
                 if(!solid(e.x+vx,e.y,.20f)&&enemies.none{it!==e&&it.hp>0&&hypot(it.x-e.x-vx,it.y-e.y)<.42f})e.x+=vx
                 if(!solid(e.x,e.y+vy,.20f)&&enemies.none{it!==e&&it.hp>0&&hypot(it.x-e.x,it.y-e.y-vy)<.42f})e.y+=vy
             }
             if(e.kind!=DoomKind.RUNNER&&distance<6f&&e.cooldown<=0f){
-                e.cooldown=e.kind.attack+random.nextFloat()*.3f;e.attackFlash=.20f;e.pattern++;events+=DoomEvent.ENEMY_SHOT
+                e.cooldown=(e.kind.attack+random.nextFloat()*.3f)/(if(level==3&&e.kind==DoomKind.BOSS&&e.hp<bossMaxHp/2)1.75f else difficulty);e.attackFlash=.20f;e.pattern++;events+=DoomEvent.ENEMY_SHOT
                 val a=atan2(y-e.y,x-e.x)
                 val offsets=when(e.kind){
                     DoomKind.SHOTGUNNER->floatArrayOf(-.17f,0f,.17f)
                     DoomKind.HEAVY->floatArrayOf(-.10f,.10f)
-                    DoomKind.BOSS->if(e.pattern%2==0||e.hp<e.kind.hp/2)floatArrayOf(-.27f,-.12f,0f,.12f,.27f)else floatArrayOf(0f)
+                    DoomKind.BOSS->if(level==3&&e.hp<bossMaxHp/2)floatArrayOf(-.45f,-.30f,-.15f,0f,.15f,.30f,.45f)else if(e.pattern%2==0||e.hp<bossMaxHp/2)floatArrayOf(-.27f,-.12f,0f,.12f,.27f)else floatArrayOf(0f)
                     else->floatArrayOf(0f)
                 }
                 val speed=when(e.kind){DoomKind.DRONE->4.4f;DoomKind.HEAVY->2.6f;DoomKind.BOSS->3.7f;else->3.3f}
-                for(o in offsets){val dir=a+o;bolts+=DoomBolt(e.x+cos(dir)*.25f,e.y+sin(dir)*.25f,cos(dir)*speed,sin(dir)*speed,e.kind.damage)}
+                for(o in offsets){val dir=a+o;bolts+=DoomBolt(e.x+cos(dir)*.25f,e.y+sin(dir)*.25f,cos(dir)*speed*difficulty,sin(dir)*speed*difficulty,(e.kind.damage*difficulty).roundToInt())}
             }
         }
         val it=bolts.iterator()
