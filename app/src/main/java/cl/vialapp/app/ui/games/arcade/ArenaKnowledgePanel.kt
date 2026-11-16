@@ -23,8 +23,6 @@ import androidx.compose.ui.unit.sp
 @Composable
 internal fun ArenaKnowledgePanel(f:ArenaCombatFrame,modifier:Modifier,enabled:Boolean,act:(Int)->Unit){
     val q=f.question?:return
-    val answered=f.selected>=0&&f.answerApplied
-    val success=f.selected==q.correct
     Column(modifier.background(Color(0xFF17283F),RoundedCornerShape(18.dp)).padding(12.dp),
         verticalArrangement=Arrangement.spacedBy(7.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
@@ -35,13 +33,13 @@ internal fun ArenaKnowledgePanel(f:ArenaCombatFrame,modifier:Modifier,enabled:Bo
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)){
                 KnowledgeArt(q.illustration,Modifier.fillMaxWidth().height(100.dp))
                 Text(q.prompt,color=Color.White,fontWeight=FontWeight.Bold,fontSize=17.sp,lineHeight=22.sp)
-                if(answered){
-                    Text(if(success)"¡Escudo destruido! −"+ArenaShieldRules.answerDamage(f.rivalMax)+" HP al rival · +25 energía" else "El rival contraatacó · −8 HP",color=if(success)Color(0xFF86EFAC)else Color(0xFFFFB0B0),fontWeight=FontWeight.Bold)
-                    Text(q.explanation,color=Color(0xFFDFEAFE),fontSize=13.sp,lineHeight=18.sp)
+                f.answerFeedback?.let{explanation->
+                    Text("El escudo resiste · Nuevo desafío",color=Color(0xFFFFB0B0),fontWeight=FontWeight.Bold,fontSize=13.sp)
+                    Text(explanation,color=Color(0xFFDFEAFE),fontSize=13.sp,lineHeight=18.sp)
                 }
                 q.answers.forEachIndexed{index,label->
-                    val fill=when{answered&&index==q.correct->Color(0xFF1A6849);answered&&f.selected==index->Color(0xFF883A42);else->Color(0xFF344D69)}
-                    Button(onClick={act(20+index)},enabled=enabled&&!answered,modifier=Modifier.fillMaxWidth().heightIn(min=46.dp),
+                    val fill=Color(0xFF344D69)
+                    Button(onClick={act(20+index)},enabled=enabled&&f.selected<0,modifier=Modifier.fillMaxWidth().heightIn(min=46.dp),
                         shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.buttonColors(containerColor=fill,contentColor=Color.White,disabledContainerColor=fill,disabledContentColor=Color.White)){
                         Text(label,fontSize=13.sp)
                     }
@@ -49,9 +47,7 @@ internal fun ArenaKnowledgePanel(f:ArenaCombatFrame,modifier:Modifier,enabled:Bo
 
             }
         }
-        if(answered)Button(onClick={act(23)},enabled=enabled,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp)){
-            Text(if(success)"¡Volver a la pelea!" else "Intentar otro desafío")
-        }else Text("Dos escudos por rival · el conocimiento importa",color=Color(0xFFB6CAE1),fontSize=11.sp)
+        Text("Dos escudos por rival · el conocimiento importa",color=Color(0xFFB6CAE1),fontSize=11.sp)
     }
 }
 

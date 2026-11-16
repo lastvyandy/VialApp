@@ -167,6 +167,12 @@ private fun CombatScene(f:ArenaCombatFrame,modifier:Modifier){
             if(!f.isCinematic&&f.defendFlash>0f)Text("¡DEFENSA!",Modifier.align(Alignment.BottomCenter).padding(bottom=15.dp),fontSize=18.sp,color=Color(0xFFBAFCE1),fontWeight=FontWeight.ExtraBold)
             else if(!f.isCinematic&&f.counterFlash>0f)Text("COUNTER",Modifier.align(Alignment.BottomCenter).padding(bottom=15.dp),fontSize=18.sp,color=Color(0xFFDAF9FF),fontWeight=FontWeight.ExtraBold)
             if(f.impact>0f&&!f.isCinematic)Text("−"+f.damage,Modifier.align(Alignment.CenterEnd).padding(12.dp),color=Color(0xFFFFDA75),fontSize=25.sp,fontWeight=FontWeight.ExtraBold)
+            if(f.answerFeedbackTime>0f&&!f.isCinematic)f.answerFeedback?.let{explanation->
+                Surface(Modifier.align(Alignment.BottomCenter).padding(horizontal=8.dp,vertical=4.dp),
+                    color=Color(0xE6193441),shape=RoundedCornerShape(8.dp)){
+                    Text(explanation,Modifier.padding(horizontal=8.dp,vertical=5.dp),fontSize=11.sp,lineHeight=14.sp,color=Color(0xFFD9FCEF))
+                }
+            }
         }
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
             Text(f.message,modifier=Modifier.weight(1f),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold,maxLines=1)

@@ -43,6 +43,7 @@ internal data class ArenaCombatFrame(
     val rivalStun:Float=0f,val defendFlash:Float=0f,val dashDir:Int=-1,
     val lastImpact:ArenaMove?=null,
     val answerApplied:Boolean=false,
+    val answerFeedback:String?=null,val answerFeedbackTime:Float=0f,
     override val message:String="Acércate y golpea."
 ):ArcadeFrame{
     val rivalMax:Int get()=when(rival){1->320;2->400;else->480}
@@ -72,7 +73,13 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
     private var questionIndex=0
     private var s=ArenaCombatFrame()
     private fun nextQuestion():ArenaQuestion {
-        if(questionIndex>=questions.size){questions=ArenaQuestions.forRival(s.rival,random);questionIndex=0}
+        if(questionIndex>=questions.size){
+            val previousPrompt=s.question?.prompt
+            questions=ArenaQuestions.forRival(s.rival,random).let{bank->
+                if(bank.size>1&&bank.first().prompt==previousPrompt)bank.drop(1)+bank.first() else bank
+            }
+            questionIndex=0
+        }
         return questions[questionIndex++]
     }
     override fun snapshot()=s
@@ -85,15 +92,10 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
                 // Select exactly once, then show the consequence on the stage.
                 // Damage is committed by the cinematic's impact frame, not this input.
                 s=s.copy(selected=index,phase=ArenaPhase.ANSWER_IMPACT,phaseTime=ANSWER_TIME,
-                    answerApplied=false,move=null,hitIn=0f,lock=0f,guard=0f,evade=0f,jump=0f,
+                    answerApplied=false,answerFeedback=null,answerFeedbackTime=0f,move=null,hitIn=0f,lock=0f,guard=0f,evade=0f,jump=0f,
                     queued=-1,moveIntent=0,inputTtl=0f,velocity=0f,walk=0f,rivalStun=0f,
                     impact=0f,playerImpact=0f,comboFlash=0f,counterFlash=0f,defendFlash=0f,intro=0f,
                     message=if(index==q.correct)"¡Respuesta correcta!" else "Respuesta incorrecta")
-            }else if(action==23&&s.selected>=0&&s.answerApplied){
-                s=if(s.answerCorrect)s.copy(phase=ArenaPhase.RECOVER,phaseTime=1.35f,
-                    question=null,selected=-1,answerApplied=false,lock=0f,move=null,hitIn=0f,
-                    queued=-1,chainTime=0f,combo=0,jump=0f,rivalStun=.42f,message="¡Guardia abierta! Ataca")
-                else s.copy(question=nextQuestion(),selected=-1,answerApplied=false,message="Intenta otro desafío")
             }
             return s
         }
@@ -152,7 +154,19 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
                     hp=(f.hp-8).coerceAtLeast(0),combo=0,chainTime=0f,lastHit=null,
                     message="El escudo resiste. −8 HP")
             }
-            if(left<=0f)f=f.copy(phase=ArenaPhase.KNOWLEDGE,phaseTime=0f)
+            if(left<=0f){
+                val explanation=f.question?.explanation
+                f=when{
+                    f.answerCorrect->f.copy(phase=ArenaPhase.RECOVER,phaseTime=1.35f,
+                        question=null,selected=-1,answerApplied=false,answerFeedback=explanation,answerFeedbackTime=4f,
+                        lock=0f,move=null,hitIn=0f,queued=-1,chainTime=0f,combo=0,jump=0f,rivalStun=.42f,
+                        message="¡Guardia abierta! Ataca")
+                    f.hp<=0->f.copy(phase=ArenaPhase.RECOVER,phaseTime=0f,question=null,selected=-1,answerApplied=false,
+                        answerFeedback=null,answerFeedbackTime=0f,message="Fin de la pelea")
+                    else->f.copy(phase=ArenaPhase.KNOWLEDGE,phaseTime=0f,question=nextQuestion(),selected=-1,
+                        answerApplied=false,answerFeedback=explanation,answerFeedbackTime=0f,message="El escudo resiste. Nuevo desafío")
+                }
+            }
             s=f
             return s
         }
@@ -163,6 +177,8 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
         }
         val old=s
         var f=old.copy(elapsed=old.elapsed+d,phaseTime=(old.phaseTime-d).coerceAtLeast(0f),
+            answerFeedbackTime=(old.answerFeedbackTime-d).coerceAtLeast(0f),
+            answerFeedback=if(old.answerFeedbackTime>d)old.answerFeedback else null,
             lock=(old.lock-d).coerceAtLeast(0f),hitIn=(old.hitIn-d).coerceAtLeast(0f),
             guard=(old.guard-d).coerceAtLeast(0f),evade=(old.evade-d).coerceAtLeast(0f),
             evadeLock=(old.evadeLock-d).coerceAtLeast(0f),impact=(old.impact-d).coerceAtLeast(0f),
@@ -199,7 +215,7 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
                     combo=combo,bestCombo=maxOf(f.bestCombo,combo),chainTime=1.15f,lastHit=m,comboFlash=if(combo>=2).65f else 0f,counterFlash=if(counter).55f else 0f,power=(f.power+if(m==ArenaMove.SPECIAL)0 else 10).coerceAtMost(100),
                     impact=.30f,freeze=if(m==ArenaMove.SPECIAL).12f else if(m==ArenaMove.HEAVY).08f else .045f,damage=dealt,lastImpact=m,rivalStun=if(m==ArenaMove.SPECIAL).36f else if(m==ArenaMove.HEAVY).20f else .12f,message=when{armored->"¡Guardia del rival!";chained->"¡COMBO!";counter->"¡COUNTER!";else->"¡Impacto!"})
                 if(f.shieldsBroken<2&&f.rivalHp==threshold){
-                    s=f.copy(phase=ArenaPhase.SHIELD_BREAK,phaseTime=.62f,question=nextQuestion(),selected=-1,answerApplied=false,move=null,hitIn=0f,lock=0f,
+                    s=f.copy(phase=ArenaPhase.SHIELD_BREAK,phaseTime=.62f,question=nextQuestion(),selected=-1,answerApplied=false,answerFeedback=null,answerFeedbackTime=0f,move=null,hitIn=0f,lock=0f,
                         guard=0f,evade=0f,freeze=0f,queued=-1,jump=0f,walk=0f,moveIntent=0,inputTtl=0f,velocity=0f,message="¡Escudo de conocimiento!")
                     return s
                 }
@@ -244,7 +260,7 @@ internal class ArenaCombatEngine(seed:Int=Random.nextInt()):ArcadeEngine<ArenaCo
             ArenaPhase.ROUND_CLEAR->if(f.phaseTime<=0f){
                 val rival=f.rival+1
                 questions=ArenaQuestions.forRival(rival,random);questionIndex=0
-                f=f.copy(shieldsBroken=0,question=null,selected=-1,answerApplied=false,rival=rival,rivalHp=if(rival==2)400 else 480,hp=(f.hp+20).coerceAtMost(100),
+                f=f.copy(shieldsBroken=0,question=null,selected=-1,answerApplied=false,answerFeedback=null,answerFeedbackTime=0f,rival=rival,rivalHp=if(rival==2)400 else 480,hp=(f.hp+20).coerceAtMost(100),
                     playerX=.24f,rivalX=.76f,phase=ArenaPhase.APPROACH,phaseTime=.8f,attackNumber=0,
                     move=null,lock=0f,hitIn=0f,guard=0f,evade=0f,evadeLock=0f,combo=0,queued=-1,chainTime=0f,lastHit=null,jump=0f,walk=0f,intro=.95f,moveIntent=0,inputTtl=0f,velocity=0f,rivalStun=0f,defendFlash=0f,lastImpact=null,message="¡Nuevo rival!")
             }

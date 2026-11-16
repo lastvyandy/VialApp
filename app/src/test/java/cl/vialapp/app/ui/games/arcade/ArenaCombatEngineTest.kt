@@ -70,7 +70,7 @@ class ArenaCombatEngineTest {
         }
         val e=reachShield()
         assertEquals(208,e.snapshot().rivalHp)
-        e.act(20+e.snapshot().question!!.correct);tick(e,100);e.act(23)
+        e.act(20+e.snapshot().question!!.correct);tick(e,82)
         val initial=e.snapshot().rivalHp
         var hits=0
         repeat(2400){
@@ -107,13 +107,20 @@ class ArenaCombatEngineTest {
         assertEquals(176,e.snapshot().rivalHp)
         assertEquals(32,e.snapshot().shieldDamage)
         assertEquals(before.elapsed,e.snapshot().elapsed,.001f)
-        tick(e,60)
-        assertEquals(ArenaPhase.KNOWLEDGE,e.snapshot().phase)
+        tick(e,37)
+        assertEquals(ArenaPhase.RECOVER,e.snapshot().phase)
         assertEquals(1,e.snapshot().knowledgeCorrect)
         assertEquals(176,e.snapshot().rivalHp)
-        assertEquals(before.elapsed,e.snapshot().elapsed,.001f)
-        e.act(20+q.correct);assertEquals(176,e.snapshot().rivalHp)
-        e.act(23);assertEquals(ArenaPhase.RECOVER,e.snapshot().phase)
+        assertEquals(q.explanation,e.snapshot().answerFeedback)
+        assertNull(e.snapshot().question)
+        e.act(20+q.correct);e.act(23)
+        assertEquals(1,e.snapshot().knowledgeCorrect)
+        tick(e,10)
+        assertTrue(e.snapshot().elapsed>before.elapsed)
+        assertNull(e.snapshot().question)
+        e.act(3);tick(e,20)
+        assertTrue(e.snapshot().rivalHp<176)
+        assertEquals(1,e.snapshot().shieldsBroken)
         assertNull(e.snapshot().question)
     }
 
@@ -131,20 +138,22 @@ class ArenaCombatEngineTest {
         assertEquals(ArenaPhase.KNOWLEDGE,e.snapshot().phase)
         assertEquals(before.hp-8,e.snapshot().hp)
         assertEquals(before.elapsed,e.snapshot().elapsed,.001f)
-        e.act(23)
         val retry=e.snapshot()
         assertEquals(-1,retry.selected)
-        assertNotEquals(q,retry.question)
-        e.act(20+retry.question!!.correct);tick(e,100)
+        assertNotEquals(q.prompt,retry.question!!.prompt)
+        assertEquals(q.explanation,retry.answerFeedback)
+        e.act(20+retry.question.correct);tick(e,82)
         assertEquals(1,e.snapshot().shieldsBroken)
         assertEquals(176,e.snapshot().rivalHp)
+        assertEquals(ArenaPhase.RECOVER,e.snapshot().phase)
+        assertNull(e.snapshot().question)
     }
     @Test fun allRivalsCanBeBeatenWithSixShieldsAndTwentyPercentKnowledge(){
         val e=ArenaCombatEngine(4)
         repeat(20000){
             val f=e.snapshot();if(f.finished)return@repeat
             when{
-                f.phase==ArenaPhase.KNOWLEDGE->if(f.selected<0)e.act(20+f.question!!.correct)else e.act(23)
+                f.phase==ArenaPhase.KNOWLEDGE->e.act(20+f.question!!.correct)
                 f.isCinematic->Unit
                 f.phase==ArenaPhase.WINDUP&&f.phaseTime<.18f&&f.evadeLock<=0f->e.act(5)
                 f.lock<=0f&&f.distance>.27f->e.act(1)
