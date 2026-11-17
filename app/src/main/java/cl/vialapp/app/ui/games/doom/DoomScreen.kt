@@ -130,6 +130,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                 DoomEvent.EXPLOSION->"doom_explosion";DoomEvent.RELOAD->"doom_reload";DoomEvent.ENEMY_SHOT->"doom_enemy"
                 DoomEvent.ENEMY_DEATH->"doom_death";DoomEvent.MACHINE_DEATH->"doom_machine_death"
                 DoomEvent.MINIGUN_SHOT->"doom_minigun";DoomEvent.ROCKET_SHOT->"doom_rocket"
+                DoomEvent.BERSERK->"doom_pickup";DoomEvent.PUNCH->"doom_hit"
             })
         }
     }
@@ -237,12 +238,14 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                     onLook={delta->if(!paused&&!e.finished&&e.pending==null){e.look(delta);revision++}},
                     onTap={horizontal,vertical->if(!paused&&!e.finished&&e.pending==null&&e.touchInteract(horizontal,vertical)){clear();drain();revision++}},
                     onUse={clear();change{e.interact()}},
-                    onWeapon={change{e.cycleWeapon()}}
+                    onWeapon={change{e.cycleWeapon()}},
+                    berserk=e.berserkActive
                 )
                 e.targetHint()?.let{hint->
                     Text(hint,Modifier.align(Alignment.Center).offset(y=19.dp).background(Dark.copy(alpha=.83f),RoundedCornerShape(3.dp)).padding(horizontal=7.dp,vertical=3.dp),color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
                 }
                 DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(5.dp).size(72.dp,54.dp))
+                if(e.berserkActive)Text("BERSERK · "+ceil(e.berserkTime).toInt()+" s",Modifier.align(Alignment.TopStart).padding(7.dp).background(Color(0xFF821F17).copy(alpha=.92f),RoundedCornerShape(4.dp)).padding(horizontal=7.dp,vertical=4.dp),color=Color(0xFFFFE5A0),fontSize=12.sp,fontWeight=FontWeight.Black)
                 if(e.level>=3&&e.bossAlive&&e.enemies.any{(it.kind==DoomKind.BOSS||it.kind==DoomKind.MINOXIDIL)&&it.alert}){
                     Column(Modifier.align(Alignment.TopCenter).padding(top=6.dp).width(if(e.level==4)172.dp else 126.dp).background(Dark.copy(alpha=.82f)).padding(3.dp),horizontalAlignment=Alignment.CenterHorizontally){
                         Text(e.bossName,color=Gold,fontSize=if(e.level==4)8.sp else 9.sp,fontWeight=FontWeight.Black)
@@ -280,13 +283,15 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
 }
 
 // A single gesture surface owns all pointers. Each thumb has an independent role.
-private enum class TouchRole{ MOVE,LOOK,FIRE,USE,WEAPON }
+private enum class TouchRole{ MOVE,LOOK,FIRE,USE,WEAPON,PUNCH }
 private data class TouchContact(val role:TouchRole,val origin:Offset,var last:Offset,var travel:Float=0f)
 private data class TouchLayout(val move:Offset,val gun:Offset,val use:Offset,val weapon:Offset,val radius:Float,val w:Float,val h:Float){
-    fun role(p:Offset):TouchRole=when{
+    val punch get()=Offset(w-radius*2.45f,h-radius*2.08f)
+    fun role(p:Offset,berserk:Boolean):TouchRole=when{
         (p-gun).getDistance()<radius*.91f->TouchRole.FIRE
         (p-use).getDistance()<radius*.55f->TouchRole.USE
         (p-weapon).getDistance()<radius*.54f->TouchRole.WEAPON
+        berserk&&(p-punch).getDistance()<radius*.6f->TouchRole.PUNCH
         p.x<w*.31f&&p.y>h*.54f->TouchRole.MOVE
         else->TouchRole.LOOK
     }
@@ -296,13 +301,14 @@ private fun touchLayout(w:Float,h:Float):TouchLayout{
     return TouchLayout(Offset(r*1.35f,h-r*1.20f),Offset(w-r*1.04f,h-r*1.15f),
         Offset(w-r*1.05f,h-r*2.62f),Offset(w-r*2.45f,h-r*.67f),r,w,h)
 }
-@Composable private fun DoomTouchControls(modifier:Modifier,onInput:(DoomInput)->Unit,onLook:(Float)->Unit,onTap:(Float,Float)->Unit,onUse:()->Unit,onWeapon:()->Unit){
+@Composable private fun DoomTouchControls(modifier:Modifier,onInput:(DoomInput)->Unit,onLook:(Float)->Unit,onTap:(Float,Float)->Unit,onUse:()->Unit,onWeapon:()->Unit,berserk:Boolean){
     val input by rememberUpdatedState(onInput);val look by rememberUpdatedState(onLook);val tap by rememberUpdatedState(onTap)
     val use by rememberUpdatedState(onUse);val weapon by rememberUpdatedState(onWeapon)
     var stick by remember{mutableStateOf(Offset.Zero)}
     var anchor by remember{mutableStateOf<Offset?>(null)}
     var firing by remember{mutableStateOf(false)}
-    Canvas(modifier.pointerInput(Unit){
+    var punching by remember{mutableStateOf(false)}
+    Canvas(modifier.pointerInput(berserk){
         val contacts=mutableMapOf<PointerId,TouchContact>()
         fun publish(l:TouchLayout){
             val movement=contacts.values.firstOrNull{it.role==TouchRole.MOVE}
@@ -311,14 +317,15 @@ private fun touchLayout(w:Float,h:Float):TouchLayout{
             stick=if(d<.055f)Offset.Zero else v/d.coerceAtLeast(1f)
             anchor=movement?.origin
             firing=contacts.values.any{it.role==TouchRole.FIRE}
-            input(DoomInput(-stick.y,stick.x,0f,firing))
+            punching=berserk&&contacts.values.any{it.role==TouchRole.PUNCH}
+            input(DoomInput(-stick.y,stick.x,0f,firing,punching))
         }
         try{
             awaitEachGesture{
                 val first=awaitFirstDown(requireUnconsumed=false)
                 val l=touchLayout(size.width.toFloat(),size.height.toFloat())
                 fun down(id:PointerId,p:Offset){
-                    var role=l.role(p)
+                    var role=l.role(p,berserk)
                     if(role==TouchRole.MOVE&&contacts.values.any{it.role==TouchRole.MOVE})role=TouchRole.LOOK
                     contacts[id]=TouchContact(role,p,p)
                 }
@@ -346,7 +353,7 @@ private fun touchLayout(w:Float,h:Float):TouchLayout{
                     publish(l)
                 }while(contacts.isNotEmpty())
             }
-        }finally{contacts.clear();stick=Offset.Zero;anchor=null;firing=false;input(DoomInput())}
+        }finally{contacts.clear();stick=Offset.Zero;anchor=null;firing=false;punching=false;input(DoomInput())}
     }){
         val l=touchLayout(size.width,size.height)
         val r=l.radius
@@ -355,7 +362,7 @@ private fun touchLayout(w:Float,h:Float):TouchLayout{
         drawCircle(White.copy(alpha=.24f),r*.87f,origin,style=Stroke(1.5.dp.toPx()))
         drawCircle(White.copy(alpha=.36f),r*.29f,origin+stick*r*.60f)
         fun pad(p:Offset,radius:Float,role:TouchRole,active:Boolean=false){
-            val tint=when(role){TouchRole.FIRE->Color(0xFFAF4837);TouchRole.USE->Color(0xFFB59A60);else->Color(0xFF9CADA7)}
+            val tint=when(role){TouchRole.FIRE->Color(0xFFAF4837);TouchRole.PUNCH->Color(0xFFC93620);TouchRole.USE->Color(0xFFB59A60);else->Color(0xFF9CADA7)}
             drawCircle(Color.Black.copy(alpha=.58f),radius,p)
             drawCircle(tint.copy(alpha=if(active).79f else .23f),radius*.87f,p)
             drawCircle(tint.copy(alpha=.79f),radius*.96f,p,style=Stroke(1.5.dp.toPx()))
@@ -363,6 +370,7 @@ private fun touchLayout(w:Float,h:Float):TouchLayout{
             drawRetroSymbol(role,p,radius*.55f,White.copy(alpha=.90f))
         }
         pad(l.gun,r*.86f,TouchRole.FIRE,firing);pad(l.use,r*.55f,TouchRole.USE);pad(l.weapon,r*.54f,TouchRole.WEAPON)
+        if(berserk)pad(l.punch,r*.6f,TouchRole.PUNCH,punching)
     }
 }
 private enum class UtilityGlyph{ EXIT,SOUND,MUSIC,PAUSE,PLAY }
@@ -398,6 +406,11 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRetroSymbol(rol
             line(-.94f,0f,-.44f,0f);line(.44f,0f,.94f,0f)
             line(0f,-.94f,0f,-.44f);line(0f,.44f,0f,.94f)
             drawCircle(c,r*.10f,p)
+        }
+        TouchRole.PUNCH->{
+            rect(-.55f,-.40f,1.10f,.90f)
+            for(k in 0..3)rect(-.58f+k*.29f,-.83f,.23f,.53f)
+            line(-.65f,.22f,-.85f,-.32f)
         }
         TouchRole.USE->{
             line(-.67f,-.82f,.55f,-.82f);line(-.67f,-.82f,-.67f,.83f);line(-.67f,.83f,.55f,.83f)
