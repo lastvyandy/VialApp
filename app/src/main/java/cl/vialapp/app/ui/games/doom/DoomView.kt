@@ -188,7 +188,11 @@ internal class DoomView(context:Context):View(context){
         target.set(0,0,width,height);brush.color=Color.WHITE
         canvas.drawBitmap(bitmap,null,target,brush)
     }
-    /** Pixel-art knuckles: alternate left and right hooks instead of the equipped firearm. */
+    /**
+     * Original retro FPS fist sprite, inspired by the chunky foreshortening of 90s shooters.
+     * Unlike the old four-square glove, these have wrist continuity, curved knuckles,
+     * deep shadow volumes and a wrapped thumb. Drawn directly at low resolution.
+     */
     private fun drawBerserkFists(c:Canvas,e:DoomEngine){
         fun poly(color:Int,vararg xy:Float){
             val path=Path().apply{
@@ -199,38 +203,100 @@ internal class DoomView(context:Context):View(context){
             brush.color=color or 0xff000000.toInt()
             c.drawPath(path,brush)
         }
-        fun box(l:Float,t:Float,r:Float,b:Float,color:Int){
+        fun oval(l:Float,t:Float,r:Float,b:Float,color:Int){
             brush.color=color or 0xff000000.toInt()
-            c.drawRect(l,t,r,b,brush)
+            c.drawOval(l,t,r,b,brush)
         }
-        val kick=if(e.punchSwing>0f)sin(((.27f-e.punchSwing)/.27f).coerceIn(0f,1f)*PI.toFloat()) else 0f
+        fun line(l:Float,t:Float,r:Float,b:Float,color:Int,thickness:Float){
+            brush.color=color or 0xff000000.toInt()
+            brush.strokeWidth=thickness
+            c.drawLine(l,t,r,b,brush)
+        }
+
+        // Start and end in exactly the same place: no sudden jump at the end of an attack.
+        val attack=if(e.punchSwing>0f)
+            sin(((.27f-e.punchSwing)/.27f).coerceIn(0f,1f)*PI.toFloat()).coerceAtLeast(0f) else 0f
+        val breathing=sin(e.elapsed*3.2f)*.85f
+
         fun fist(right:Boolean,power:Float){
             c.save()
             if(right)c.scale(-1f,1f)
-            c.translate(-42f+power*29f,-power*36f)
-            // Arm and rough forearm wraps.
-            poly(0x241b1c,-43f,5f,-40f,-19f,-33f,-32f,-10f,-30f,0f,-12f,3f,5f)
-            poly(0x8e483c,-39f,5f,-37f,-20f,-29f,-29f,-13f,-24f,-3f,-12f,0f,5f)
-            poly(0xc28568,-36f,5f,-35f,-13f,-29f,-25f,-15f,-25f,-6f,-10f,-5f,5f)
-            box(-38f,-14f,-6f,-6f,0x2b262b)
-            box(-34f,-12f,-8f,-9f,0x6b2220)
-            // Thumb and individually outlined knuckles.
-            poly(0x65362e,-37f,-32f,-37f,-56f,-28f,-64f,-13f,-59f,-7f,-45f,-12f,-34f)
-            poly(0xa96b52,-36f,-34f,-35f,-53f,-29f,-60f,-14f,-56f,-10f,-44f,-13f,-33f)
-            poly(0xe0a485,-34f,-39f,-32f,-54f,-26f,-57f,-15f,-53f,-12f,-45f,-15f,-37f)
-            for(k in 0..3){
-                val x=-36f+k*8f
-                box(x,-56f,x+8f,-38f,0x68372e)
-                box(x+1f,-57f,x+7f,-43f,if(k%2==0)0xd79b7a else 0xb77a5f)
-                box(x+2f,-56f,x+6f,-52f,0xf1b996)
-                box(x+1f,-43f,x+7f,-40f,0x633730)
+            c.translate(-65f+power*54f,breathing-power*43f)
+            c.scale(1f+power*.17f,1f+power*.17f)
+
+            // Oversized dark sleeve continues all the way off the bottom edge.
+            poly(0x17191B,-36f,18f,-34f,-21f,-30f,-38f,-22f,-52f,
+                14f,-54f,28f,-39f,35f,-19f,37f,18f)
+            poly(0x343B35,-31f,18f,-29f,-23f,-21f,-43f,
+                13f,-45f,25f,-32f,30f,18f)
+            poly(0x4B4B39,-25f,18f,-25f,-21f,-19f,-38f,
+                12f,-41f,23f,-29f,24f,18f)
+            poly(0x292C2A,-31f,-6f,-29f,-26f,-18f,-32f,20f,-33f,30f,-19f,31f,-8f)
+            line(-27f,-20f,26f,-23f,0x8A7751,3f)
+            line(-26f,-15f,25f,-17f,0x1A1B1B,2f)
+
+            // Short thick wrist, not a floating mitten.
+            poly(0x392523,-24f,-27f,-26f,-56f,-17f,-69f,14f,-72f,
+                28f,-56f,27f,-28f)
+            poly(0x995B45,-20f,-29f,-22f,-55f,-15f,-65f,
+                13f,-67f,24f,-52f,21f,-27f)
+            poly(0xC38767,-17f,-33f,-19f,-57f,-11f,-63f,
+                12f,-64f,20f,-50f,18f,-32f)
+            poly(0xE0A682,-15f,-41f,-16f,-53f,-7f,-61f,9f,-62f,16f,-48f)
+            line(-18f,-32f,16f,-34f,0x704032,2.6f)
+
+            // Fist contour is one rounded, powerful mass with an angled thumb.
+            poly(0x211819,-36f,-61f,-37f,-75f,-33f,-87f,-21f,-97f,
+                -4f,-100f,14f,-97f,29f,-87f,36f,-76f,
+                34f,-61f,27f,-49f,12f,-43f,-18f,-44f,-31f,-52f)
+            poly(0x714032,-33f,-64f,-33f,-76f,-29f,-86f,-17f,-94f,
+                -4f,-95f,14f,-93f,26f,-85f,32f,-75f,
+                30f,-62f,23f,-51f,11f,-47f,-19f,-48f,-29f,-55f)
+            poly(0xB97858,-30f,-66f,-28f,-80f,-19f,-89f,
+                -5f,-92f,13f,-89f,26f,-80f,28f,-66f,
+                19f,-53f,-16f,-52f)
+            poly(0xD59873,-25f,-65f,-24f,-78f,-15f,-85f,
+                0f,-89f,15f,-84f,21f,-73f,16f,-57f,-14f,-56f)
+
+            // Four foreshortened knuckles, rounded and staggered rather than square tiles.
+            val knuckles=arrayOf(
+                floatArrayOf(-32f,-87f,-15f,-66f),
+                floatArrayOf(-17f,-94f,0f,-68f),
+                floatArrayOf(-2f,-95f,15f,-68f),
+                floatArrayOf(12f,-88f,30f,-64f)
+            )
+            for((i,k) in knuckles.withIndex()){
+                oval(k[0]-1f,k[1]-1f,k[2]+1f,k[3]+1f,0x4B2825)
+                oval(k[0]+1f,k[1]+1f,k[2]-1f,k[3]-3f,if(i%2==0)0xB77456 else 0xC38464)
+                oval(k[0]+4f,k[1]+3f,k[2]-3f,k[1]+10f,if(i%2==0)0xE8AE89 else 0xF1BB94)
+                line(k[0]+4f,k[3]-2f,k[2]-3f,k[3]-4f,0x834A3D,1.5f)
             }
-            box(-31f,-35f,-13f,-30f,0x874f40)
-            box(-34f,-13f,-11f,-10f,0xd4a080)
+
+            // Curled thumb crosses the near side of the fist, with a soft highlight.
+            poly(0x352321,31f,-61f,37f,-60f,39f,-53f,33f,-45f,
+                18f,-40f,5f,-43f,1f,-53f,13f,-65f,26f,-68f)
+            poly(0x975940,29f,-62f,34f,-59f,35f,-53f,30f,-48f,
+                17f,-44f,8f,-47f,6f,-53f,16f,-62f)
+            poly(0xD69A78,27f,-62f,32f,-58f,30f,-53f,21f,-49f,
+                11f,-50f,9f,-54f,17f,-60f)
+            oval(17f,-62f,28f,-55f,0xF0BA90)
+            line(9f,-48f,18f,-45f,0x714132,2f)
+
+            // Sparse gritty pixel highlights and wrist creases, never a plastic glove.
+            line(-19f,-59f,-13f,-57f,0xF2BA91,2f)
+            line(-2f,-59f,6f,-57f,0xEFAD82,1.4f)
+            line(-14f,-36f,11f,-37f,0x6F4035,2f)
             c.restore()
         }
-        fist(e.punchFromRight,if(e.punchFromRight)0f else kick)
-        fist(!e.punchFromRight,if(e.punchFromRight)kick else 0f)
+
+        // The striking hand surges almost to the reticle while its partner guards below.
+        if(e.punchFromRight){
+            fist(false,0f)
+            fist(true,attack)
+        }else{
+            fist(true,0f)
+            fist(false,attack)
+        }
     }
     private fun drawGun(c:Canvas,weapon:DoomWeapon,fire:Boolean,phase:DoomWeaponPhase,progress:Float){
         fun rect(l:Float,t:Float,r:Float,b:Float,color:Int){brush.color=color or 0xff000000.toInt();c.drawRect(l,t,r,b,brush)}
