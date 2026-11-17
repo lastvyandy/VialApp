@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
+import android.graphics.RectF
 import android.view.View
 import kotlin.math.*
 import kotlin.random.Random
@@ -188,115 +189,24 @@ internal class DoomView(context:Context):View(context){
         target.set(0,0,width,height);brush.color=Color.WHITE
         canvas.drawBitmap(bitmap,null,target,brush)
     }
-    /**
-     * Original retro FPS fist sprite, inspired by the chunky foreshortening of 90s shooters.
-     * Unlike the old four-square glove, these have wrist continuity, curved knuckles,
-     * deep shadow volumes and a wrapped thumb. Drawn directly at low resolution.
-     */
+    /** Cached original pixel-art fists, scaled with sharp edges like a classic FPS. */
     private fun drawBerserkFists(c:Canvas,e:DoomEngine){
-        fun poly(color:Int,vararg xy:Float){
-            val path=Path().apply{
-                moveTo(xy[0],xy[1])
-                for(i in 2 until xy.size step 2)lineTo(xy[i],xy[i+1])
-                close()
-            }
-            brush.color=color or 0xff000000.toInt()
-            c.drawPath(path,brush)
-        }
-        fun oval(l:Float,t:Float,r:Float,b:Float,color:Int){
-            brush.color=color or 0xff000000.toInt()
-            c.drawOval(l,t,r,b,brush)
-        }
-        fun line(l:Float,t:Float,r:Float,b:Float,color:Int,thickness:Float){
-            brush.color=color or 0xff000000.toInt()
-            brush.strokeWidth=thickness
-            c.drawLine(l,t,r,b,brush)
-        }
-
-        // Start and end in exactly the same place: no sudden jump at the end of an attack.
-        val attack=if(e.punchSwing>0f)
-            sin(((.27f-e.punchSwing)/.27f).coerceIn(0f,1f)*PI.toFloat()).coerceAtLeast(0f) else 0f
-        val breathing=sin(e.elapsed*3.2f)*.85f
-
-        fun fist(right:Boolean,power:Float){
+        val progress=if(e.punchSwing>0f)
+            sin(((.27f-e.punchSwing)/.27f).coerceIn(0f,1f)*PI.toFloat()).coerceAtLeast(0f)
+        else 0f
+        fun fist(right:Boolean,thrust:Float){
             c.save()
             if(right)c.scale(-1f,1f)
-            c.translate(-65f+power*54f,breathing-power*43f)
-            c.scale(1f+power*.17f,1f+power*.17f)
-
-            // Oversized dark sleeve continues all the way off the bottom edge.
-            poly(0x17191B,-36f,18f,-34f,-21f,-30f,-38f,-22f,-52f,
-                14f,-54f,28f,-39f,35f,-19f,37f,18f)
-            poly(0x343B35,-31f,18f,-29f,-23f,-21f,-43f,
-                13f,-45f,25f,-32f,30f,18f)
-            poly(0x4B4B39,-25f,18f,-25f,-21f,-19f,-38f,
-                12f,-41f,23f,-29f,24f,18f)
-            poly(0x292C2A,-31f,-6f,-29f,-26f,-18f,-32f,20f,-33f,30f,-19f,31f,-8f)
-            line(-27f,-20f,26f,-23f,0x8A7751,3f)
-            line(-26f,-15f,25f,-17f,0x1A1B1B,2f)
-
-            // Short thick wrist, not a floating mitten.
-            poly(0x392523,-24f,-27f,-26f,-56f,-17f,-69f,14f,-72f,
-                28f,-56f,27f,-28f)
-            poly(0x995B45,-20f,-29f,-22f,-55f,-15f,-65f,
-                13f,-67f,24f,-52f,21f,-27f)
-            poly(0xC38767,-17f,-33f,-19f,-57f,-11f,-63f,
-                12f,-64f,20f,-50f,18f,-32f)
-            poly(0xE0A682,-15f,-41f,-16f,-53f,-7f,-61f,9f,-62f,16f,-48f)
-            line(-18f,-32f,16f,-34f,0x704032,2.6f)
-
-            // Fist contour is one rounded, powerful mass with an angled thumb.
-            poly(0x211819,-36f,-61f,-37f,-75f,-33f,-87f,-21f,-97f,
-                -4f,-100f,14f,-97f,29f,-87f,36f,-76f,
-                34f,-61f,27f,-49f,12f,-43f,-18f,-44f,-31f,-52f)
-            poly(0x714032,-33f,-64f,-33f,-76f,-29f,-86f,-17f,-94f,
-                -4f,-95f,14f,-93f,26f,-85f,32f,-75f,
-                30f,-62f,23f,-51f,11f,-47f,-19f,-48f,-29f,-55f)
-            poly(0xB97858,-30f,-66f,-28f,-80f,-19f,-89f,
-                -5f,-92f,13f,-89f,26f,-80f,28f,-66f,
-                19f,-53f,-16f,-52f)
-            poly(0xD59873,-25f,-65f,-24f,-78f,-15f,-85f,
-                0f,-89f,15f,-84f,21f,-73f,16f,-57f,-14f,-56f)
-
-            // Four foreshortened knuckles, rounded and staggered rather than square tiles.
-            val knuckles=arrayOf(
-                floatArrayOf(-32f,-87f,-15f,-66f),
-                floatArrayOf(-17f,-94f,0f,-68f),
-                floatArrayOf(-2f,-95f,15f,-68f),
-                floatArrayOf(12f,-88f,30f,-64f)
-            )
-            for((i,k) in knuckles.withIndex()){
-                oval(k[0]-1f,k[1]-1f,k[2]+1f,k[3]+1f,0x4B2825)
-                oval(k[0]+1f,k[1]+1f,k[2]-1f,k[3]-3f,if(i%2==0)0xB77456 else 0xC38464)
-                oval(k[0]+4f,k[1]+3f,k[2]-3f,k[1]+10f,if(i%2==0)0xE8AE89 else 0xF1BB94)
-                line(k[0]+4f,k[3]-2f,k[2]-3f,k[3]-4f,0x834A3D,1.5f)
-            }
-
-            // Curled thumb crosses the near side of the fist, with a soft highlight.
-            poly(0x352321,31f,-61f,37f,-60f,39f,-53f,33f,-45f,
-                18f,-40f,5f,-43f,1f,-53f,13f,-65f,26f,-68f)
-            poly(0x975940,29f,-62f,34f,-59f,35f,-53f,30f,-48f,
-                17f,-44f,8f,-47f,6f,-53f,16f,-62f)
-            poly(0xD69A78,27f,-62f,32f,-58f,30f,-53f,21f,-49f,
-                11f,-50f,9f,-54f,17f,-60f)
-            oval(17f,-62f,28f,-55f,0xF0BA90)
-            line(9f,-48f,18f,-45f,0x714132,2f)
-
-            // Sparse gritty pixel highlights and wrist creases, never a plastic glove.
-            line(-19f,-59f,-13f,-57f,0xF2BA91,2f)
-            line(-2f,-59f,6f,-57f,0xEFAD82,1.4f)
-            line(-14f,-36f,11f,-37f,0x6F4035,2f)
+            val size=1f+thrust*.30f
+            val left=-139f+thrust*51f
+            val top=-132f-thrust*44f
+            c.drawBitmap(DoomFistSprite.bitmap,null,
+                RectF(left,top,left+126f*size,top+141f*size),artFilter)
             c.restore()
         }
-
-        // The striking hand surges almost to the reticle while its partner guards below.
-        if(e.punchFromRight){
-            fist(false,0f)
-            fist(true,attack)
-        }else{
-            fist(true,0f)
-            fist(false,attack)
-        }
+        // Draw the idle fist behind the striking fist so the hit has depth and weight.
+        fist(!e.punchFromRight,0f)
+        fist(e.punchFromRight,progress)
     }
     private fun drawGun(c:Canvas,weapon:DoomWeapon,fire:Boolean,phase:DoomWeaponPhase,progress:Float){
         fun rect(l:Float,t:Float,r:Float,b:Float,color:Int){brush.color=color or 0xff000000.toInt();c.drawRect(l,t,r,b,brush)}
