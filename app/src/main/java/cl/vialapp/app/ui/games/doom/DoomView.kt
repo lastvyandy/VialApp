@@ -420,7 +420,6 @@ private class DoomArt{
             box(6,7,11,14,0xb5d59a);box(53,7,58,14,0xb5d59a)
             box(4,35,13,42,0xa33d2e);box(51,35,60,42,0xa33d2e)
             box(12,47,52,52,0x4a2224);box(16,48,48,50,0xb45234)
-        }
         })
     val loot=Array(DoomLootKind.entries.size){i->sprite{
         when(DoomLootKind.entries[i]){
