@@ -561,6 +561,18 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         b.hp-=amount
         if(b.hp<=0){b.exploded=true;explosion(b.x,b.y)}
     }
+    private fun punch(){
+        if(!berserkActive||punchCooldown>0f||finished||pending!=null)return
+        punchCooldown=.29f;faceFire=.3f;shotFlash=.07f;events+=DoomEvent.PUNCH
+        val target=enemies.filter{it.hp>0&&hypot(it.x-x,it.y-y)<1.5f&&visible(x,y,it.x,it.y)}
+            .filter{abs(atan2(sin(atan2(it.y-y,it.x-x)-angle),cos(atan2(it.y-y,it.x-x)-angle)))<.85f}
+            .minByOrNull{hypot(it.x-x,it.y-y)}
+        if(target!=null){
+            damageEnemy(target,164)
+            val nx=target.x+cos(angle)*.33f;val ny=target.y+sin(angle)*.33f
+            if(target.hp>0&&!solid(nx,ny,.22f)){target.x=nx;target.y=ny}
+        }
+    }
     private fun shoot(){
         if(fireCooldown>0f||finished||weaponPhase!=DoomWeaponPhase.READY)return
         val w=weapon
@@ -607,6 +619,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
                 DoomLootKind.ROCKET->{owned[4]=true;ammo[4]+=6;magazine[4]=1;selectWeapon(DoomWeapon.ROCKET);faceGrin=1.25f;tell("¡Lanzacohetes adquirido!")}
                 DoomLootKind.BELT->ammo[3]+=72
                 DoomLootKind.ROCKET_AMMO->ammo[4]+=4
+                DoomLootKind.BERSERK->{berserkTime=24f;hp=max(hp,75);faceGrin=2f;events+=DoomEvent.BERSERK;tell("¡BERSERK! Puños devastadores durante 24 segundos.")}
             }
             if(l.kind!=DoomLootKind.COIN)events+=DoomEvent.LOOT
         }
@@ -614,7 +627,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     fun step(dt:Float,input:DoomInput=DoomInput()){
         if(finished||pending!=null||dt<=0f)return
         val d=dt.coerceAtMost(.05f);elapsed+=d
-        fireCooldown=(fireCooldown-d).coerceAtLeast(0f);shotFlash=(shotFlash-d).coerceAtLeast(0f);hurtFlash=(hurtFlash-d).coerceAtLeast(0f);messageTime=(messageTime-d).coerceAtLeast(0f)
+        fireCooldown=(fireCooldown-d).coerceAtLeast(0f);punchCooldown=(punchCooldown-d).coerceAtLeast(0f);berserkTime=(berserkTime-d).coerceAtLeast(0f);shotFlash=(shotFlash-d).coerceAtLeast(0f);hurtFlash=(hurtFlash-d).coerceAtLeast(0f);messageTime=(messageTime-d).coerceAtLeast(0f)
         advanceWeapon(d)
         advanceDeathAnimations(d)
         faceTurnTime=(faceTurnTime-d).coerceAtLeast(0f);facePain=(facePain-d).coerceAtLeast(0f);faceGrin=(faceGrin-d).coerceAtLeast(0f);faceFire=(faceFire-d).coerceAtLeast(0f)
@@ -622,11 +635,14 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         explosions.forEach{it.time-=d};explosions.removeAll{it.time<=0f}
         angle=(angle+input.turn.coerceIn(-1f,1f)*2.65f*d)%(2*PI.toFloat())
         val f=input.forward.coerceIn(-1f,1f);val s=input.strafe.coerceIn(-1f,1f);val norm=hypot(f,s).coerceAtLeast(1f)
-        val dx=(cos(angle)*f-sin(angle)*s)*d*3.3f/norm;val dy=(sin(angle)*f+cos(angle)*s)*d*3.3f/norm
+        val speed=if(berserkActive)4.45f else 3.3f
+        val dx=(cos(angle)*f-sin(angle)*s)*d*speed/norm;val dy=(sin(angle)*f+cos(angle)*s)*d*speed/norm
         if(!solid(x+dx,y)&&enemies.none{it.hp>0&&hypot(it.x-x-dx,it.y-y)<.36f})x+=dx
         if(!solid(x,y+dy)&&enemies.none{it.hp>0&&hypot(it.x-x,it.y-y-dy)<.36f})y+=dy
         if(abs(dx)+abs(dy)>.001f)walk+=d*9f
-        collect();if(input.fire)shoot()
+        val rise=stairTier(floor(x).toInt(),floor(y).toInt())*.22f
+        cameraElevation+=(rise-cameraElevation)*(d*9f).coerceIn(0f,1f)
+        collect();if(input.fire)shoot();if(input.punch)punch()
         val rocketIterator=rockets.iterator()
         while(rocketIterator.hasNext()){
             val rocket=rocketIterator.next();rocket.life-=d
