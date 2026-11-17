@@ -103,12 +103,12 @@ internal class DoomView(context:Context):View(context){
         for(a in e.enemies){
             if(a.hp>0){
                 val phase=if(a.alert)((e.elapsed*6+a.id*.4f).toInt() and 3)else 0
-                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.MINOXIDIL->1.83f;DoomKind.BALD_MINION->1.02f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
+                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.MINOXIDIL->1.83f;DoomKind.FLESH_STALKER->1.02f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
                 val pose=if(a.attackFlash>0f)art.enemyAttack[a.kind.ordinal] else art.enemyFrames[a.kind.ordinal][phase]
                 sprites+=Sprite(a.x,a.y,size,pose,a.flash>0f,if(a.kind==DoomKind.DRONE).25f+sin(e.elapsed*4+a.id)*.07f else 0f)
             }else{
                 val frame=(a.deathAge/.12f).toInt().coerceIn(0,5)
-                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.MINOXIDIL->1.83f;DoomKind.BALD_MINION->1.02f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
+                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.MINOXIDIL->1.83f;DoomKind.FLESH_STALKER->1.02f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
                 sprites+=Sprite(a.x,a.y,size,art.enemyDeath[a.kind.ordinal][frame],frame==0,if(a.kind==DoomKind.DRONE)(.25f*(1f-a.deathAge/.55f)).coerceAtLeast(0f)else 0f)
             }
         }
