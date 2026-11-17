@@ -377,40 +377,50 @@ private class DoomArt{
             for(i in 0..3){box(10,46+i*3,17,47+i*3,0x888075);box(47,46+i*3,54,47+i*3,0x888075)}
             box(28,6,35,14,0xe45c39);box(30,7,33,11,0xffeba0)
         },
-        // Pelado de la guardia capilar: sunglasses, shiny bald head and red jacket.
+
+        // Flesh stalker: crooked claws, horned skull, dripping surgical flesh.
         sprite{
-            oval(10,56,54,63,0x22252b)
-            box(14,45,29,61,0x1b242d);box(36,45,51,61,0x1b242d)
-            box(11,55,29,63,0x363f43);box(35,55,54,63,0x363f43)
-            poly(0x2c323b,10,28,17,23,47,23,55,30,50,49,13,49)
-            poly(0xb33532,15,28,25,25,40,25,50,29,46,46,18,46)
-            box(25,29,39,41,0xeda947);box(31,29,34,46,0xf1d87c)
-            oval(16,2,49,31,0x8c583e);oval(18,3,47,28,0xd6a071)
-            oval(23,4,42,19,0xf1c293);oval(27,6,36,11,0xffe1ae)
-            box(20,17,43,22,0x161f27);box(21,18,30,21,0x2e3443);box(34,18,42,21,0x2e3443)
-            box(26,25,38,27,0x532f26)
-            box(8,30,16,46,0xc94b31);box(49,29,57,44,0xc94b31)
-            box(5,39,13,45,0x98634b);box(51,38,59,44,0x98634b)
+            oval(4,56,60,64,0x1c1014)
+            box(7,46,23,62,0x241b1d);box(39,45,56,62,0x241b1d)
+            poly(0x201a1f,7,26,14,16,24,20,43,14,54,28,51,50,11,50)
+            poly(0x7e3c3a,11,29,17,19,44,21,50,33,43,48,14,46)
+            for(k in 0..3){val x=16+k*8;box(x,32,x+3,42,0xb35b4a)}
+            // Fangs and broken bone protrusions; absolutely no human scalp.
+            poly(0xb3a38b,14,20,6,2,23,16)
+            poly(0xb3a38b,40,15,56,0,50,24)
+            poly(0x37262b,17,13,47,13,51,32,40,39,18,32)
+            box(20,23,29,28,0xef3a1f);box(35,23,45,28,0xef3a1f)
+            box(22,24,28,26,0xff9b45);box(37,24,44,26,0xff9b45)
+            poly(0x111116,19,33,43,33,38,43,25,44)
+            for(k in 0..4)poly(0xe0c7a6,22+k*4,35,25+k*4,35,23+k*4,42)
+            poly(0x4e2327,10,35,4,40,3,53,13,50)
+            poly(0x4e2327,51,35,59,41,62,54,52,50)
+            for(k in 0..2){box(1+k*3,47-k*4,5+k*3,55-k*4,0x97866e);box(52+k*3,44+k*4,56+k*3,53+k*4,0x97866e)}
+            box(20,50,46,55,0x862b2a)
         },
-        // Captain Minoxidil: ridiculous polished bald head, moustache and twin serum launchers.
+        // Captain Minoxidil: grotesque armored bio-mech, red cyclops,
+        // syringes, steel tusks, no exposed human face or bald scalp.
         sprite{
-            oval(2,56,62,64,0x1b212a)
-            box(11,45,27,62,0x172333);box(36,45,53,62,0x172333)
-            box(8,58,29,64,0x343e49);box(36,58,56,64,0x343e49)
-            poly(0x0b3346,8,31,18,24,46,24,57,33,54,55,10,55)
-            poly(0x168b8a,13,29,23,27,42,27,50,31,47,50,16,50)
-            box(29,32,35,52,0xe3b74c);box(23,35,29,39,0xe7c877);box(35,35,42,39,0xe7c877)
-            // Oversized chrome bald dome and reflected road lights.
-            oval(12,2,52,36,0x493c34);oval(15,3,49,34,0xc48c65)
-            oval(20,5,45,27,0xe2b084);oval(25,6,39,15,0xffddb0)
-            box(17,20,49,24,0x142933);box(19,20,29,23,0x91f7ef);box(35,20,47,23,0x91f7ef)
-            poly(0x533024,24,28,31,30,33,31,39,28,36,34,29,34)
-            // Iconic M on his chest and serum vials at both shoulders.
-            box(7,23,16,49,0x2e5557);box(9,24,14,42,0x69cbb9)
-            box(48,23,57,49,0x2e5557);box(50,24,55,42,0x69cbb9)
-            box(7,20,16,25,0xffb63d);box(48,20,57,25,0xffb63d)
-            box(26,39,28,45,0xf6e7ad);box(29,40,32,43,0xf6e7ad)
-            box(33,40,36,43,0xf6e7ad);box(37,39,39,45,0xf6e7ad)
+            oval(1,55,63,64,0x181013)
+            box(7,43,24,63,0x1c2026);box(40,43,57,63,0x1c2026)
+            box(8,57,27,63,0x70725d);box(38,57,57,63,0x70725d)
+            poly(0x191b1f,5,34,13,21,23,17,43,17,55,25,60,38,51,54,12,54)
+            poly(0x5c322f,11,29,19,21,45,22,53,34,46,50,15,48)
+            poly(0x9d5139,14,31,22,24,43,24,49,34,44,47,18,45)
+            // Massive serrated armored crown.
+            poly(0x242c31,11,22,5,3,21,13,29,2,37,11,50,1,55,25,46,31,16,31)
+            poly(0x6f756e,16,19,17,9,26,16,31,7,37,17,45,9,46,22)
+            poly(0x191217,16,22,47,22,51,33,42,40,20,40,12,32)
+            oval(20,22,45,36,0x751d22);oval(25,23,41,33,0xed3d23)
+            oval(29,24,36,30,0xffdb74)
+            for(k in 0..4)poly(0xe6ccb1,20+k*5,34,24+k*5,34,22+k*5,44)
+            // Shoulder launchers loaded with toxic serum vials.
+            box(2,18,15,45,0x18272b);box(49,18,62,45,0x18272b)
+            box(5,10,12,35,0x3da989);box(52,10,59,35,0x3da989)
+            box(6,7,11,14,0xb5d59a);box(53,7,58,14,0xb5d59a)
+            box(4,35,13,42,0xa33d2e);box(51,35,60,42,0xa33d2e)
+            box(12,47,52,52,0x4a2224);box(16,48,48,50,0xb45234)
+        }
         })
     val loot=Array(DoomLootKind.entries.size){i->sprite{
         when(DoomLootKind.entries[i]){
@@ -422,6 +432,7 @@ private class DoomArt{
             DoomLootKind.ROCKET->{poly(0x4c5140,4,36,20,24,59,12,63,26,29,39,13,49);box(24,24,53,30,0x9b9a69);box(6,35,22,45,0x3a3a31)}
             DoomLootKind.ROCKET_AMMO->{for(k in 0..2){val x=11+k*16;box(x,27,x+10,57,0x747a49);poly(0xb5ad79,x,27,x+5,13,x+10,27);box(x,46,x+10,51,0x97502f)}}
             DoomLootKind.BELT->{box(7,34,58,59,0x50462e);for(k in 0..5){box(9+k*8,21,15+k*8,48,0xb99a4c);box(9+k*8,20,15+k*8,24,0xe4cc85)}}
+            DoomLootKind.BERSERK->{box(7,8,57,62,0x261a1e);box(11,12,53,58,0x841c20);poly(0xc4a386,23,12,43,12,47,30,39,43,24,43,16,29);poly(0xe5c9a5,18,31,28,27,35,30,49,22,52,37,37,55,17,48);box(21,40,48,53,0xdd9b75);box(14,53,54,59,0xc93823);box(16,10,20,16,0xffdb62);box(45,9,49,15,0xffdb62)}
             DoomLootKind.SHOTGUN,DoomLootKind.PLASMA->{poly(0x27252a,5,35,26,20,61,14,61,26,27,36,15,49,7,48);box(26,18,59,25,0xb3b5b0);box(6,36,26,45,0x804a2d);if(i==DoomLootKind.PLASMA.ordinal)box(29,25,52,31,0x64e9d7)}
             else->{val color=when(i){DoomLootKind.SHELLS.ordinal->0xb34131;DoomLootKind.CELL.ordinal->0x4bb9ae;else->0xa69146};box(8,32,56,60,0x292a26);box(10,29,54,55,color);for(k in 0..4){box(13+k*8,25,18+k*8,47,color);box(13+k*8,23,18+k*8,28,0xe9cd86)}}
         }
