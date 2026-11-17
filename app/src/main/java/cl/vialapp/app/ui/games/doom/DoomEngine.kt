@@ -10,25 +10,25 @@ internal enum class DoomWeapon(val title:String,val delay:Float,val damage:Int,v
 internal enum class DoomKind(val hp:Int,val speed:Float,val attack:Float,val damage:Int){
     GUARD(55,.85f,1.65f,9), DRONE(38,1.3f,1.9f,7), BOSS(310,.65f,1.22f,13),
     SHOTGUNNER(72,.93f,1.6f,7), HEAVY(135,.55f,2.15f,11), RUNNER(36,2.0f,1.0f,26),
-    BALD_MINION(74,1.4f,1.25f,11), MINOXIDIL(820,1.05f,1.17f,15)
+    FLESH_STALKER(74,1.4f,1.25f,11), MINOXIDIL(820,1.05f,1.17f,15)
 }
 internal enum class DoomWeaponPhase { READY, LOWERING, RAISING, FIRING, PUMPING, RELOADING }
 internal data class DoomExplosive(val x:Float,val y:Float,val crate:Boolean,var hp:Int=24,var exploded:Boolean=false)
 internal data class DoomExplosion(val x:Float,val y:Float,var time:Float=.52f)
-internal enum class DoomLootKind { COIN, AMMO, SHELLS, CELL, MEDKIT, ARMOR, SHOTGUN, PLASMA, KEY, MINIGUN, ROCKET, BELT, ROCKET_AMMO }
+internal enum class DoomLootKind { COIN, AMMO, SHELLS, CELL, MEDKIT, ARMOR, SHOTGUN, PLASMA, KEY, MINIGUN, ROCKET, BELT, ROCKET_AMMO, BERSERK }
 internal data class DoomEnemy(val id:Int,val kind:DoomKind,var x:Float,var y:Float,var hp:Int=kind.hp,var cooldown:Float=.8f,var flash:Float=0f,var alert:Boolean=false,var attackFlash:Float=0f,var pattern:Int=0,var deathAge:Float=0f)
 internal data class DoomLoot(val kind:DoomLootKind,val x:Float,val y:Float,var taken:Boolean=false)
 internal enum class DoomDecorKind { BARREL, CRATE, TERMINAL, LAMP, WRECK,
     CAR_BLUE, CAR_RED, CAR_YELLOW, SIGN_STOP, SIGN_YIELD, SIGN_PEDESTRIAN, CONE,
-    BUS_STOP, TREE, CAPILLARY_AD, BALD_STATUE, ROAD_BARRIER }
+    BUS_STOP, TREE, CAPILLARY_AD, DEMON_TOTEM, ROAD_BARRIER }
 internal data class DoomDecor(val kind:DoomDecorKind,val x:Float,val y:Float,val scale:Float,val lift:Float=0f)
 internal data class DoomRocket(var x:Float,var y:Float,val vx:Float,val vy:Float,var life:Float=2.2f)
 internal data class DoomBolt(var x:Float,var y:Float,val vx:Float,val vy:Float,val damage:Int,var life:Float=3f,val chrome:Boolean=false)
 internal data class DoomChallenge(val prompt:String,val answers:List<String>,val correct:Int,val explanation:String)
 internal data class DoomDoor(val x:Int,val y:Int,val kind:Int,val question:DoomChallenge?=null,var open:Boolean=false)
 internal data class DoomRay(val distance:Float,val cell:Int,val u:Float,val side:Int,val mapX:Int=-1,val mapY:Int=-1)
-internal data class DoomInput(val forward:Float=0f,val strafe:Float=0f,val turn:Float=0f,val fire:Boolean=false)
-internal enum class DoomEvent { SHOT, BLAST, PLASMA, HIT, HURT, COIN, LOOT, SWITCH, DOOR, CORRECT, WRONG, VICTORY, DEFEAT, SECRET, EXPLOSION, RELOAD, ENEMY_SHOT, ENEMY_DEATH, MACHINE_DEATH, MINIGUN_SHOT, ROCKET_SHOT }
+internal data class DoomInput(val forward:Float=0f,val strafe:Float=0f,val turn:Float=0f,val fire:Boolean=false,val punch:Boolean=false)
+internal enum class DoomEvent { SHOT, BLAST, PLASMA, HIT, HURT, COIN, LOOT, SWITCH, DOOR, CORRECT, WRONG, VICTORY, DEFEAT, SECRET, EXPLOSION, RELOAD, ENEMY_SHOT, ENEMY_DEATH, MACHINE_DEATH, MINIGUN_SHOT, ROCKET_SHOT, BERSERK, PUNCH }
 internal enum class DoomFaceState(val asset:String){
     NORMAL("02_normal_frente"),RIGHT("03_normal_mirando_derecha_v1"),LEFT("10_normal_mirando_izquierda_v2"),
     ANGRY("11_enojado_frente"),HURT("12_herido_frente"),HURT_RIGHT("13_herido_mirando_derecha"),
@@ -52,7 +52,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     val exitY get()=when(level){3->19;4->23;else->13}
     val bossMaxHp get()=when(level){3->560;4->DoomKind.MINOXIDIL.hp;else->DoomKind.BOSS.hp}
     val bossHealth get()=enemies.firstOrNull{it.kind==DoomKind.BOSS||it.kind==DoomKind.MINOXIDIL}?.hp?:0
-    val secretTotal get()=doors.count{it.kind==3}
+    val secretTotal get()=doors.count{it.kind==3||it.kind==4}
     val width=when(level){3->30;4->34;else->22}
     val height=when(level){3->23;4->27;else->17}
     private val grid=IntArray(width*height){1}
@@ -71,6 +71,9 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     var angle=0f;private set
     var hp=100;private set
     var armor=0;private set
+    var berserkTime=0f;private set
+    val berserkActive get()=berserkTime>0f
+    var cameraElevation=0f;private set
     var coins=0;private set
     var kills=0;private set
     var elapsed=0f;private set
@@ -105,7 +108,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     var questionsAnswered=0;private set
     var questionsCorrect=0;private set
     val faceState get()=doomFaceState(hp,if(faceTurnTime>0f)faceTurn else when((elapsed/1.25f).toInt()%6){1->-1;4->1;else->0},
-        facePain>0f,faceGrin>0f||faceFire>0f)
+        facePain>0f,berserkActive||faceGrin>0f||faceFire>0f)
     val deathAnimationActive get()=enemies.any{it.hp<=0&&it.deathAge<.72f}
     fun advanceDeathAnimations(dt:Float){
         if(dt<=0f)return
@@ -120,6 +123,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     var hurtFlash=0f;private set
     var walk=0f;private set
     private var fireCooldown=0f
+    private var punchCooldown=0f
     private var reinforcementsSpawned=0
     val bossName get()=if(level==4)"CAPITAN MINOXIDIL" else "NUCLEO"
     var won=false;private set
@@ -311,21 +315,21 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
                 cooldown=.7f+random.nextFloat()*.95f)
         }
         // A moderate first wave, crossfire on the avenue, then a tough outdoor boss.
-        foe(DoomKind.BALD_MINION,5.5f,4.5f);foe(DoomKind.GUARD,5.5f,7.5f);foe(DoomKind.DRONE,2.5f,8.5f)
-        foe(DoomKind.BALD_MINION,12.5f,4.5f);foe(DoomKind.SHOTGUNNER,16.5f,3.5f)
-        foe(DoomKind.BALD_MINION,19.5f,6.5f);foe(DoomKind.DRONE,14.5f,7.5f);foe(DoomKind.HEAVY,18.5f,8.5f)
-        foe(DoomKind.GUARD,24.5f,3.5f);foe(DoomKind.BALD_MINION,27.5f,5.5f)
+        foe(DoomKind.FLESH_STALKER,5.5f,4.5f);foe(DoomKind.GUARD,5.5f,7.5f);foe(DoomKind.DRONE,5.5f,8.5f)
+        foe(DoomKind.FLESH_STALKER,12.5f,4.5f);foe(DoomKind.SHOTGUNNER,16.5f,3.5f)
+        foe(DoomKind.FLESH_STALKER,19.5f,6.5f);foe(DoomKind.DRONE,14.5f,7.5f);foe(DoomKind.HEAVY,18.5f,8.5f)
+        foe(DoomKind.GUARD,24.5f,3.5f);foe(DoomKind.FLESH_STALKER,27.5f,5.5f)
         foe(DoomKind.DRONE,31.5f,6.5f);foe(DoomKind.RUNNER,25.5f,8.5f)
-        foe(DoomKind.SHOTGUNNER,24.5f,12.5f);foe(DoomKind.BALD_MINION,29.5f,14.5f)
+        foe(DoomKind.SHOTGUNNER,24.5f,12.5f);foe(DoomKind.FLESH_STALKER,29.5f,14.5f)
         foe(DoomKind.HEAVY,27.5f,16.5f);foe(DoomKind.DRONE,23.5f,16.5f)
-        foe(DoomKind.GUARD,18.5f,12.5f);foe(DoomKind.BALD_MINION,14.5f,14.5f)
+        foe(DoomKind.GUARD,18.5f,12.5f);foe(DoomKind.FLESH_STALKER,14.5f,14.5f)
         foe(DoomKind.SHOTGUNNER,11.5f,16.5f);foe(DoomKind.RUNNER,19.5f,15.5f)
-        foe(DoomKind.BALD_MINION,4.5f,13.5f);foe(DoomKind.DRONE,6.5f,15.5f)
-        foe(DoomKind.HEAVY,3.5f,22.5f);foe(DoomKind.BALD_MINION,6.5f,23.5f)
-        foe(DoomKind.BALD_MINION,12.5f,22.5f);foe(DoomKind.GUARD,17.5f,20.5f)
+        foe(DoomKind.FLESH_STALKER,4.5f,13.5f);foe(DoomKind.DRONE,6.5f,15.5f)
+        foe(DoomKind.HEAVY,3.5f,22.5f);foe(DoomKind.FLESH_STALKER,6.5f,23.5f)
+        foe(DoomKind.FLESH_STALKER,12.5f,22.5f);foe(DoomKind.GUARD,17.5f,20.5f)
         foe(DoomKind.SHOTGUNNER,19.5f,23.5f);foe(DoomKind.DRONE,13.5f,24.5f)
-        foe(DoomKind.BALD_MINION,24.5f,23.5f);foe(DoomKind.HEAVY,25.5f,20.5f)
-        foe(DoomKind.BALD_MINION,30.5f,21.5f);foe(DoomKind.DRONE,23.5f,24.5f)
+        foe(DoomKind.FLESH_STALKER,24.5f,23.5f);foe(DoomKind.HEAVY,25.5f,20.5f)
+        foe(DoomKind.FLESH_STALKER,30.5f,21.5f);foe(DoomKind.DRONE,23.5f,24.5f)
         foe(DoomKind.MINOXIDIL,29.0f,23.5f)
         fun supply(k:DoomLootKind,xx:Float,yy:Float){loot+=DoomLoot(k,xx,yy)}
         supply(DoomLootKind.SHOTGUN,3.5f,4.5f);supply(DoomLootKind.SHELLS,2.5f,6.5f)
@@ -347,14 +351,14 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         fun prop(k:DoomDecorKind,xx:Float,yy:Float,scale:Float=.82f,lift:Float=0f){
             decor+=DoomDecor(k,xx,yy,scale,lift)
         }
-        prop(DoomDecorKind.CAR_BLUE,3.5f,7.6f,1.4f)
-        prop(DoomDecorKind.CAR_RED,15.2f,3.5f,1.35f)
-        prop(DoomDecorKind.CAR_YELLOW,27.2f,7.8f,1.45f)
-        prop(DoomDecorKind.CAR_BLUE,29.5f,12.5f,1.3f)
-        prop(DoomDecorKind.CAR_RED,17.5f,14.5f,1.3f)
-        prop(DoomDecorKind.CAR_YELLOW,3.5f,16.3f,1.25f)
-        prop(DoomDecorKind.CAR_BLUE,15.3f,21.4f,1.3f)
-        prop(DoomDecorKind.CAR_RED,25.5f,23.5f,1.35f)
+        prop(DoomDecorKind.CAR_BLUE,5.4f,7.6f,.71f)
+        prop(DoomDecorKind.CAR_RED,15.2f,3.5f,.70f)
+        prop(DoomDecorKind.CAR_YELLOW,27.2f,7.8f,.74f)
+        prop(DoomDecorKind.CAR_BLUE,29.5f,12.5f,.69f)
+        prop(DoomDecorKind.CAR_RED,17.5f,14.5f,.70f)
+        prop(DoomDecorKind.CAR_YELLOW,3.5f,16.3f,.69f)
+        prop(DoomDecorKind.CAR_BLUE,15.3f,21.4f,.71f)
+        prop(DoomDecorKind.CAR_RED,25.5f,23.5f,.70f)
         prop(DoomDecorKind.SIGN_STOP,7.5f,4.6f,1.1f)
         prop(DoomDecorKind.SIGN_YIELD,26.0f,9.5f,1.1f)
         prop(DoomDecorKind.SIGN_PEDESTRIAN,11.2f,8.6f,1f)
@@ -363,8 +367,8 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         prop(DoomDecorKind.BUS_STOP,31.0f,4.0f,1.6f)
         prop(DoomDecorKind.CAPILLARY_AD,18.0f,2.0f,1.85f)
         prop(DoomDecorKind.CAPILLARY_AD,5.5f,20.0f,1.6f)
-        prop(DoomDecorKind.BALD_STATUE,5.5f,14.0f,1.45f)
-        prop(DoomDecorKind.BALD_STATUE,30.5f,19.5f,1.65f)
+        prop(DoomDecorKind.DEMON_TOTEM,5.5f,14.0f,.82f)
+        prop(DoomDecorKind.DEMON_TOTEM,30.5f,19.5f,.85f)
         for((xx,yy) in listOf(2.5f to 2.0f,20.0f to 8.5f,22.5f to 2.0f,
             31.5f to 16.5f,2.0f to 11.5f,8.0f to 24.5f))
             prop(DoomDecorKind.TREE,xx,yy,1.25f)
@@ -390,7 +394,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         cell(floor(px+r).toInt(),floor(py-r).toInt())!=0||
         cell(floor(px-r).toInt(),floor(py+r).toInt())!=0||
         cell(floor(px+r).toInt(),floor(py+r).toInt())!=0||
-        (level==4&&decor.any{it.kind in setOf(DoomDecorKind.CAR_BLUE,DoomDecorKind.CAR_RED,DoomDecorKind.CAR_YELLOW)&&hypot(it.x-px,it.y-py)<.37f+r})
+        (level==4&&decor.any{it.kind in setOf(DoomDecorKind.CAR_BLUE,DoomDecorKind.CAR_RED,DoomDecorKind.CAR_YELLOW)&&hypot(it.x-px,it.y-py)<.21f+r})
     fun ray(px:Float,py:Float,dx:Float,dy:Float):DoomRay{
         var mx=floor(px).toInt();var my=floor(py).toInt()
         val ddx=if(abs(dx)<.00001f)1e6f else abs(1f/dx);val ddy=if(abs(dy)<.00001f)1e6f else abs(1f/dy)
@@ -644,7 +648,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
                     for((xx,yy) in listOf(e.x-1.6f to e.y,e.x+1.6f to e.y)){
                         if(reinforcementsSpawned>=8)break
                         if(cell(floor(xx).toInt(),floor(yy).toInt())==0&&!solid(xx,yy,.25f)&&hypot(x-xx,y-yy)>1.2f){
-                            newMinions+=DoomEnemy(enemies.size+newMinions.size,DoomKind.BALD_MINION,xx,yy,cooldown=.75f,alert=true)
+                            newMinions+=DoomEnemy(enemies.size+newMinions.size,DoomKind.FLESH_STALKER,xx,yy,cooldown=.75f,alert=true)
                             reinforcementsSpawned++
                         }
                     }
