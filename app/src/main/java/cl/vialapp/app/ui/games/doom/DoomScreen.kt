@@ -66,8 +66,8 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
     val session=remember(context){SessionManager(context)}
     var run by remember{mutableStateOf<DoomEngine?>(null)}
     val levels=remember(context,userKey){context.getSharedPreferences("doom_levels",android.content.Context.MODE_PRIVATE)}
-    var unlocked by remember(userKey){mutableIntStateOf(if(levels.getBoolean(userKey+"_level3",false))3 else if(levels.getBoolean(userKey+"_level2",false))2 else 1)}
-    fun unlockNext(level:Int){if(level<3&&unlocked<level+1){unlocked=level+1;levels.edit().putBoolean(userKey+"_level"+unlocked,true).apply()}}
+    var unlocked by remember(userKey){mutableIntStateOf(if(levels.getBoolean(userKey+"_level4",false))4 else if(levels.getBoolean(userKey+"_level3",false))3 else if(levels.getBoolean(userKey+"_level2",false))2 else 1)}
+    fun unlockNext(level:Int){if(level<4&&unlocked<level+1){unlocked=level+1;levels.edit().putBoolean(userKey+"_level"+unlocked,true).apply()}}
     val engine=run
     cl.vialapp.app.ui.GameLandscape(active=engine!=null)
     val audio=LocalGameAudio.current
@@ -79,8 +79,8 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
             Text("DON PELAO",fontSize=36.sp,fontWeight=FontWeight.Black,color=Red)
             Text("OPERACIÓN CAOS VIAL",fontSize=23.sp,fontWeight=FontWeight.Black,color=Gold)
             DoomPreview(Modifier.fillMaxWidth().aspectRatio(16f/9f))
-            Text("EPISODIO 01 · ESTACIONAMIENTO INFERNAL",color=Gold,fontWeight=FontWeight.Bold)
-            Text("Carvier: La central vial está fuera de control. Recupera la credencial, desbloquea los accesos de tránsito y destruye el núcleo.",color=White)
+            Text("EPISODIO 01 · CUATRO SECTORES",color=Gold,fontWeight=FontWeight.Bold)
+            Text("Carvier: Atraviesa cuatro sectores, respeta las señales y enfrenta al Capitán Minoxidil en Zona Cero Capilar.",color=White)
             Text("Pulgar izquierdo: muévete en cualquier dirección. Desliza sobre la escena para mirar; toca directamente las puertas. Mantén la mira para disparar y toca los números del HUD para cambiar de arma.",color=White,fontSize=13.sp)
             Text("Récord: "+store.getHighScore(GameProgressStore.PELAO_DOOM)+" · Prototipo jugable",color=Gold,fontSize=12.sp)
             Button(onClick={run=DoomEngine();audio?.play("start")},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
@@ -92,8 +92,12 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
             Button(onClick={run=DoomEngine(level=3);audio?.play("start")},enabled=unlocked>=3,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
                 Text(if(unlocked>=3)"E1M3 · LA FORTALEZA VIAL" else "E1M3 · COMPLETA E1M2",fontWeight=FontWeight.Black)
             }
+            Button(onClick={run=DoomEngine(level=4);audio?.play("start")},enabled=unlocked>=4,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF187D86))){
+                Text(if(unlocked>=4)"E1M4 · ZONA CERO CAPILAR" else "E1M4 · COMPLETA E1M3",fontWeight=FontWeight.Black)
+            }
+            Text("E1M4: avenida exterior, autos, señales chilenas y el Capitán Minoxidil.",color=White,fontSize=12.sp)
         }
-    }else key(engine){DoomRun(engine,store,session,onMenu={run=null},onRetry={run=DoomEngine(level=engine.level);audio?.play("start")},onNext=if(engine.level<3){{run=DoomEngine(level=engine.level+1);audio?.play("start")}}else null,onComplete={unlockNext(engine.level)})}
+    }else key(engine){DoomRun(engine,store,session,onMenu={run=null},onRetry={run=DoomEngine(level=engine.level);audio?.play("start")},onNext=if(engine.level<4){{run=DoomEngine(level=engine.level+1);audio?.play("start")}}else null,onComplete={unlockNext(engine.level)})}
 }
 
 @Composable
@@ -239,9 +243,9 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                     Text(hint,Modifier.align(Alignment.Center).offset(y=19.dp).background(Dark.copy(alpha=.83f),RoundedCornerShape(3.dp)).padding(horizontal=7.dp,vertical=3.dp),color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
                 }
                 DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(5.dp).size(72.dp,54.dp))
-                if(e.level==3&&e.bossAlive&&e.enemies.any{it.kind==DoomKind.BOSS&&it.alert}){
-                    Column(Modifier.align(Alignment.TopCenter).padding(top=6.dp).width(126.dp).background(Dark.copy(alpha=.82f)).padding(3.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                        Text("NUCLEO",color=Gold,fontSize=9.sp,fontWeight=FontWeight.Black)
+                if(e.level>=3&&e.bossAlive&&e.enemies.any{(it.kind==DoomKind.BOSS||it.kind==DoomKind.MINOXIDIL)&&it.alert}){
+                    Column(Modifier.align(Alignment.TopCenter).padding(top=6.dp).width(if(e.level==4)172.dp else 126.dp).background(Dark.copy(alpha=.82f)).padding(3.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                        Text(e.bossName,color=Gold,fontSize=if(e.level==4)8.sp else 9.sp,fontWeight=FontWeight.Black)
                         Box(Modifier.fillMaxWidth().height(5.dp).background(Color(0xFF45271D))){Box(Modifier.fillMaxWidth((e.bossHealth.toFloat()/e.bossMaxHp).coerceIn(0f,1f)).fillMaxHeight().background(Red))}
                     }
                 }
@@ -460,10 +464,10 @@ private val hudDigits=arrayOf(
                 sub=if(e.weaponPhase==DoomWeaponPhase.RELOADING)"RECARGA" else "CARG. "+e.magazineAmmo,
                 onClick=if(enabled)onReload else null)
             HudMeter("HEALTH",e.hp,Color(0xFFE94D3A),Modifier.weight(1f).fillMaxHeight())
-            Column(Modifier.weight(if(e.level==3)1.55f else 1.18f).fillMaxHeight().background(Color(0xFF292721)).border(1.dp,Color(0xFF716652)),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+            Column(Modifier.weight(if(e.level>=3)1.55f else 1.18f).fillMaxHeight().background(Color(0xFF292721)).border(1.dp,Color(0xFF716652)),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
                 Text("ARMS",color=Color(0xFFD2C3A3),fontSize=9.sp,fontWeight=FontWeight.Black)
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){
-                    DoomWeapon.entries.take(if(e.level==3)5 else 3).forEachIndexed{i,w->
+                    DoomWeapon.entries.take(if(e.level>=3)5 else 3).forEachIndexed{i,w->
                         Box(Modifier.weight(1f).height(23.dp).padding(1.dp).background(if(e.weapon==w)Color(0xFF83602D)else Color(0xFF1A1A18)).clickable(enabled=enabled&&e.owns(w)){onSelect(w)},contentAlignment=Alignment.Center){
                             PixelNumber(i+2,if(e.weapon==w)Gold else if(e.owns(w))Color(0xFFD3C2A0)else Color(0xFF54524B),Modifier.size(10.dp,16.dp))
                         }
@@ -479,10 +483,10 @@ private val hudDigits=arrayOf(
                 Text(if(e.hasKey)"◆ KEY" else "◇ KEY",color=if(e.hasKey)Gold else Color(0xFF77736A),fontSize=10.sp,fontWeight=FontWeight.Bold)
             }
             Column(Modifier.weight(.95f).fillMaxHeight().background(Color(0xFF242524)).border(1.dp,Color(0xFF676052)).padding(3.dp),verticalArrangement=Arrangement.Center){
-                DoomWeapon.entries.take(if(e.level==3)5 else 3).forEachIndexed{i,w->
+                DoomWeapon.entries.take(if(e.level>=3)5 else 3).forEachIndexed{i,w->
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-                        Text(listOf("BUL","SHL","CEL","BEL","RKT")[i],color=Color(0xFFAFA38A),fontSize=if(e.level==3)7.sp else 8.sp,lineHeight=if(e.level==3)9.sp else 10.sp)
-                        Text(e.ammoFor(w).toString(),color=if(e.weapon==w)Gold else White,fontSize=if(e.level==3)8.sp else 9.sp,fontWeight=FontWeight.Bold,lineHeight=if(e.level==3)9.sp else 10.sp)
+                        Text(listOf("BUL","SHL","CEL","BEL","RKT")[i],color=Color(0xFFAFA38A),fontSize=if(e.level>=3)7.sp else 8.sp,lineHeight=if(e.level>=3)9.sp else 10.sp)
+                        Text(e.ammoFor(w).toString(),color=if(e.weapon==w)Gold else White,fontSize=if(e.level>=3)8.sp else 9.sp,fontWeight=FontWeight.Bold,lineHeight=if(e.level>=3)9.sp else 10.sp)
                     }
                 }
             }
