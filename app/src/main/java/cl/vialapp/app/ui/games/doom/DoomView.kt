@@ -34,7 +34,7 @@ internal class DoomView(context:Context):View(context){
     private val art=DoomArt()
     private var previousX=0f
     private var previousY=0f
-    private data class Sprite(val x:Float,val y:Float,val size:Float,val art:IntArray,val hit:Boolean=false,val lift:Float=0f)
+    private data class Sprite(val x:Float,val y:Float,val size:Float,val art:IntArray,val hit:Boolean=false,val lift:Float=0f,val widthScale:Float=1f)
     private val sprites=ArrayList<Sprite>()
     override fun onDraw(canvas:Canvas){
         super.onDraw(canvas)
@@ -96,7 +96,29 @@ internal class DoomView(context:Context):View(context){
             }
         }
         sprites.clear()
-        for(p in e.decor)if(hypot(p.x-e.x,p.y-e.y)>.31f)sprites+=Sprite(p.x,p.y,p.scale,art.decor[p.kind.ordinal],false,p.lift)
+        for(p in e.decor)if(hypot(p.x-e.x,p.y-e.y)>.31f){
+            // World props are scenery, not upright enemies. Preserve their silhouette in perspective.
+            val size=if(e.level==4)when(p.kind){
+                DoomDecorKind.CAR_BLUE,DoomDecorKind.CAR_RED,DoomDecorKind.CAR_YELLOW->p.scale.coerceAtMost(.43f)
+                DoomDecorKind.BUS_STOP->.55f
+                DoomDecorKind.CAPILLARY_AD->.54f
+                DoomDecorKind.ROAD_BARRIER->.36f
+                DoomDecorKind.CONE->.24f
+                DoomDecorKind.SIGN_STOP,DoomDecorKind.SIGN_YIELD,DoomDecorKind.SIGN_PEDESTRIAN->.65f
+                DoomDecorKind.DEMON_TOTEM->.63f
+                else->p.scale.coerceAtMost(.83f)
+            }else p.scale
+            val aspect=when(p.kind){
+                DoomDecorKind.CAR_BLUE,DoomDecorKind.CAR_RED,DoomDecorKind.CAR_YELLOW->1.85f
+                DoomDecorKind.BUS_STOP->1.75f
+                DoomDecorKind.CAPILLARY_AD->1.45f
+                DoomDecorKind.ROAD_BARRIER->1.55f
+                DoomDecorKind.CONE->.72f
+                DoomDecorKind.SIGN_STOP,DoomDecorKind.SIGN_YIELD,DoomDecorKind.SIGN_PEDESTRIAN->.71f
+                else->1f
+            }
+            sprites+=Sprite(p.x,p.y,size,art.decor[p.kind.ordinal],false,p.lift,aspect)
+        }
         for(b in e.explosives)if(!b.exploded)sprites+=Sprite(b.x,b.y,if(b.crate).70f else .77f,art.explosive[if(b.crate)1 else 0])
         for(b in e.explosions){val frame=((.52f-b.time)/.52f*6).toInt().coerceIn(0,5);sprites+=Sprite(b.x,b.y,1.05f+frame*.13f,art.explosion[frame],true,.12f)}
         for(l in e.loot)if(!l.taken)sprites+=Sprite(l.x,l.y,if(l.kind==DoomLootKind.BERSERK).68f else .46f,art.loot[l.kind.ordinal])
@@ -120,11 +142,12 @@ internal class DoomView(context:Context):View(context){
             if(z<.11f)continue
             val px=w*.5f*(1f+(-dx*sa+dy*ca)/(z*.66f))
             val size=(focal*s.size/z).coerceAtMost(2200f)
-            val bottom=horizon+focal*.5f/z-focal*s.lift/z;val top=bottom-size;val left=px-size*.5f
+            val bottom=horizon+focal*.5f/z-focal*s.lift/z;val top=bottom-size
+            val spriteWidth=size*s.widthScale;val left=px-spriteWidth*.5f
             val light=((if(e.level==4).98f else 1.25f)/(1f+z*.14f)).coerceIn(.25f,1f)
-            for(xx in left.toInt().coerceAtLeast(0)..(left+size).toInt().coerceAtMost(w-1)){
+            for(xx in left.toInt().coerceAtLeast(0)..(left+spriteWidth).toInt().coerceAtMost(w-1)){
                 if(z>=depth[xx])continue
-                val tx=((xx-left)*64/size).toInt().coerceIn(0,63)
+                val tx=((xx-left)*64/spriteWidth).toInt().coerceIn(0,63)
                 for(yy in top.toInt().coerceAtLeast(0)..bottom.toInt().coerceAtMost(h-1)){
                     val ty=((yy-top)*64/size).toInt().coerceIn(0,63)
                     val color=s.art[ty*64+tx]
