@@ -130,7 +130,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                 DoomEvent.EXPLOSION->"doom_explosion";DoomEvent.RELOAD->"doom_reload";DoomEvent.ENEMY_SHOT->"doom_enemy"
                 DoomEvent.ENEMY_DEATH->"doom_death";DoomEvent.MACHINE_DEATH->"doom_machine_death"
                 DoomEvent.MINIGUN_SHOT->"doom_minigun";DoomEvent.ROCKET_SHOT->"doom_rocket"
-                DoomEvent.BERSERK->"doom_pickup";DoomEvent.PUNCH->"doom_hit"
+                DoomEvent.BERSERK->"doom_berserk";DoomEvent.PUNCH->"doom_punch"
             })
         }
     }
@@ -473,8 +473,8 @@ private val hudDigits=arrayOf(
             drawLine(Color(0xFFBAA27D),Offset.Zero,Offset(size.width,0f),2.dp.toPx())
         }
         Row(Modifier.fillMaxSize().padding(4.dp),horizontalArrangement=Arrangement.spacedBy(3.dp),verticalAlignment=Alignment.CenterVertically){
-            HudMeter("AMMO",e.ammunition,Color(0xFFE8B747),Modifier.weight(1.12f).fillMaxHeight(),
-                sub=if(e.weaponPhase==DoomWeaponPhase.RELOADING)"RECARGA" else "CARG. "+e.magazineAmmo,
+            HudMeter(if(e.berserkActive)"PUÑOS" else "AMMO",if(e.berserkActive)164 else e.ammunition,if(e.berserkActive)Color(0xFFE6442D)else Color(0xFFE8B747),Modifier.weight(1.12f).fillMaxHeight(),
+                sub=if(e.berserkActive)"BERSERK" else if(e.weaponPhase==DoomWeaponPhase.RELOADING)"RECARGA" else "CARG. "+e.magazineAmmo,
                 onClick=if(enabled)onReload else null)
             HudMeter("HEALTH",e.hp,Color(0xFFE94D3A),Modifier.weight(1f).fillMaxHeight())
             Column(Modifier.weight(if(e.level>=3)1.55f else 1.18f).fillMaxHeight().background(Color(0xFF292721)).border(1.dp,Color(0xFF716652)),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
@@ -486,7 +486,7 @@ private val hudDigits=arrayOf(
                         }
                     }
                 }
-                Text(e.weapon.title,color=Gold,fontSize=8.sp,maxLines=1)
+                Text(if(e.berserkActive)"PUÑOS BERSERK" else e.weapon.title,color=if(e.berserkActive)Red else Gold,fontSize=8.sp,maxLines=1)
             }
             DoomFace(e.faceState,e.hp<=0,Modifier.weight(1.07f).fillMaxHeight())
             HudMeter("ARMOR",e.armor,Color(0xFF9FB7A0),Modifier.weight(1f).fillMaxHeight())

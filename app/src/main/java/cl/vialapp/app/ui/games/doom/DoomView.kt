@@ -138,19 +138,76 @@ internal class DoomView(context:Context):View(context){
         val bob=if(moving)sin(e.walk)*3.5f else 0f
         lowCanvas.translate(w/2f+bob,h-1f+gunScale*(e.weaponLowering*91f+e.recoil*(if(e.weapon==DoomWeapon.SHOTGUN)17f else 8f))+(if(moving)abs(cos(e.walk))*2.3f else 0f))
         lowCanvas.scale(gunScale,gunScale)
-        drawGun(lowCanvas,e.weapon,e.shotFlash>0f,e.weaponPhase,e.weaponProgress)
+        if(e.berserkActive)drawBerserkFists(lowCanvas,e) else drawGun(lowCanvas,e.weapon,e.shotFlash>0f,e.weaponPhase,e.weaponProgress)
         lowCanvas.restore()
         val cx=w/2f;val cy=horizon
         brush.color=if(e.targetHint()!=null)Color.rgb(255,203,88) else Color.argb(160,240,237,213)
         lowCanvas.drawRect(cx-7,cy,cx-3,cy+1,brush);lowCanvas.drawRect(cx+4,cy,cx+8,cy+1,brush)
         lowCanvas.drawRect(cx,cy-7,cx+1,cy-3,brush);lowCanvas.drawRect(cx,cy+4,cx+1,cy+8,brush)
         if(e.targetHint()!=null){lowCanvas.drawRect(cx-1,cy-1,cx+2,cy+2,brush)}
-        if(e.berserkActive){brush.color=Color.argb(16,221,28,18);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
+        if(e.berserkActive){
+            val pulse=(sin(e.elapsed*7f)*13f).toInt()
+            brush.color=Color.argb((45+pulse).coerceIn(29,67),181,12,11)
+            lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)
+            // Deep red vignette that pulses throughout the power-up.
+            for(k in 0..3){
+                val edge=(4-k)*3f
+                brush.color=Color.argb((25+k*17+pulse).coerceIn(18,95),117,2,3)
+                lowCanvas.drawRect(0f,0f,w.toFloat(),edge,brush)
+                lowCanvas.drawRect(0f,h-edge,w.toFloat(),h.toFloat(),brush)
+                lowCanvas.drawRect(0f,0f,edge,h.toFloat(),brush)
+                lowCanvas.drawRect(w-edge,0f,w.toFloat(),h.toFloat(),brush)
+            }
+        }
         if(e.hurtFlash>0f){brush.color=Color.argb((e.hurtFlash*480).toInt().coerceIn(0,100),180,12,8);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
         if(e.blastFlash>0f){brush.color=Color.argb((e.blastFlash*240).toInt().coerceIn(0,64),255,151,59);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
         if(e.pickupFlash>0f){brush.color=Color.argb((e.pickupFlash*125).toInt().coerceIn(0,22),220,200,85);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
         target.set(0,0,width,height);brush.color=Color.WHITE
         canvas.drawBitmap(bitmap,null,target,brush)
+    }
+    /** Pixel-art knuckles: alternate left and right hooks instead of the equipped firearm. */
+    private fun drawBerserkFists(c:Canvas,e:DoomEngine){
+        fun poly(color:Int,vararg xy:Float){
+            val path=Path().apply{
+                moveTo(xy[0],xy[1])
+                for(i in 2 until xy.size step 2)lineTo(xy[i],xy[i+1])
+                close()
+            }
+            brush.color=color or 0xff000000.toInt()
+            c.drawPath(path,brush)
+        }
+        fun box(l:Float,t:Float,r:Float,b:Float,color:Int){
+            brush.color=color or 0xff000000.toInt()
+            c.drawRect(l,t,r,b,brush)
+        }
+        val kick=if(e.punchSwing>0f)sin(((.27f-e.punchSwing)/.27f).coerceIn(0f,1f)*PI.toFloat()) else 0f
+        fun fist(right:Boolean,power:Float){
+            c.save()
+            if(right)c.scale(-1f,1f)
+            c.translate(-42f+power*29f,-power*36f)
+            // Arm and rough forearm wraps.
+            poly(0x241b1c,-43f,5f,-40f,-19f,-33f,-32f,-10f,-30f,0f,-12f,3f,5f)
+            poly(0x8e483c,-39f,5f,-37f,-20f,-29f,-29f,-13f,-24f,-3f,-12f,0f,5f)
+            poly(0xc28568,-36f,5f,-35f,-13f,-29f,-25f,-15f,-25f,-6f,-10f,-5f,5f)
+            box(-38f,-14f,-6f,-6f,0x2b262b)
+            box(-34f,-12f,-8f,-9f,0x6b2220)
+            // Thumb and individually outlined knuckles.
+            poly(0x65362e,-37f,-32f,-37f,-56f,-28f,-64f,-13f,-59f,-7f,-45f,-12f,-34f)
+            poly(0xa96b52,-36f,-34f,-35f,-53f,-29f,-60f,-14f,-56f,-10f,-44f,-13f,-33f)
+            poly(0xe0a485,-34f,-39f,-32f,-54f,-26f,-57f,-15f,-53f,-12f,-45f,-15f,-37f)
+            for(k in 0..3){
+                val x=-36f+k*8f
+                box(x,-56f,x+8f,-38f,0x68372e)
+                box(x+1f,-57f,x+7f,-43f,if(k%2==0)0xd79b7a else 0xb77a5f)
+                box(x+2f,-56f,x+6f,-52f,0xf1b996)
+                box(x+1f,-43f,x+7f,-40f,0x633730)
+            }
+            box(-31f,-35f,-13f,-30f,0x874f40)
+            box(-34f,-13f,-11f,-10f,0xd4a080)
+            c.restore()
+        }
+        fist(e.punchFromRight,if(e.punchFromRight)0f else kick)
+        fist(!e.punchFromRight,if(e.punchFromRight)kick else 0f)
     }
     private fun drawGun(c:Canvas,weapon:DoomWeapon,fire:Boolean,phase:DoomWeaponPhase,progress:Float){
         fun rect(l:Float,t:Float,r:Float,b:Float,color:Int){brush.color=color or 0xff000000.toInt();c.drawRect(l,t,r,b,brush)}

@@ -72,6 +72,8 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     var hp=100;private set
     var armor=0;private set
     var berserkTime=0f;private set
+    var punchSwing=0f;private set
+    var punchFromRight=false;private set
     val berserkActive get()=berserkTime>0f
     var cameraElevation=0f;private set
     var coins=0;private set
@@ -450,7 +452,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         weaponPhase=value;phaseDuration=duration;weaponProgress=0f
     }
     fun selectWeapon(next:DoomWeapon){
-        if(finished||pending!=null||!owns(next)||next==weapon&&queuedWeapon==null)return
+        if(finished||pending!=null||berserkActive||!owns(next)||next==weapon&&queuedWeapon==null)return
         if(next==weapon&&weaponPhase!=DoomWeaponPhase.LOWERING){queuedWeapon=null;return}
         queuedWeapon=next
         if(weaponPhase==DoomWeaponPhase.READY||weaponPhase==DoomWeaponPhase.RELOADING){
@@ -458,10 +460,12 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         }
     }
     fun cycleWeapon(){
+        if(berserkActive)return
         val available=weapons;val current=queuedWeapon?:weapon
         selectWeapon(available[(available.indexOf(current)+1)%available.size])
     }
     fun reload(){
+        if(berserkActive)return
         if(finished||pending!=null||weaponPhase!=DoomWeaponPhase.READY||magazineAmmo>=min(ammunition,magazineSize[weapon.ordinal])||ammunition<=0)return
         phase(DoomWeaponPhase.RELOADING,when(weapon){DoomWeapon.PISTOL->.54f;DoomWeapon.SHOTGUN->.65f;DoomWeapon.PLASMA->.46f;DoomWeapon.MINIGUN->.92f;DoomWeapon.ROCKET->.66f})
         events+=DoomEvent.RELOAD
@@ -563,7 +567,8 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     }
     private fun punch(){
         if(!berserkActive||punchCooldown>0f||finished||pending!=null)return
-        punchCooldown=.29f;faceFire=.3f;shotFlash=.07f;events+=DoomEvent.PUNCH
+        punchCooldown=.29f;punchSwing=.27f;punchFromRight=!punchFromRight
+        faceFire=.3f;events+=DoomEvent.PUNCH
         val target=enemies.filter{it.hp>0&&hypot(it.x-x,it.y-y)<1.5f&&visible(x,y,it.x,it.y)}
             .filter{abs(atan2(sin(atan2(it.y-y,it.x-x)-angle),cos(atan2(it.y-y,it.x-x)-angle)))<.85f}
             .minByOrNull{hypot(it.x-x,it.y-y)}
@@ -574,6 +579,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         }
     }
     private fun shoot(){
+        if(berserkActive){punch();return}
         if(fireCooldown>0f||finished||weaponPhase!=DoomWeaponPhase.READY)return
         val w=weapon
         if(ammo[w.ordinal]<=0){fireCooldown=.3f;tell("Sin munición. Cambia de arma.");return}
@@ -619,7 +625,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
                 DoomLootKind.ROCKET->{owned[4]=true;ammo[4]+=6;magazine[4]=1;selectWeapon(DoomWeapon.ROCKET);faceGrin=1.25f;tell("¡Lanzacohetes adquirido!")}
                 DoomLootKind.BELT->ammo[3]+=72
                 DoomLootKind.ROCKET_AMMO->ammo[4]+=4
-                DoomLootKind.BERSERK->{berserkTime=24f;hp=max(hp,75);faceGrin=2f;events+=DoomEvent.BERSERK;tell("¡BERSERK! Puños devastadores durante 24 segundos.")}
+                DoomLootKind.BERSERK->{berserkTime=24f;punchSwing=0f;hp=max(hp,75);faceGrin=2f;events+=DoomEvent.BERSERK;tell("¡BERSERK! Puños devastadores durante 24 segundos.")}
             }
             if(l.kind!=DoomLootKind.COIN)events+=DoomEvent.LOOT
         }
@@ -627,7 +633,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     fun step(dt:Float,input:DoomInput=DoomInput()){
         if(finished||pending!=null||dt<=0f)return
         val d=dt.coerceAtMost(.05f);elapsed+=d
-        fireCooldown=(fireCooldown-d).coerceAtLeast(0f);punchCooldown=(punchCooldown-d).coerceAtLeast(0f);berserkTime=(berserkTime-d).coerceAtLeast(0f);shotFlash=(shotFlash-d).coerceAtLeast(0f);hurtFlash=(hurtFlash-d).coerceAtLeast(0f);messageTime=(messageTime-d).coerceAtLeast(0f)
+        fireCooldown=(fireCooldown-d).coerceAtLeast(0f);punchCooldown=(punchCooldown-d).coerceAtLeast(0f);punchSwing=(punchSwing-d).coerceAtLeast(0f);berserkTime=(berserkTime-d).coerceAtLeast(0f);shotFlash=(shotFlash-d).coerceAtLeast(0f);hurtFlash=(hurtFlash-d).coerceAtLeast(0f);messageTime=(messageTime-d).coerceAtLeast(0f)
         advanceWeapon(d)
         advanceDeathAnimations(d)
         faceTurnTime=(faceTurnTime-d).coerceAtLeast(0f);facePain=(facePain-d).coerceAtLeast(0f);faceGrin=(faceGrin-d).coerceAtLeast(0f);faceFire=(faceFire-d).coerceAtLeast(0f)
