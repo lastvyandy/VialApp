@@ -2,6 +2,7 @@ package cl.vialapp.app.ui.games.doom
 
 import android.app.Activity
 import android.content.ContextWrapper
+import cl.vialapp.app.MainActivity
 import android.media.MediaPlayer
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.asImageBitmap
@@ -81,7 +82,8 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
             DoomPreview(Modifier.fillMaxWidth().aspectRatio(16f/9f))
             Text("EPISODIO 01 · CUATRO SECTORES",color=Gold,fontWeight=FontWeight.Bold)
             Text("Carvier: Atraviesa cuatro sectores, respeta las señales y enfrenta al Capitán Minoxidil en Zona Cero Capilar.",color=White)
-            Text("Pulgar izquierdo: muévete en cualquier dirección. Desliza sobre la escena para mirar; toca directamente las puertas. Mantén la mira para disparar y toca los números del HUD para cambiar de arma.",color=White,fontSize=13.sp)
+            Text("Pantalla: stick izquierdo para moverse, desliza para mirar, mantén pulsado para disparar y toca las puertas para usar.",color=White,fontSize=13.sp)
+            Text("Mando Xbox Bluetooth: stick izquierdo mover · derecho mirar · RT disparar o golpear · LT puños berserk · A usar · X recargar · Y/RB cambiar arma · LB arma anterior · START pausar.",color=Gold,fontSize=12.sp)
             Text("Récord: "+store.getHighScore(GameProgressStore.PELAO_DOOM)+" · Prototipo jugable",color=Gold,fontSize=12.sp)
             Button(onClick={run=DoomEngine();audio?.play("start")},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
                 Text("E1M1 · ESTACIONAMIENTO INFERNAL",fontWeight=FontWeight.Black,color=Color.White)
@@ -112,6 +114,8 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     val audio=LocalGameAudio.current
     val rewards=LocalRewards.current
     val runId=remember{UUID.randomUUID().toString()}
+    val gamepad=remember(e){DoomGamepad()}
+    var selectedAnswer by remember{mutableIntStateOf(0)}
     var revision by remember{mutableIntStateOf(0)}
     var drive by remember{mutableStateOf(DoomInput())}
     var paused by remember{mutableStateOf(false)}
@@ -154,14 +158,16 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             else if(music.isPlaying)music.pause()
         }
     }
-    DisposableEffect(context){
+    DisposableEffect(context,gamepad){
         var ctx=context
         while(ctx is ContextWrapper&&ctx !is Activity)ctx=ctx.baseContext
         val activity=ctx as? Activity
+        val host=activity as? MainActivity
+        host?.activeDoomGamepad=gamepad
         val lifecycle=(activity as? LifecycleOwner)?.lifecycle
         val observer=LifecycleEventObserver{_,event->if(event==Lifecycle.Event.ON_PAUSE){clear();paused=true}}
         lifecycle?.addObserver(observer)
-        onDispose{lifecycle?.removeObserver(observer)}
+        onDispose{lifecycle?.removeObserver(observer);if(host?.activeDoomGamepad===gamepad)host.activeDoomGamepad=null;gamepad.reset()}
     }
     BackHandler{
         when{
@@ -170,6 +176,44 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             exit->{exit=false}
             paused->{clear();paused=false}
             else->{clear();paused=true}
+        }
+    }
+    LaunchedEffect(challenge){selectedAnswer=0}
+    // Poll one-shot gamepad buttons when the simulation is stopped by pause or a quiz.
+    LaunchedEffect(e,gamepad,ready,paused,challenge,finished,resultVisible,exit){
+        while(true){
+            withFrameNanos{}
+            if(!ready)continue
+            for(action in gamepad.consumeActions()){
+                when {
+                    challenge!=null&&!e.finished -> when(action){
+                        DoomPadAction.UP->selectedAnswer=(selectedAnswer-1+challenge.answers.size)%challenge.answers.size
+                        DoomPadAction.DOWN->selectedAnswer=(selectedAnswer+1)%challenge.answers.size
+                        DoomPadAction.USE->change{e.answer(selectedAnswer)}
+                        DoomPadAction.CANCEL->change{e.dismissChallenge()}
+                        else->Unit
+                    }
+                    resultVisible -> when(action){
+                        DoomPadAction.USE->if(e.won&&onNext!=null)onNext()else onRetry()
+                        DoomPadAction.CANCEL,DoomPadAction.PAUSE->onMenu()
+                        else->Unit
+                    }
+                    paused -> when(action){
+                        DoomPadAction.PAUSE,DoomPadAction.CANCEL->{clear();paused=false;exit=false}
+                        DoomPadAction.USE->if(exit)onMenu()else{clear();paused=false}
+                        else->Unit
+                    }
+                    !e.finished -> when(action){
+                        DoomPadAction.PAUSE,DoomPadAction.CANCEL->{clear();paused=true}
+                        DoomPadAction.USE->change{e.interact()}
+                        DoomPadAction.RELOAD->change{e.reload()}
+                        DoomPadAction.NEXT_WEAPON->change{e.cycleWeapon()}
+                        DoomPadAction.PREVIOUS_WEAPON->change{e.previousWeapon()}
+                        else->Unit
+                    }
+                    else->Unit
+                }
+            }
         }
     }
     LaunchedEffect(e,ready,paused,challenge,finished){
@@ -181,7 +225,15 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             carry+=((now-last)/1_000_000_000f).coerceIn(0f,.1f);last=now
             var updated=false
             while(carry>=1f/30f&&!e.finished&&e.pending==null){
-                e.step(1f/30f,drive);carry-=1f/30f;updated=true
+                val pad=gamepad.snapshot()
+                e.step(1f/30f,DoomInput(
+                    forward=(drive.forward+pad.forward).coerceIn(-1f,1f),
+                    strafe=(drive.strafe+pad.strafe).coerceIn(-1f,1f),
+                    turn=(drive.turn+pad.turn).coerceIn(-1f,1f),
+                    fire=drive.fire||pad.fire,
+                    punch=drive.punch||pad.punch,
+                    lookVertical=pad.lookVertical
+                ));carry-=1f/30f;updated=true
             }
             if(updated){drain();revision++}
         }
@@ -245,6 +297,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                     Text(hint,Modifier.align(Alignment.Center).offset(y=19.dp).background(Dark.copy(alpha=.83f),RoundedCornerShape(3.dp)).padding(horizontal=7.dp,vertical=3.dp),color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
                 }
                 DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(5.dp).size(72.dp,54.dp))
+                if(gamepad.connected)Text("MANDO XBOX",Modifier.align(Alignment.TopStart).padding(6.dp).background(Dark.copy(alpha=.78f)).padding(horizontal=5.dp,vertical=3.dp),color=Gold,fontSize=9.sp,fontWeight=FontWeight.Bold)
                 if(e.berserkActive)Text("BERSERK · "+ceil(e.berserkTime).toInt()+" s",Modifier.align(Alignment.TopStart).padding(7.dp).background(Color(0xFF821F17).copy(alpha=.92f),RoundedCornerShape(4.dp)).padding(horizontal=7.dp,vertical=4.dp),color=Color(0xFFFFE5A0),fontSize=12.sp,fontWeight=FontWeight.Black)
                 if(e.level>=3&&e.bossAlive&&e.enemies.any{(it.kind==DoomKind.BOSS||it.kind==DoomKind.MINOXIDIL)&&it.alert}){
                     Column(Modifier.align(Alignment.TopCenter).padding(top=6.dp).width(if(e.level==4)172.dp else 126.dp).background(Dark.copy(alpha=.82f)).padding(3.dp),horizontalAlignment=Alignment.CenterHorizontally){
@@ -273,12 +326,12 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){
                     listOf(RoadSign.YIELD,RoadSign.STOP,RoadSign.MAX_50).forEachIndexed{i,sign->
                         Button(onClick={change{e.answer(i)}},modifier=Modifier.weight(1f),contentPadding=PaddingValues(4.dp),
-                            colors=ButtonDefaults.buttonColors(containerColor=Metal)){
+                            colors=ButtonDefaults.buttonColors(containerColor=if(gamepad.connected&&selectedAnswer==i)Red else Metal)){
                             Column(horizontalAlignment=Alignment.CenterHorizontally){RoadSignArt(sign,Modifier.size(42.dp));Text(challenge.answers[i],fontSize=9.sp,textAlign=TextAlign.Center,color=White)}
                         }
                     }
                 }
-            }else challenge.answers.forEachIndexed{i,label->Button(onClick={change{e.answer(i)}},modifier=Modifier.fillMaxWidth()){Text(label)}}
+            }else challenge.answers.forEachIndexed{i,label->Button(onClick={change{e.answer(i)}},modifier=Modifier.fillMaxWidth(),colors=if(gamepad.connected&&selectedAnswer==i)ButtonDefaults.buttonColors(containerColor=Red)else ButtonDefaults.buttonColors()){Text(label)}}
         }},confirmButton={},dismissButton={TextButton(onClick={change{e.dismissChallenge()}}){Text("VOLVER",color=White)}})
 }
 
