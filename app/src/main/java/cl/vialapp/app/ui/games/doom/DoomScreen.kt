@@ -319,20 +319,44 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             onSelect={w->change{e.selectWeapon(w)}},onReload={change{e.reload()}})
 
     }
-    if(challenge!=null&&!finished)AlertDialog(onDismissRequest={change{e.dismissChallenge()}},containerColor=Dark,title={Text("TERMINAL DE CONTROL",color=Gold,fontWeight=FontWeight.Black)},
-        text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(6.dp)){
-            Text(challenge.prompt,color=White,fontWeight=FontWeight.Bold)
-            if(e.level==1&&e.pending?.kind==1){
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){
-                    listOf(RoadSign.YIELD,RoadSign.STOP,RoadSign.MAX_50).forEachIndexed{i,sign->
-                        Button(onClick={change{e.answer(i)}},modifier=Modifier.weight(1f),contentPadding=PaddingValues(4.dp),
-                            colors=ButtonDefaults.buttonColors(containerColor=if(gamepad.connected&&selectedAnswer==i)Red else Metal)){
-                            Column(horizontalAlignment=Alignment.CenterHorizontally){RoadSignArt(sign,Modifier.size(42.dp));Text(challenge.answers[i],fontSize=9.sp,textAlign=TextAlign.Center,color=White)}
+    if(challenge!=null&&!finished){
+        // Inline overlay retains Activity focus, allowing Xbox A/D-pad to answer the quiz.
+        Box(Modifier.fillMaxSize().background(Dark.copy(alpha=.94f)),contentAlignment=Alignment.Center){
+            Column(
+                Modifier.fillMaxWidth(.87f).widthIn(max=510.dp).heightIn(max=340.dp)
+                    .border(2.dp,Red,RoundedCornerShape(10.dp))
+                    .background(Metal,RoundedCornerShape(10.dp))
+                    .verticalScroll(rememberScrollState()).padding(14.dp),
+                verticalArrangement=Arrangement.spacedBy(8.dp)
+            ){
+                Text("TERMINAL DE CONTROL",color=Gold,fontWeight=FontWeight.Black,fontSize=17.sp)
+                Text(challenge.prompt,color=White,fontWeight=FontWeight.Bold)
+                if(gamepad.connected)Text("CRUCETA: ELEGIR  ·  A: CONFIRMAR  ·  B: SALIR",color=Gold,fontSize=10.sp)
+                if(e.level==1&&e.pending?.kind==1){
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+                        listOf(RoadSign.YIELD,RoadSign.STOP,RoadSign.MAX_50).forEachIndexed{i,sign->
+                            Button(onClick={change{e.answer(i)}},modifier=Modifier.weight(1f),
+                                contentPadding=PaddingValues(4.dp),
+                                colors=ButtonDefaults.buttonColors(containerColor=if(gamepad.connected&&selectedAnswer==i)Red else Metal)){
+                                Column(horizontalAlignment=Alignment.CenterHorizontally){
+                                    RoadSignArt(sign,Modifier.size(40.dp))
+                                    Text(challenge.answers[i],fontSize=9.sp,textAlign=TextAlign.Center,color=White)
+                                }
+                            }
+                        }
+                    }
+                }else{
+                    challenge.answers.forEachIndexed{i,label->
+                        Button(onClick={change{e.answer(i)}},modifier=Modifier.fillMaxWidth(),
+                            colors=ButtonDefaults.buttonColors(containerColor=if(gamepad.connected&&selectedAnswer==i)Red else Color(0xFF55514B))){
+                            Text(label,color=White)
                         }
                     }
                 }
-            }else challenge.answers.forEachIndexed{i,label->Button(onClick={change{e.answer(i)}},modifier=Modifier.fillMaxWidth(),colors=if(gamepad.connected&&selectedAnswer==i)ButtonDefaults.buttonColors(containerColor=Red)else ButtonDefaults.buttonColors()){Text(label)}}
-        }},confirmButton={},dismissButton={TextButton(onClick={change{e.dismissChallenge()}}){Text("VOLVER",color=White)}})
+                TextButton(onClick={change{e.dismissChallenge()}}){Text("VOLVER",color=Gold)}
+            }
+        }
+    }
 }
 
 // A single gesture surface owns all pointers. Each thumb has an independent role.

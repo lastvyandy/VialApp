@@ -199,10 +199,18 @@ fun main(){
     check(hidden.berserkActive&&hidden.berserkTime>20f)
     val mutant=hidden.enemies.first{it.kind==DoomKind.FLESH_STALKER}
     mutant.x=2.83f;mutant.y=8.5f;mutant.hp=74
-    hidden.step(.03f,DoomInput(punch=true))
+    val originalAmmo=hidden.ammunition
+    hidden.step(.03f,DoomInput(fire=true))
     check(mutant.hp==0&&hidden.drainEvents().contains(DoomEvent.PUNCH))
+    check(hidden.ammunition==originalAmmo&&hidden.punchSwing>0f)
+    // Normal fire button uses fists during berserk and bullets after it expires.
     repeat(510){hidden.step(.05f)}
     check(!hidden.berserkActive)
+    hidden.step(.03f,DoomInput(fire=true))
+    check(hidden.ammunition==originalAmmo-1&&hidden.drainEvents().contains(DoomEvent.SHOT))
+    val aiming=DoomEngine(level=4)
+    aiming.step(.05f,DoomInput(turn=.5f,lookVertical=-1f))
+    check(aiming.angle>0f&&aiming.lookPitch>0f)
     // Raised stairs are traversable rather than decorative walls.
     val steps=DoomEngine(level=4)
     steps.enemies.forEach{it.hp=0}

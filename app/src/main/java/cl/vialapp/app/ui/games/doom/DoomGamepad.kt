@@ -49,7 +49,13 @@ internal class DoomGamepad {
         rx=axis(event,if(dev?.getMotionRange(MotionEvent.AXIS_Z,InputDevice.SOURCE_JOYSTICK)!=null)MotionEvent.AXIS_Z else MotionEvent.AXIS_RX)
         ry=axis(event,if(dev?.getMotionRange(MotionEvent.AXIS_RZ,InputDevice.SOURCE_JOYSTICK)!=null)MotionEvent.AXIS_RZ else MotionEvent.AXIS_RY)
         hatX=axis(event,MotionEvent.AXIS_HAT_X)
+        val previousHatY=hatY
         hatY=axis(event,MotionEvent.AXIS_HAT_Y)
+        // Some Xbox controllers send only HAT_Y, never DPAD key presses.
+        if(hatY>.65f&&previousHatY<=.65f&&KeyEvent.KEYCODE_DPAD_DOWN !in down)
+            actions.addLast(DoomPadAction.DOWN)
+        else if(hatY<-.65f&&previousHatY>=-.65f&&KeyEvent.KEYCODE_DPAD_UP !in down)
+            actions.addLast(DoomPadAction.UP)
         rt=max(axis(event,MotionEvent.AXIS_RTRIGGER),axis(event,MotionEvent.AXIS_GAS)).coerceAtLeast(0f)
         lt=max(axis(event,MotionEvent.AXIS_LTRIGGER),axis(event,MotionEvent.AXIS_BRAKE)).coerceAtLeast(0f)
         return true
