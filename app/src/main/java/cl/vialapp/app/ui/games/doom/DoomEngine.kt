@@ -305,6 +305,23 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             listOf("Seguirla para avanzar rápido","Facilitar su paso sin maniobras peligrosas","Detenerte de golpe"),
             1,"Facilita su paso con calma y de manera segura."))
         barrier(21,22,2)
+        // Unmarked wall passages with actual item caches.
+        for(yy in 6..9)grid[yy*width+3]=3
+        barrier(3,7,4)
+        for(yy in 12..16)grid[yy*width+30]=3
+        barrier(30,15,4)
+        // Staggered corners, damaged storefronts, angular alleys; marked roads stay clear.
+        for((bx,by) in listOf(
+            1 to 1,1 to 2,7 to 9,6 to 1,6 to 2,
+            10 to 1,11 to 1,12 to 1,10 to 9,11 to 9,17 to 1,
+            31 to 1,32 to 1,32 to 2,22 to 8,23 to 8,
+            22 to 11,22 to 12,32 to 11,32 to 12,
+            10 to 11,10 to 12,20 to 16,20 to 17,
+            1 to 11,1 to 12,8 to 16,8 to 17,
+            1 to 19,1 to 20,8 to 24,8 to 25,
+            10 to 19,10 to 20,19 to 20,20 to 20,
+            22 to 19,22 to 20,31 to 25,32 to 25
+        ))grid[by*width+bx]=when((bx+by)%3){0->2;1->3;else->4}
         // Actual traffic island corners; the roads remain wide enough to circle enemies.
         for((xx,yy) in listOf(7 to 2,18 to 2,23 to 2,31 to 2,13 to 8,24 to 8,
             30 to 8,23 to 12,30 to 16,11 to 12,19 to 16,2 to 12,7 to 16,
@@ -347,6 +364,10 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         supply(DoomLootKind.COIN,5.5f,24.5f);supply(DoomLootKind.COIN,16.5f,24.5f)
         supply(DoomLootKind.ARMOR,23.5f,21.5f);supply(DoomLootKind.ROCKET_AMMO,31.5f,24.5f)
         supply(DoomLootKind.MEDKIT,27.5f,25.5f);supply(DoomLootKind.COIN,29.5f,19.5f)
+        supply(DoomLootKind.BERSERK,2.5f,8.5f)
+        supply(DoomLootKind.BERSERK,25.5f,15.5f)
+        supply(DoomLootKind.ROCKET_AMMO,31.5f,15.5f)
+        supply(DoomLootKind.ARMOR,31.5f,14.5f)
         // Three-dimensional billboard sprites make these outdoor sectors recognizably VialApp.
         fun prop(k:DoomDecorKind,xx:Float,yy:Float,scale:Float=.82f,lift:Float=0f){
             decor+=DoomDecor(k,xx,yy,scale,lift)
@@ -383,6 +404,16 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             explosives+=DoomExplosive(xx,yy,explosives.size%2==0)
         grid[exitY*width+exitX]=6
         message="Carvier: Bienvenido a Zona Cero Capilar. Deten al Capitán Minoxidil."
+    }
+    /** Walkable terraced staircases in the damaged street. */
+    fun stairTier(cx:Int,cy:Int):Int {
+        if(level!=4)return 0
+        return when{
+            cx in 12..16&&cy in 6..9 -> (cy-5).coerceIn(0,4)
+            cx in 24..28&&cy in 12..16 -> (cy-11).coerceIn(0,4)
+            cx in 25..30&&cy in 20..24 -> (cy-19).coerceIn(0,4)
+            else->0
+        }
     }
     fun cell(cx:Int,cy:Int):Int{
         if(cx !in 0 until width||cy !in 0 until height)return 1
@@ -465,7 +496,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         if(hit.cell==6)return if(bossAlive)(if(level==4)"CAPITÁN EN PIE" else "NÚCLEO ACTIVO") else "TOCA PARA SALIR"
         if(hit.cell!=5)return null
         val door=doors.firstOrNull{!it.open&&it.x==hit.mapX&&it.y==hit.mapY}?:return null
-        return when{door.kind==2&&!hasKey->"REQUIERE CREDENCIAL";door.question!=null->"TOCA EL TERMINAL";else->"TOCA PARA ABRIR"}
+        return when{door.kind==2&&!hasKey->"REQUIERE CREDENCIAL";door.kind==4->"MURO SOSPECHOSO";door.question!=null->"TOCA EL TERMINAL";else->"TOCA PARA ABRIR"}
     }
     fun touchInteract(horizontal:Float,vertical:Float=0f):Boolean{
         if(finished||pending!=null)return false
@@ -490,7 +521,9 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     private fun openDoor(door:DoomDoor){
         if(door.kind==2&&!hasKey){tell("Se necesita la credencial de acceso.");return}
         if(door.question!=null){pending=door;return}
-        door.open=true;events+=DoomEvent.DOOR;tell("Acceso abierto.")
+        door.open=true;events+=DoomEvent.DOOR
+        if(door.kind==4){secrets++;events+=DoomEvent.SECRET;tell("¡MURO SECRETO! "+secrets+"/"+secretTotal)}
+        else tell("Acceso abierto.")
     }
     fun answer(index:Int){
         val d=pending?:return;val q=d.question?:return
