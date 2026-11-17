@@ -260,14 +260,24 @@ private class DoomArt{
     // Fixed-size textures: no new bitmaps are created in the draw loop.
     val sky=IntArray(512*64){i->
         val x=i%512;val y=i/512
-        val cloud=((x/8*17+y/5*13) xor (x/32*5)) and 31
-        val mountainY=46+(x/37%5)-((x*7/13)%4)
-        when {
-            y>=mountainY -> rgb(74+(x%7),104+(x%11),102+(x%5))
-            y>mountainY-3 -> rgb(118,151,146)
-            cloud in 0..2&&y in 10..30 -> rgb(209,233,237)
-            cloud in 3..5&&y in 12..31 -> rgb(180,220,233)
-            else -> rgb(99+y/2,177+y/4,220+y/8)
+        val fracture=((x/5*17+y/3*29+x/33*23) xor (x*7+y*11)) and 63
+        val cloud=((x/31+y/9*17) xor (x/9+y/5*5) xor (x/74*13)) and 31
+        val skyline=45+(x/19%5)-((x*17/49)%7)
+        val redGlow=((x+112)%512) in 135..325&&y in 32..48
+        val lightning=(
+            x in 368..370&&y in 8..13||
+            x in 366..368&&y in 14..20||
+            x in 371..373&&y in 21..28||
+            x in 369..371&&y in 29..33
+        )
+        when{
+            y>=skyline->rgb(20+fracture/6,22+fracture/7,27+fracture/6)
+            y>skyline-3->rgb(82+fracture/2,37+fracture/3,34+fracture/4)
+            lightning->rgb(153,125,126)
+            redGlow->rgb(68+fracture/3,28+fracture/6,30+fracture/5)
+            cloud in 0..10->rgb(26+fracture/4,24+fracture/6,34+fracture/4)
+            cloud in 11..19->rgb(44+fracture/5,36+fracture/6,43+fracture/5)
+            else->rgb(20+y/5+fracture/8,24+y/6+fracture/8,34+y/6+fracture/7)
         }
     }
     val roadFloor=IntArray(4096){i->
@@ -275,19 +285,19 @@ private class DoomArt{
         val speck=((x*11+y*37+x*y) xor (x+y*7)) and 15
         when{
             x in 0..2||y in 0..2->rgb(43+speck,55+speck,59+speck)
-            (x*7+y*5)%41<3->rgb(96+speck,104+speck,104+speck)
-            else->rgb(56+speck,65+speck,68+speck)
+            (x*7+y*5)%41<3->rgb(95+speck,77+speck,65+speck)
+            else->rgb(43+speck,45+speck,46+speck)
         }
     }
     val roadWalls=Array(6){kind->IntArray(4096){i->
         val x=i%64;val y=i/64;val n=grain(x,y)
         when(kind){
-            0->when{y%16<2||x%32<2->rgb(51+n,68+n,74+n);y%16 in 2..3->rgb(142+n,174+n,173+n);else->rgb(106+n,134+n,141+n)}
-            1->when{y<5->rgb(58+n,81+n,75+n);y>55->rgb(55+n,63+n,61+n);x%13 in 0..2->rgb(36+n,46+n,49+n);else->rgb(102+n,119+n,122+n)}
-            2->when{y in 5..13->rgb(25+n,74+n,63+n);y in 16..44&&x in 10..54->rgb(27+n,75+n,91+n);y in 16..44->rgb(198+n,194+n,160+n);else->rgb(118+n,130+n,121+n)}
-            3->when{y<12->rgb(59+n,106+n,111+n);x%16<3->rgb(36+n,70+n,71+n);y%16<2->rgb(57+n,85+n,88+n);else->rgb(89+n,135+n,138+n)}
-            4->when{y in 27..35->if(x%16<8)rgb(230,183,57)else rgb(49,62,66);x%8<2->rgb(54+n,68+n,64+n);else->rgb(131+n,145+n,141+n)}
-            else->when{y in 11..30&&x in 10..55->rgb(52+n,144+n,140+n);x%12<2->rgb(36+n,67+n,66+n);else->rgb(107+n,140+n,125+n)}
+            0->when{y%16<2||x%32<2->rgb(22+n,28+n,32+n);y%16 in 2..3->rgb(115+n,78+n,65+n);else->rgb(82+n,65+n,62+n)}
+            1->when{y<5->rgb(48+n,31+n,26+n);y>55->rgb(27+n,24+n,27+n);x%13 in 0..2->rgb(22+n,23+n,25+n);else->rgb(84+n,70+n,59+n)}
+            2->when{y in 5..13->rgb(80+n,28+n,23+n);y in 16..44&&x in 10..54->rgb(23+n,47+n,45+n);y in 16..44->rgb(134+n,101+n,65+n);else->rgb(74+n,77+n,65+n)}
+            3->when{y<12->rgb(68+n,28+n,26+n);x%16<3->rgb(29+n,32+n,33+n);y%16<2->rgb(109+n,48+n,36+n);else->rgb(71+n,58+n,56+n)}
+            4->when{y in 27..35->if(x%16<8)rgb(163,109,43)else rgb(36,35,34);x%8<2->rgb(31+n,33+n,34+n);else->rgb(78+n,74+n,70+n)}
+            else->when{y in 11..30&&x in 10..55->rgb(85+n,27+n,28+n);x%12<2->rgb(27+n,38+n,40+n);else->rgb(58+n,66+n,59+n)}
         }
     }}
     val roadGates=Array(4){kind->
