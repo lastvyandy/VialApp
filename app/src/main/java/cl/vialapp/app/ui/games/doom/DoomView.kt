@@ -44,11 +44,11 @@ internal class DoomView(context:Context):View(context){
         val focal=w/(2f*.66f)
         val moving=hypot(e.x-previousX,e.y-previousY)>.001f
         previousX=e.x;previousY=e.y
-        val horizon=h*.5f+(if(moving)sin(e.walk*1.65f)*1.1f else 0f)
+        val horizon=h*.5f+e.cameraElevation*17f+(if(moving)sin(e.walk*1.65f)*1.1f else 0f)
         val muzzle=(if(e.shotFlash>0f).21f else 0f)+e.blastFlash*1.1f
         for(y in 0 until h){
             val rowDistance=(focal*.5f)/abs(y+.5f-horizon).coerceAtLeast(.5f)
-            val light=(.90f/(1f+rowDistance*.12f)+muzzle/(1f+rowDistance*.4f)).coerceIn(.12f,.89f)
+            val light=((if(e.level==4).70f else .90f)/(1f+rowDistance*.12f)+muzzle/(1f+rowDistance*.4f)).coerceIn(.09f,if(e.level==4).77f else .89f)
             var fx=e.x+rowDistance*(ca-planeX);var fy=e.y+rowDistance*(sa-planeY)
             val sx=rowDistance*planeX*2/w;val sy=rowDistance*planeY*2/w
             val isFloor=y>=horizon
@@ -61,11 +61,15 @@ internal class DoomView(context:Context):View(context){
                 val avenueLine=e.level==4&&isFloor&&(cy==5||cy==14||cy==22)&&ty in 29..33
                 val zebra=e.level==4&&isFloor&&(cy==8||cy==12||cy==20)&&cx%3!=0&&tx in 5..58&&ty in 5..55
                 val roadside=e.level==4&&isFloor&&(cx==1||cx==32||cy==1||cy==25)&&tx in 3..60
+                val stair=e.level==4&&isFloor&&e.stairTier(cx,cy)>0
+                val riser=stair&&ty in 0..8
+                val tread=stair&&ty in 9..13
+                val worn=stair&&((tx+y/5)and 15)<3
                 val color=if(e.level==4&&!isFloor){
                     val yy=(y*64/horizon.toInt().coerceAtLeast(1)).coerceIn(0,63)
                     val xx=((x*2+(e.angle*150f).toInt()) and 511)
                     art.sky[yy*512+xx]
-                }else if(zebra)0xffd7e8e3.toInt() else if(avenueLine)0xffe2b64a.toInt()
+                }else if(riser)0xff171c21.toInt() else if(tread)0xffa36d35.toInt() else if(worn)0xff775b45.toInt() else if(zebra)0xffa7a7a0.toInt() else if(avenueLine)0xffbc793a.toInt()
                 else if(roadside)0xffa9ada0.toInt() else if(fortressStripe)0xffbc8234.toInt() else if(e.level==3&&isFloor&&cx>=21&&cy>=16&&((tx in 1..4)||(ty in 1..4)))0xff8d3e24.toInt() else if(stripe)0xffad8d38.toInt() else if(isFloor&&cx>=16&&cy>=8&&((tx in 5..8)||(ty in 5..8)))0xff553630.toInt() else if(isFloor&&cx>=9&&cy<7&&cx<=14&&ty in 1..3)0xff627064.toInt() else tex[ty*64+tx]
                 val edge=.83f+.17f*(1f-abs(x-w*.5f)/(w*.5f))
                 pixels[y*w+x]=if(e.level==4&&!isFloor)color else shade(color,light*edge)
@@ -80,9 +84,9 @@ internal class DoomView(context:Context):View(context){
             val top=horizon-lineHeight*.5f
             val tx=(ray.u*64).toInt().coerceIn(0,63)
             val door=if(ray.cell==5)e.doors.firstOrNull{it.x==ray.mapX&&it.y==ray.mapY} else null
-            val tex=if(e.level==4){if(door!=null)art.roadGates[door.kind.coerceIn(0,3)] else art.roadWalls[(ray.cell-1).coerceIn(0,5)]}
+            val tex=if(e.level==4){if(door?.kind==4)art.roadWalls[4] else if(door!=null)art.roadGates[door.kind.coerceIn(0,3)] else art.roadWalls[(ray.cell-1).coerceIn(0,5)]}
                 else if(door!=null)art.doors[door.kind.coerceIn(0,3)] else art.walls[(ray.cell-1).coerceIn(0,5)]
-            val light=((1.08f+muzzle)/(1f+d*.17f)*(if(ray.side==1).76f else 1f)).coerceIn(.18f,1.15f)
+            val light=(((if(e.level==4).83f else 1.08f)+muzzle)/(1f+d*.17f)*(if(ray.side==1).76f else 1f)).coerceIn(.15f,1.15f)
             for(y in top.toInt().coerceIn(0,h-1)..(top+lineHeight).toInt().coerceIn(0,h-1)){
                 val ty=((y-top)*64/lineHeight).toInt().coerceIn(0,63)
                 val color=tex[ty*64+tx]
@@ -92,10 +96,10 @@ internal class DoomView(context:Context):View(context){
             }
         }
         sprites.clear()
-        for(p in e.decor)if(hypot(p.x-e.x,p.y-e.y)>.42f)sprites+=Sprite(p.x,p.y,p.scale,art.decor[p.kind.ordinal],false,p.lift)
+        for(p in e.decor)if(hypot(p.x-e.x,p.y-e.y)>.31f)sprites+=Sprite(p.x,p.y,p.scale,art.decor[p.kind.ordinal],false,p.lift)
         for(b in e.explosives)if(!b.exploded)sprites+=Sprite(b.x,b.y,if(b.crate).70f else .77f,art.explosive[if(b.crate)1 else 0])
         for(b in e.explosions){val frame=((.52f-b.time)/.52f*6).toInt().coerceIn(0,5);sprites+=Sprite(b.x,b.y,1.05f+frame*.13f,art.explosion[frame],true,.12f)}
-        for(l in e.loot)if(!l.taken)sprites+=Sprite(l.x,l.y,.46f,art.loot[l.kind.ordinal])
+        for(l in e.loot)if(!l.taken)sprites+=Sprite(l.x,l.y,if(l.kind==DoomLootKind.BERSERK).68f else .46f,art.loot[l.kind.ordinal])
         for(a in e.enemies){
             if(a.hp>0){
                 val phase=if(a.alert)((e.elapsed*6+a.id*.4f).toInt() and 3)else 0
@@ -117,7 +121,7 @@ internal class DoomView(context:Context):View(context){
             val px=w*.5f*(1f+(-dx*sa+dy*ca)/(z*.66f))
             val size=(focal*s.size/z).coerceAtMost(2200f)
             val bottom=horizon+focal*.5f/z-focal*s.lift/z;val top=bottom-size;val left=px-size*.5f
-            val light=(1.25f/(1f+z*.14f)).coerceIn(.27f,1f)
+            val light=((if(e.level==4).98f else 1.25f)/(1f+z*.14f)).coerceIn(.25f,1f)
             for(xx in left.toInt().coerceAtLeast(0)..(left+size).toInt().coerceAtMost(w-1)){
                 if(z>=depth[xx])continue
                 val tx=((xx-left)*64/size).toInt().coerceIn(0,63)
@@ -141,6 +145,7 @@ internal class DoomView(context:Context):View(context){
         lowCanvas.drawRect(cx-7,cy,cx-3,cy+1,brush);lowCanvas.drawRect(cx+4,cy,cx+8,cy+1,brush)
         lowCanvas.drawRect(cx,cy-7,cx+1,cy-3,brush);lowCanvas.drawRect(cx,cy+4,cx+1,cy+8,brush)
         if(e.targetHint()!=null){lowCanvas.drawRect(cx-1,cy-1,cx+2,cy+2,brush)}
+        if(e.berserkActive){brush.color=Color.argb(16,221,28,18);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
         if(e.hurtFlash>0f){brush.color=Color.argb((e.hurtFlash*480).toInt().coerceIn(0,100),180,12,8);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
         if(e.blastFlash>0f){brush.color=Color.argb((e.blastFlash*240).toInt().coerceIn(0,64),255,151,59);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
         if(e.pickupFlash>0f){brush.color=Color.argb((e.pickupFlash*125).toInt().coerceIn(0,22),220,200,85);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
