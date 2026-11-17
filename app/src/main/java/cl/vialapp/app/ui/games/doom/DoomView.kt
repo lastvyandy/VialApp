@@ -44,7 +44,7 @@ internal class DoomView(context:Context):View(context){
         val focal=w/(2f*.66f)
         val moving=hypot(e.x-previousX,e.y-previousY)>.001f
         previousX=e.x;previousY=e.y
-        val horizon=h*.5f+e.cameraElevation*17f+(if(moving)sin(e.walk*1.65f)*1.1f else 0f)
+        val horizon=h*.5f+e.cameraElevation*17f+(if(moving)sin(e.walk*1.65f)*1.1f else 0f)+e.blastFlash*sin(e.elapsed*70f)*5f+e.recoil*1.6f
         val muzzle=(if(e.shotFlash>0f).21f else 0f)+e.blastFlash*1.1f
         for(y in 0 until h){
             val rowDistance=(focal*.5f)/abs(y+.5f-horizon).coerceAtLeast(.5f)
@@ -112,7 +112,7 @@ internal class DoomView(context:Context):View(context){
                 sprites+=Sprite(a.x,a.y,size,art.enemyDeath[a.kind.ordinal][frame],frame==0,if(a.kind==DoomKind.DRONE)(.25f*(1f-a.deathAge/.55f)).coerceAtLeast(0f)else 0f)
             }
         }
-        for(b in e.bolts)sprites+=Sprite(b.x,b.y,if(b.chrome).34f else .23f,if(b.chrome)art.chromeBolt else art.bolt,false,.43f)
+        for(b in e.bolts)sprites+=Sprite(b.x,b.y,if(b.chrome).34f else if(b.toxic).27f else .23f,when{b.chrome->art.chromeBolt;b.toxic->art.toxicBolt;else->art.bolt},false,.43f)
         for(b in e.rockets)sprites+=Sprite(b.x,b.y,.32f,art.rocket,false,.38f)
         sprites.sortByDescending{(it.x-e.x)*(it.x-e.x)+(it.y-e.y)*(it.y-e.y)}
         for(s in sprites){
@@ -642,5 +642,6 @@ private class DoomArt{
     val rocket=sprite{oval(10,10,54,54,0x963624);oval(16,16,48,48,0xff9440);oval(25,25,39,39,0xffedb0)}
     val bolt=sprite{oval(7,7,57,57,0x952b23);oval(15,15,49,49,0xff6728);oval(23,23,41,41,0xffeeac)}
     val chromeBolt=sprite{oval(3,3,61,61,0x1c5b69);oval(11,11,53,53,0x62d7d0);oval(23,23,41,41,0xf8ffe7);box(26,0,38,14,0xffe1a4);box(26,50,38,64,0xffe1a4)}
+    val toxicBolt=sprite{oval(5,4,59,61,0x3b1f24);poly(0x6a7b25,6,35,20,9,45,10,58,37,44,57,17,58);oval(19,18,46,46,0x9eb83d);oval(26,23,39,37,0xf2f7aa)}
     val wreck=sprite{poly(0x333133,0,52,16,40,31,47,43,37,63,51,58,61,5,61);box(18,47,33,55,0x7a7770);box(39,45,44,49,0x9a3929)}
 }
