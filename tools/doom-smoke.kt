@@ -198,7 +198,7 @@ fun main(){
     walk(hidden,2.5f,7.5f);walk(hidden,2.5f,8.5f)
     check(hidden.berserkActive&&hidden.berserkTime>20f)
     val mutant=hidden.enemies.first{it.kind==DoomKind.FLESH_STALKER}
-    mutant.x=3.45f;mutant.y=8.5f;mutant.hp=74
+    mutant.x=2.83f;mutant.y=8.5f;mutant.hp=74
     hidden.step(.03f,DoomInput(punch=true))
     check(mutant.hp==0&&hidden.drainEvents().contains(DoomEvent.PUNCH))
     repeat(510){hidden.step(.05f)}

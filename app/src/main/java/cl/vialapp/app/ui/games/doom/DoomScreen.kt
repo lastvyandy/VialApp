@@ -220,7 +220,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     Column(Modifier.fillMaxSize().background(Dark).padding(horizontal=5.dp,vertical=3.dp)){
         Row(Modifier.fillMaxWidth().height(34.dp),verticalAlignment=Alignment.CenterVertically){
             DoomUtilityIcon("Salir",UtilityGlyph.EXIT,!saving){if(finished&&!saving)onMenu()else if(!finished){clear();paused=true;exit=true}}
-            Text("SECTOR 0"+e.level+"  /  "+e.kills+"/"+e.enemies.size+" ROBOTS",color=Gold,fontWeight=FontWeight.Bold,fontSize=11.sp,modifier=Modifier.weight(1f))
+            Text("SECTOR 0"+e.level+"  /  "+e.kills+"/"+e.enemies.size+(if(e.level==4)" HORRORES" else " ROBOTS"),color=Gold,fontWeight=FontWeight.Bold,fontSize=11.sp,modifier=Modifier.weight(1f))
             DoomUtilityIcon("Efectos de sonido",UtilityGlyph.SOUND,true,audio?.enabled==true){audio?.let{it.setEffectsEnabled(!it.enabled)}}
             if(music!=null)DoomUtilityIcon("Música",UtilityGlyph.MUSIC,true,musicEnabled){musicEnabled=!musicEnabled;musicPrefs.edit().putBoolean("doom_music_enabled",musicEnabled).apply()}
             DoomUtilityIcon(if(paused)"Continuar" else "Pausa",if(paused)UtilityGlyph.PLAY else UtilityGlyph.PAUSE,!finished&&challenge==null&&!exit){clear();paused=!paused}
