@@ -156,7 +156,7 @@ fun main(){
     check(fourth.decor.count{it.kind in listOf(DoomDecorKind.CAR_BLUE,DoomDecorKind.CAR_RED,DoomDecorKind.CAR_YELLOW)}>=8)
     check(fourth.decor.count{it.kind in listOf(DoomDecorKind.SIGN_STOP,DoomDecorKind.SIGN_YIELD,DoomDecorKind.SIGN_PEDESTRIAN)}>=5)
     check(fourth.loot.all{!fourth.solid(it.x,it.y,.10f)}){"E1M4 pickup blocked by scenery"}
-    check(fourth.enemies.all{!fourth.solid(it.x,it.y,.18f)}){"E1M4 enemy spawned inside a car or wall"}
+    check(fourth.enemies.all{!fourth.solid(it.x,it.y,.18f)}){"E1M4 enemy blocked: "+fourth.enemies.filter{fourth.solid(it.x,it.y,.18f)}.map{it.kind.toString()+" at "+it.x+","+it.y}}
     fourth.enemies.forEach{it.hp=0}
     walk(fourth,8.4f,3.5f);walk(fourth,8.4f,5.5f);fourth.interact()
     check(fourth.pending?.question?.correct==1);fourth.answer(1)
@@ -206,7 +206,8 @@ fun main(){
     // Raised stairs are traversable rather than decorative walls.
     val steps=DoomEngine(level=4)
     steps.enemies.forEach{it.hp=0}
-    walk(steps,13.5f,3.5f);walk(steps,13.5f,7.5f)
+    walk(steps,8.4f,5.5f);steps.interact();steps.answer(1)
+    walk(steps,13.5f,5.5f);walk(steps,13.5f,7.5f)
     check(steps.stairTier(13,7)>0&&steps.cameraElevation>.15f)
     println("DOOM smoke OK: combat, four missions, five weapons, coins, touch-ray doors, classroom gates, secret, credential, exit, all 12 face states, enemy deaths, reload and chain explosions.")
 }
