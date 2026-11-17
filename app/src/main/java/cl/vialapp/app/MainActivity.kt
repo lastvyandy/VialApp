@@ -2,6 +2,9 @@ package cl.vialapp.app
 
 import android.os.Bundle
 import android.content.Intent
+import android.view.KeyEvent
+import android.view.MotionEvent
+import cl.vialapp.app.ui.games.doom.DoomGamepad
 import cl.vialapp.app.engagement.EngagementState
 import cl.vialapp.app.engagement.StudyReminder
 import androidx.activity.ComponentActivity
@@ -65,6 +68,19 @@ import cl.vialapp.app.ui.navigation.VialAppNavigation
 import cl.vialapp.app.ui.profile.CompleteProfileScreen
 
 class MainActivity : ComponentActivity() {
+    internal var activeDoomGamepad:DoomGamepad?=null
+
+    override fun dispatchGenericMotionEvent(event:MotionEvent):Boolean =
+        if(activeDoomGamepad?.onMotion(event)==true)true else super.dispatchGenericMotionEvent(event)
+
+    override fun dispatchKeyEvent(event:KeyEvent):Boolean =
+        if(activeDoomGamepad?.onKey(event)==true)true else super.dispatchKeyEvent(event)
+
+    override fun onStop(){
+        activeDoomGamepad?.reset()
+        super.onStop()
+    }
+
     private var openPractice by mutableStateOf(false)
 
     override fun onSaveInstanceState(outState: Bundle) {
