@@ -614,18 +614,24 @@ private class DoomArt{
             oval(4,20,42,52,0x34623a);oval(28,22,61,50,0x3c743b)
             oval(17,8,41,25,0x6bb36d)
         },
+        // Flat roadside billboard, with no humanoid or enemy-like silhouette.
         sprite{
-            box(4,2,60,62,0x2a3440);box(7,5,57,59,0x2f6679)
-            oval(20,8,45,32,0xd5a477);oval(24,9,39,21,0xffd4a2)
-            box(12,38,53,47,0x154d61);box(14,41,51,45,0xe8dfba)
-            box(11,50,54,56,0x134252);box(20,52,44,54,0xbfe9e3)
+            box(3,7,61,55,0x1c2026);box(6,10,58,52,0x572420)
+            box(10,14,54,48,0x281a1c);box(13,16,51,20,0xaf4732)
+            box(14,26,50,30,0xc8b08b);box(14,33,50,36,0x8d764e)
+            for(k in 0..6)box(13+k*6,43,16+k*6,49,if(k%2==0)0xaa6b29 else 0x27252a)
+            box(12,50,52,55,0x9a372a);box(9,56,17,64,0x4a4040);box(47,56,55,64,0x4a4040)
         },
+        // Concrete devil effigy, fixed to a square roadside plinth.
         sprite{
-            box(18,49,46,63,0x58616e);box(23,24,42,53,0x9eaab1)
-            oval(12,2,52,37,0xaf7b60);oval(18,4,46,31,0xe9bc8b)
-            oval(25,5,38,14,0xffd7a8);box(18,19,47,23,0x18323b)
-            box(26,29,39,33,0x452b28)
-            box(12,52,53,56,0x162531)
+            box(4,51,60,64,0x33353a);box(8,46,56,54,0x777970)
+            box(11,18,53,49,0x303238)
+            poly(0x7c827a,13,21,5,2,24,15,31,18,42,13,57,1,50,23,45,43,20,43)
+            poly(0x26272d,18,25,45,25,42,43,23,43)
+            box(20,30,28,34,0xe55127);box(37,30,45,34,0xe55127)
+            poly(0xe0ccb0,23,39,28,39,25,45)
+            poly(0xe0ccb0,38,39,43,39,40,45)
+            box(15,48,50,52,0x9a6b36)
         },
         sprite{
             box(5,25,59,35,0xe9ece0);box(7,26,57,33,0xd35635)
