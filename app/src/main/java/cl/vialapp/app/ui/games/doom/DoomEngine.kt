@@ -23,7 +23,7 @@ internal enum class DoomDecorKind { BARREL, CRATE, TERMINAL, LAMP, WRECK,
     BUS_STOP, TREE, CAPILLARY_AD, DEMON_TOTEM, ROAD_BARRIER }
 internal data class DoomDecor(val kind:DoomDecorKind,val x:Float,val y:Float,val scale:Float,val lift:Float=0f)
 internal data class DoomRocket(var x:Float,var y:Float,val vx:Float,val vy:Float,var life:Float=2.2f)
-internal data class DoomBolt(var x:Float,var y:Float,val vx:Float,val vy:Float,val damage:Int,var life:Float=3f,val chrome:Boolean=false)
+internal data class DoomBolt(var x:Float,var y:Float,val vx:Float,val vy:Float,val damage:Int,var life:Float=3f,val chrome:Boolean=false,val toxic:Boolean=false)
 internal data class DoomChallenge(val prompt:String,val answers:List<String>,val correct:Int,val explanation:String)
 internal data class DoomDoor(val x:Int,val y:Int,val kind:Int,val question:DoomChallenge?=null,var open:Boolean=false)
 internal data class DoomRay(val distance:Float,val cell:Int,val u:Float,val side:Int,val mapX:Int=-1,val mapY:Int=-1)
@@ -671,8 +671,8 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             if(e.kind==DoomKind.RUNNER&&distance<.85f){
                 enemyDied(e);explosion(e.x,e.y,1.65f,64);continue
             }
-            val desired=when(e.kind){DoomKind.DRONE->2.7f;DoomKind.SHOTGUNNER->2.1f;DoomKind.HEAVY->3f;DoomKind.RUNNER->.55f;DoomKind.MINOXIDIL->3.2f;else->1.35f}
-            val lateral=if(e.kind==DoomKind.DRONE||e.kind==DoomKind.MINOXIDIL||level==3&&e.kind==DoomKind.BOSS)sin(elapsed*2.7f+e.id)*.82f else 0f
+            val desired=when(e.kind){DoomKind.DRONE->2.7f;DoomKind.SHOTGUNNER->2.1f;DoomKind.HEAVY->3f;DoomKind.RUNNER->.55f;DoomKind.MINOXIDIL->3.2f;DoomKind.FLESH_STALKER->2.0f;else->1.35f}
+            val lateral=when{e.kind==DoomKind.FLESH_STALKER->sin(elapsed*4.2f+e.id)*.72f;e.kind==DoomKind.DRONE||e.kind==DoomKind.MINOXIDIL||level==3&&e.kind==DoomKind.BOSS->sin(elapsed*2.7f+e.id)*.82f;else->0f}
             val difficulty=when(level){3->1.17f;4->1.13f;else->1f}
             if(distance>.05f&&(distance>desired||lateral!=0f)){
                 val approach=if(distance>desired)1f else 0f
@@ -686,13 +686,14 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
                 val a=atan2(y-e.y,x-e.x)
                 val offsets=when(e.kind){
                     DoomKind.SHOTGUNNER->floatArrayOf(-.17f,0f,.17f)
+                    DoomKind.FLESH_STALKER->if(e.pattern%2==0)floatArrayOf(-.19f,0f,.19f)else floatArrayOf(0f)
                     DoomKind.HEAVY->floatArrayOf(-.10f,.10f)
                     DoomKind.BOSS->if(level==3&&e.hp<bossMaxHp/2)floatArrayOf(-.45f,-.30f,-.15f,0f,.15f,.30f,.45f)else if(e.pattern%2==0||e.hp<bossMaxHp/2)floatArrayOf(-.27f,-.12f,0f,.12f,.27f)else floatArrayOf(0f)
                     DoomKind.MINOXIDIL->if(e.hp<bossMaxHp/3)floatArrayOf(-.70f,-.55f,-.4f,-.25f,-.1f,0f,.1f,.25f,.4f,.55f,.7f) else if(e.hp<bossMaxHp*2/3)floatArrayOf(-.48f,-.32f,-.16f,0f,.16f,.32f,.48f) else floatArrayOf(-.20f,0f,.20f)
                     else->floatArrayOf(0f)
                 }
                 val speed=when(e.kind){DoomKind.DRONE->4.4f;DoomKind.HEAVY->2.6f;DoomKind.BOSS->3.7f;DoomKind.MINOXIDIL->3.8f;else->3.3f}
-                for(o in offsets){val dir=a+o;bolts+=DoomBolt(e.x+cos(dir)*.25f,e.y+sin(dir)*.25f,cos(dir)*speed*difficulty,sin(dir)*speed*difficulty,(e.kind.damage*difficulty).roundToInt(),chrome=e.kind==DoomKind.MINOXIDIL)}
+                for(o in offsets){val dir=a+o;bolts+=DoomBolt(e.x+cos(dir)*.25f,e.y+sin(dir)*.25f,cos(dir)*speed*difficulty,sin(dir)*speed*difficulty,(e.kind.damage*difficulty).roundToInt(),chrome=e.kind==DoomKind.MINOXIDIL,toxic=e.kind==DoomKind.FLESH_STALKER)}
                 if(e.kind==DoomKind.MINOXIDIL&&e.hp<bossMaxHp*2/3&&e.pattern%4==0&&reinforcementsSpawned<8){
                     for((xx,yy) in listOf(e.x-1.6f to e.y,e.x+1.6f to e.y)){
                         if(reinforcementsSpawned>=8)break
