@@ -59,7 +59,7 @@ jobs:
           if [ ! -f "$ANDROID_HOME/platforms/android-36/android.jar" ]; then
             "$SDKMANAGER" "platforms;android-36"
           fi
-          test -f "$ANDROID_HOME/platforms/android-37/android.jar"
+          test -f "$ANDROID_HOME/platforms/android-36/android.jar"
       - uses: gradle/actions/setup-gradle@v4
       - run: bash gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
       - uses: actions/upload-artifact@v4

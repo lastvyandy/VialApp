@@ -173,7 +173,7 @@ fun main(){
     walk(fourth,7.5f,14.5f);walk(fourth,10.5f,14.5f)
     walk(fourth,15.5f,14.5f);walk(fourth,15.5f,17.4f);fourth.interact()
     check(fourth.pending?.question?.correct==1);fourth.answer(1)
-    walk(fourth,15.5f,19.5f);walk(fourth,11.5f,19.5f);walk(fourth,11.5f,22.5f);check(fourth.hasKey)
+    walk(fourth,15.5f,19.5f);walk(fourth,13.5f,19.5f);walk(fourth,13.5f,22.5f);walk(fourth,11.5f,22.5f);check(fourth.hasKey)
     walk(fourth,20.4f,22.5f);fourth.interact();check(fourth.doors.last().open)
     walk(fourth,22.5f,22.5f);walk(fourth,31.5f,23.5f)
     fourth.interact();check(fourth.won&&fourth.questionsCorrect==6)
