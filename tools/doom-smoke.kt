@@ -148,9 +148,11 @@ fun main(){
     val fourth=DoomEngine(level=4)
     check(fourth.levelTitle=="ZONA CERO CAPILAR"&&fourth.width==34&&fourth.height==27)
     check(fourth.bossName=="CAPITAN MINOXIDIL"&&fourth.bossHealth==820)
-    check(fourth.enemies.size==33&&fourth.enemies.count{it.kind==DoomKind.BALD_MINION}>=8)
+    check(fourth.enemies.size==33&&fourth.enemies.count{it.kind==DoomKind.FLESH_STALKER}>=8)
     check(fourth.enemies.last().kind==DoomKind.MINOXIDIL)
-    check(fourth.secretTotal==2&&fourth.doors.count{it.kind==1}==4)
+    check(fourth.secretTotal==4&&fourth.doors.count{it.kind==1}==4&&fourth.doors.count{it.kind==4}==2)
+    check(fourth.loot.count{it.kind==DoomLootKind.BERSERK}==2)
+    check(fourth.stairTier(14,8)>fourth.stairTier(14,6))
     check(fourth.decor.count{it.kind in listOf(DoomDecorKind.CAR_BLUE,DoomDecorKind.CAR_RED,DoomDecorKind.CAR_YELLOW)}>=8)
     check(fourth.decor.count{it.kind in listOf(DoomDecorKind.SIGN_STOP,DoomDecorKind.SIGN_YIELD,DoomDecorKind.SIGN_PEDESTRIAN)}>=5)
     check(fourth.loot.all{!fourth.solid(it.x,it.y,.10f)}){"E1M4 pickup blocked by scenery"}
@@ -174,7 +176,7 @@ fun main(){
     walk(fourth,15.5f,14.5f);walk(fourth,15.5f,17.4f);fourth.interact()
     check(fourth.pending?.question?.correct==1);fourth.answer(1)
     walk(fourth,15.5f,19.5f);walk(fourth,13.5f,19.5f);walk(fourth,13.5f,22.5f);walk(fourth,11.5f,22.5f);check(fourth.hasKey)
-    walk(fourth,20.4f,22.5f);fourth.interact();check(fourth.doors.last().open)
+    walk(fourth,20.4f,22.5f);fourth.interact();check(fourth.doors.first{it.x==21&&it.y==22}.open)
     walk(fourth,22.5f,22.5f);walk(fourth,31.5f,23.5f)
     fourth.interact();check(fourth.won&&fourth.questionsCorrect==6)
     // Multi-phase serum volleys and reinforcements belong only to Captain Minoxidil.
@@ -185,7 +187,26 @@ fun main(){
     captainTest.step(.025f)
     check(captainTest.bolts.size==11&&captainTest.bolts.all{it.chrome})
     repeat(3){captain.cooldown=0f;captainTest.step(.025f)}
-    check(captainTest.enemies.size>33){"Captain Minoxidil must summon bald reinforcements"}
-    check(captainTest.enemies.count{it.kind==DoomKind.BALD_MINION}<=19)
+    check(captainTest.enemies.size>33){"Captain Minoxidil must summon mutated reinforcements"}
+    check(captainTest.enemies.count{it.kind==DoomKind.FLESH_STALKER}<=19)
+    // Hidden cache is an actual breakaway wall with a timed melee power-up.
+    val hidden=DoomEngine(level=4)
+    hidden.enemies.forEach{it.hp=0}
+    walk(hidden,4.5f,3.5f);walk(hidden,4.5f,7.5f)
+    hidden.interact()
+    check(hidden.doors.first{it.x==3&&it.y==7}.open&&hidden.secrets==1)
+    walk(hidden,2.5f,7.5f);walk(hidden,2.5f,8.5f)
+    check(hidden.berserkActive&&hidden.berserkTime>20f)
+    val mutant=hidden.enemies.first{it.kind==DoomKind.FLESH_STALKER}
+    mutant.x=3.45f;mutant.y=8.5f;mutant.hp=74
+    hidden.step(.03f,DoomInput(punch=true))
+    check(mutant.hp==0&&hidden.drainEvents().contains(DoomEvent.PUNCH))
+    repeat(510){hidden.step(.05f)}
+    check(!hidden.berserkActive)
+    // Raised stairs are traversable rather than decorative walls.
+    val steps=DoomEngine(level=4)
+    steps.enemies.forEach{it.hp=0}
+    walk(steps,13.5f,3.5f);walk(steps,13.5f,7.5f)
+    check(steps.stairTier(13,7)>0&&steps.cameraElevation>.15f)
     println("DOOM smoke OK: combat, four missions, five weapons, coins, touch-ray doors, classroom gates, secret, credential, exit, all 12 face states, enemy deaths, reload and chain explosions.")
 }
