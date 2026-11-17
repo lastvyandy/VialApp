@@ -144,5 +144,48 @@ fun main(){
     boss.x=5.5f;boss.y=3.5f;boss.hp=200;boss.cooldown=0f
     bossFight.step(.025f)
     check(bossFight.bolts.size==7&&bossFight.bossAlive)
-    println("DOOM smoke OK: combat, three missions, five weapons, coins, touch-ray doors, classroom gates, secret, credential, exit, all 12 face states, enemy deaths, reload and chain explosions.")
+    // E1M4 must be distinctly outdoors and navigable without skipping mandatory lessons.
+    val fourth=DoomEngine(level=4)
+    check(fourth.levelTitle=="ZONA CERO CAPILAR"&&fourth.width==34&&fourth.height==27)
+    check(fourth.bossName=="CAPITAN MINOXIDIL"&&fourth.bossHealth==820)
+    check(fourth.enemies.size==33&&fourth.enemies.count{it.kind==DoomKind.BALD_MINION}>=8)
+    check(fourth.enemies.last().kind==DoomKind.MINOXIDIL)
+    check(fourth.secretTotal==2&&fourth.doors.count{it.kind==1}==4)
+    check(fourth.decor.count{it.kind in listOf(DoomDecorKind.CAR_BLUE,DoomDecorKind.CAR_RED,DoomDecorKind.CAR_YELLOW)}>=8)
+    check(fourth.decor.count{it.kind in listOf(DoomDecorKind.SIGN_STOP,DoomDecorKind.SIGN_YIELD,DoomDecorKind.SIGN_PEDESTRIAN)}>=5)
+    check(fourth.loot.all{!fourth.solid(it.x,it.y,.10f)}){"E1M4 pickup blocked by scenery"}
+    check(fourth.enemies.all{!fourth.solid(it.x,it.y,.18f)}){"E1M4 enemy spawned inside a car or wall"}
+    fourth.enemies.forEach{it.hp=0}
+    walk(fourth,8.4f,3.5f);walk(fourth,8.4f,5.5f);fourth.interact()
+    check(fourth.pending?.question?.correct==1);fourth.answer(1)
+    walk(fourth,11.5f,5.5f);check(fourth.owns(DoomWeapon.MINIGUN))
+    walk(fourth,20.4f,5.5f);fourth.interact();check(fourth.doors[1].open)
+    walk(fourth,23.5f,5.5f);walk(fourth,25.5f,5.5f)
+    walk(fourth,25.5f,9.5f);walk(fourth,27.5f,9.5f)
+    fourth.interact();check(fourth.pending?.question?.correct==2);fourth.answer(2)
+    walk(fourth,27.5f,12.5f);walk(fourth,22.5f,14.5f);fourth.interact()
+    check(fourth.pending?.question?.correct==0);fourth.answer(0)
+    walk(fourth,18.5f,14.5f);walk(fourth,10.5f,14.5f);fourth.interact()
+    check(fourth.pending?.kind==3);fourth.answer(1);check(fourth.secrets==1)
+    walk(fourth,7.5f,14.5f);walk(fourth,5.5f,17.4f);fourth.interact()
+    check(fourth.pending?.kind==3);fourth.answer(0);check(fourth.secrets==2)
+    walk(fourth,5.5f,19.5f);walk(fourth,5.5f,17.4f)
+    walk(fourth,7.5f,14.5f);walk(fourth,10.5f,14.5f)
+    walk(fourth,15.5f,14.5f);walk(fourth,15.5f,17.4f);fourth.interact()
+    check(fourth.pending?.question?.correct==1);fourth.answer(1)
+    walk(fourth,15.5f,19.5f);walk(fourth,11.5f,22.5f);check(fourth.hasKey)
+    walk(fourth,20.4f,22.5f);fourth.interact();check(fourth.doors.last().open)
+    walk(fourth,22.5f,22.5f);walk(fourth,31.5f,23.5f)
+    fourth.interact();check(fourth.won&&fourth.questionsCorrect==6)
+    // Multi-phase serum volleys and reinforcements belong only to Captain Minoxidil.
+    val captainTest=DoomEngine(level=4)
+    val captain=captainTest.enemies.last()
+    captainTest.enemies.filter{it!==captain}.forEach{it.hp=0}
+    captain.x=5.1f;captain.y=3.5f;captain.hp=200;captain.cooldown=0f
+    captainTest.step(.025f)
+    check(captainTest.bolts.size==11&&captainTest.bolts.all{it.chrome})
+    repeat(3){captain.cooldown=0f;captainTest.step(.025f)}
+    check(captainTest.enemies.size>33){"Captain Minoxidil must summon bald reinforcements"}
+    check(captainTest.enemies.count{it.kind==DoomKind.BALD_MINION}<=19)
+    println("DOOM smoke OK: combat, four missions, five weapons, coins, touch-ray doors, classroom gates, secret, credential, exit, all 12 face states, enemy deaths, reload and chain explosions.")
 }
