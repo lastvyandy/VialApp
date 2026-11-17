@@ -44,7 +44,7 @@ internal class DoomView(context:Context):View(context){
         val focal=w/(2f*.66f)
         val moving=hypot(e.x-previousX,e.y-previousY)>.001f
         previousX=e.x;previousY=e.y
-        val horizon=h*.5f+e.cameraElevation*17f+(if(moving)sin(e.walk*1.65f)*1.1f else 0f)+e.blastFlash*sin(e.elapsed*70f)*5f+e.recoil*1.6f
+        val horizon=h*.5f+e.lookPitch*h*.30f+e.cameraElevation*17f+(if(moving)sin(e.walk*1.65f)*1.1f else 0f)+e.blastFlash*sin(e.elapsed*70f)*5f+e.recoil*1.6f
         val muzzle=(if(e.shotFlash>0f).21f else 0f)+e.blastFlash*1.1f
         for(y in 0 until h){
             val rowDistance=(focal*.5f)/abs(y+.5f-horizon).coerceAtLeast(.5f)

@@ -27,7 +27,7 @@ internal data class DoomBolt(var x:Float,var y:Float,val vx:Float,val vy:Float,v
 internal data class DoomChallenge(val prompt:String,val answers:List<String>,val correct:Int,val explanation:String)
 internal data class DoomDoor(val x:Int,val y:Int,val kind:Int,val question:DoomChallenge?=null,var open:Boolean=false)
 internal data class DoomRay(val distance:Float,val cell:Int,val u:Float,val side:Int,val mapX:Int=-1,val mapY:Int=-1)
-internal data class DoomInput(val forward:Float=0f,val strafe:Float=0f,val turn:Float=0f,val fire:Boolean=false,val punch:Boolean=false)
+internal data class DoomInput(val forward:Float=0f,val strafe:Float=0f,val turn:Float=0f,val fire:Boolean=false,val punch:Boolean=false,val lookVertical:Float=0f)
 internal enum class DoomEvent { SHOT, BLAST, PLASMA, HIT, HURT, COIN, LOOT, SWITCH, DOOR, CORRECT, WRONG, VICTORY, DEFEAT, SECRET, EXPLOSION, RELOAD, ENEMY_SHOT, ENEMY_DEATH, MACHINE_DEATH, MINIGUN_SHOT, ROCKET_SHOT, BERSERK, PUNCH }
 internal enum class DoomFaceState(val asset:String){
     NORMAL("02_normal_frente"),RIGHT("03_normal_mirando_derecha_v1"),LEFT("10_normal_mirando_izquierda_v2"),
@@ -76,6 +76,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     var punchFromRight=false;private set
     val berserkActive get()=berserkTime>0f
     var cameraElevation=0f;private set
+    var lookPitch=0f;private set
     var coins=0;private set
     var kills=0;private set
     var elapsed=0f;private set
@@ -464,6 +465,11 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         val available=weapons;val current=queuedWeapon?:weapon
         selectWeapon(available[(available.indexOf(current)+1)%available.size])
     }
+    fun previousWeapon(){
+        if(berserkActive)return
+        val available=weapons;val current=queuedWeapon?:weapon
+        selectWeapon(available[(available.indexOf(current)-1+available.size)%available.size])
+    }
     fun reload(){
         if(berserkActive)return
         if(finished||pending!=null||weaponPhase!=DoomWeaponPhase.READY||magazineAmmo>=min(ammunition,magazineSize[weapon.ordinal])||ammunition<=0)return
@@ -640,6 +646,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         blastFlash=(blastFlash-d).coerceAtLeast(0f);pickupFlash=(pickupFlash-d).coerceAtLeast(0f)
         explosions.forEach{it.time-=d};explosions.removeAll{it.time<=0f}
         angle=(angle+input.turn.coerceIn(-1f,1f)*2.65f*d)%(2*PI.toFloat())
+        lookPitch=(lookPitch-input.lookVertical.coerceIn(-1f,1f)*1.7f*d).coerceIn(-.3f,.3f)
         val f=input.forward.coerceIn(-1f,1f);val s=input.strafe.coerceIn(-1f,1f);val norm=hypot(f,s).coerceAtLeast(1f)
         val speed=if(berserkActive)4.45f else 3.3f
         val dx=(cos(angle)*f-sin(angle)*s)*d*speed/norm;val dy=(sin(angle)*f+cos(angle)*s)*d*speed/norm
