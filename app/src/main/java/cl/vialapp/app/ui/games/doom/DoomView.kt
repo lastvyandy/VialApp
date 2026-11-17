@@ -52,15 +52,23 @@ internal class DoomView(context:Context):View(context){
             var fx=e.x+rowDistance*(ca-planeX);var fy=e.y+rowDistance*(sa-planeY)
             val sx=rowDistance*planeX*2/w;val sy=rowDistance*planeY*2/w
             val isFloor=y>=horizon
-            val tex=if(isFloor)art.floor else art.ceiling
+            val tex=if(e.level==4&&isFloor)art.roadFloor else if(isFloor)art.floor else art.ceiling
             for(x in 0 until w){
                 val tx=(fx*64).toInt() and 63;val ty=(fy*64).toInt() and 63
                 val cx=floor(fx).toInt();val cy=floor(fy).toInt()
                 val stripe=isFloor&&((cx in 1..7&&cy==3)||(cx in 9..14&&cy==11))&&ty in 29..32
                 val fortressStripe=e.level==3&&isFloor&&(cx==14||cy==19)&&ty in 28..33
-                val color=if(fortressStripe)0xffbc8234.toInt() else if(e.level==3&&isFloor&&cx>=21&&cy>=16&&((tx in 1..4)||(ty in 1..4)))0xff8d3e24.toInt() else if(stripe)0xffad8d38.toInt() else if(isFloor&&cx>=16&&cy>=8&&((tx in 5..8)||(ty in 5..8)))0xff553630.toInt() else if(isFloor&&cx>=9&&cy<7&&cx<=14&&ty in 1..3)0xff627064.toInt() else tex[ty*64+tx]
+                val avenueLine=e.level==4&&isFloor&&(cy==5||cy==14||cy==22)&&ty in 29..33
+                val zebra=e.level==4&&isFloor&&(cy==8||cy==12||cy==20)&&cx%3!=0&&tx in 5..58&&ty in 5..55
+                val roadside=e.level==4&&isFloor&&(cx==1||cx==32||cy==1||cy==25)&&tx in 3..60
+                val color=if(e.level==4&&!isFloor){
+                    val yy=(y*64/horizon.toInt().coerceAtLeast(1)).coerceIn(0,63)
+                    val xx=((x*2+(e.angle*150f).toInt()) and 511)
+                    art.sky[yy*512+xx]
+                }else if(zebra)0xffd7e8e3.toInt() else if(avenueLine)0xffe2b64a.toInt()
+                else if(roadside)0xffa9ada0.toInt() else if(fortressStripe)0xffbc8234.toInt() else if(e.level==3&&isFloor&&cx>=21&&cy>=16&&((tx in 1..4)||(ty in 1..4)))0xff8d3e24.toInt() else if(stripe)0xffad8d38.toInt() else if(isFloor&&cx>=16&&cy>=8&&((tx in 5..8)||(ty in 5..8)))0xff553630.toInt() else if(isFloor&&cx>=9&&cy<7&&cx<=14&&ty in 1..3)0xff627064.toInt() else tex[ty*64+tx]
                 val edge=.83f+.17f*(1f-abs(x-w*.5f)/(w*.5f))
-                pixels[y*w+x]=shade(color,light*edge)
+                pixels[y*w+x]=if(e.level==4&&!isFloor)color else shade(color,light*edge)
                 fx+=sx;fy+=sy
             }
         }
@@ -72,7 +80,8 @@ internal class DoomView(context:Context):View(context){
             val top=horizon-lineHeight*.5f
             val tx=(ray.u*64).toInt().coerceIn(0,63)
             val door=if(ray.cell==5)e.doors.firstOrNull{it.x==ray.mapX&&it.y==ray.mapY} else null
-            val tex=if(door!=null)art.doors[door.kind.coerceIn(0,3)] else art.walls[(ray.cell-1).coerceIn(0,5)]
+            val tex=if(e.level==4){if(door!=null)art.roadGates[door.kind.coerceIn(0,3)] else art.roadWalls[(ray.cell-1).coerceIn(0,5)]}
+                else if(door!=null)art.doors[door.kind.coerceIn(0,3)] else art.walls[(ray.cell-1).coerceIn(0,5)]
             val light=((1.08f+muzzle)/(1f+d*.17f)*(if(ray.side==1).76f else 1f)).coerceIn(.18f,1.15f)
             for(y in top.toInt().coerceIn(0,h-1)..(top+lineHeight).toInt().coerceIn(0,h-1)){
                 val ty=((y-top)*64/lineHeight).toInt().coerceIn(0,63)
@@ -90,16 +99,16 @@ internal class DoomView(context:Context):View(context){
         for(a in e.enemies){
             if(a.hp>0){
                 val phase=if(a.alert)((e.elapsed*6+a.id*.4f).toInt() and 3)else 0
-                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
+                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.MINOXIDIL->1.83f;DoomKind.BALD_MINION->1.02f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
                 val pose=if(a.attackFlash>0f)art.enemyAttack[a.kind.ordinal] else art.enemyFrames[a.kind.ordinal][phase]
                 sprites+=Sprite(a.x,a.y,size,pose,a.flash>0f,if(a.kind==DoomKind.DRONE).25f+sin(e.elapsed*4+a.id)*.07f else 0f)
             }else{
                 val frame=(a.deathAge/.12f).toInt().coerceIn(0,5)
-                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
+                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.MINOXIDIL->1.83f;DoomKind.BALD_MINION->1.02f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
                 sprites+=Sprite(a.x,a.y,size,art.enemyDeath[a.kind.ordinal][frame],frame==0,if(a.kind==DoomKind.DRONE)(.25f*(1f-a.deathAge/.55f)).coerceAtLeast(0f)else 0f)
             }
         }
-        for(b in e.bolts)sprites+=Sprite(b.x,b.y,.23f,art.bolt,false,.43f)
+        for(b in e.bolts)sprites+=Sprite(b.x,b.y,if(b.chrome).34f else .23f,if(b.chrome)art.chromeBolt else art.bolt,false,.43f)
         for(b in e.rockets)sprites+=Sprite(b.x,b.y,.32f,art.rocket,false,.38f)
         sprites.sortByDescending{(it.x-e.x)*(it.x-e.x)+(it.y-e.y)*(it.y-e.y)}
         for(s in sprites){
@@ -243,6 +252,53 @@ private class DoomArt{
         when{x<2||y<2->rgb(25+n,25+n,23+n);x==2||y==2->rgb(90+n,83+n,69+n);(x/7+y/11)%9==1->rgb(48+n,43+n,36+n);else->rgb(70+n,65+n,55+n)}
     }
     val ceiling=IntArray(4096){i->val x=i%64;val y=i/64;val n=rng.nextInt(-8,9);if(x in 27..36&&y in 8..55)rgb(110+n,105+n,81+n)else if(x%16==0||y%16==0)rgb(23+n,24+n,25+n)else rgb(49+n,45+n,43+n)}
+    // Fixed-size textures: no new bitmaps are created in the draw loop.
+    val sky=IntArray(512*64){i->
+        val x=i%512;val y=i/512
+        val cloud=((x/8*17+y/5*13) xor (x/32*5)) and 31
+        val mountainY=46+(x/37%5)-((x*7/13)%4)
+        when {
+            y>=mountainY -> rgb(74+(x%7),104+(x%11),102+(x%5))
+            y>mountainY-3 -> rgb(118,151,146)
+            cloud in 0..2&&y in 10..30 -> rgb(209,233,237)
+            cloud in 3..5&&y in 12..31 -> rgb(180,220,233)
+            else -> rgb(99+y/2,177+y/4,220+y/8)
+        }
+    }
+    val roadFloor=IntArray(4096){i->
+        val x=i%64;val y=i/64
+        val speck=((x*11+y*37+x*y) xor (x+y*7)) and 15
+        when{
+            x in 0..2||y in 0..2->rgb(43+speck,55+speck,59+speck)
+            (x*7+y*5)%41<3->rgb(96+speck,104+speck,104+speck)
+            else->rgb(56+speck,65+speck,68+speck)
+        }
+    }
+    val roadWalls=Array(6){kind->IntArray(4096){i->
+        val x=i%64;val y=i/64;val n=grain(x,y)
+        when(kind){
+            0->when{y%16<2||x%32<2->rgb(51+n,68+n,74+n);y%16 in 2..3->rgb(142+n,174+n,173+n);else->rgb(106+n,134+n,141+n)}
+            1->when{y<5->rgb(58+n,81+n,75+n);y>55->rgb(55+n,63+n,61+n);x%13 in 0..2->rgb(36+n,46+n,49+n);else->rgb(102+n,119+n,122+n)}
+            2->when{y in 5..13->rgb(25+n,74+n,63+n);y in 16..44&&x in 10..54->rgb(27+n,75+n,91+n);y in 16..44->rgb(198+n,194+n,160+n);else->rgb(118+n,130+n,121+n)}
+            3->when{y<12->rgb(59+n,106+n,111+n);x%16<3->rgb(36+n,70+n,71+n);y%16<2->rgb(57+n,85+n,88+n);else->rgb(89+n,135+n,138+n)}
+            4->when{y in 27..35->if(x%16<8)rgb(230,183,57)else rgb(49,62,66);x%8<2->rgb(54+n,68+n,64+n);else->rgb(131+n,145+n,141+n)}
+            else->when{y in 11..30&&x in 10..55->rgb(52+n,144+n,140+n);x%12<2->rgb(36+n,67+n,66+n);else->rgb(107+n,140+n,125+n)}
+        }
+    }}
+    val roadGates=Array(4){kind->
+        val bg=Bitmap.createBitmap(64,64,Bitmap.Config.ARGB_8888)
+        bg.setPixels(roadWalls[4],0,64,0,0,64,64)
+        val c=Canvas(bg);val p=Paint().apply{isAntiAlias=false}
+        fun box(l:Float,t:Float,r:Float,b:Float,color:Int){p.color=color or 0xff000000.toInt();c.drawRect(l,t,r,b,p)}
+        box(5f,5f,59f,59f,0x263F46)
+        box(8f,9f,56f,55f,0x436B71)
+        box(8f,30f,56f,44f,0xD8DFD9)
+        for(k in 0..4)box(9f+k*10,31f,15f+k*10,43f,0xE05C36)
+        box(15f,9f,49f,28f,if(kind==2)0x89511E else 0x216D6A)
+        p.textSize=7f;p.textAlign=Paint.Align.CENTER;p.typeface=android.graphics.Typeface.DEFAULT_BOLD;p.color=android.graphics.Color.WHITE
+        c.drawText(when(kind){0->"DESVIO";1->"CONTROL";2->"CERRADO";else->"BONUS"},32f,22f,p)
+        IntArray(4096).also{bg.getPixels(it,0,64,0,0,64,64);bg.recycle()}
+    }
     private class Ink(val c:Canvas){
         private val p=Paint().apply{isAntiAlias=false}
         fun box(l:Int,t:Int,r:Int,b:Int,v:Int){p.color=v or 0xff000000.toInt();c.drawRect(l.toFloat(),t.toFloat(),r.toFloat(),b.toFloat(),p)}
@@ -305,6 +361,41 @@ private class DoomArt{
             box(6,44,18,59,0x464446);box(46,44,58,59,0x464446)
             for(i in 0..3){box(10,46+i*3,17,47+i*3,0x888075);box(47,46+i*3,54,47+i*3,0x888075)}
             box(28,6,35,14,0xe45c39);box(30,7,33,11,0xffeba0)
+        },
+        // Pelado de la guardia capilar: sunglasses, shiny bald head and red jacket.
+        sprite{
+            oval(10,56,54,63,0x22252b)
+            box(14,45,29,61,0x1b242d);box(36,45,51,61,0x1b242d)
+            box(11,55,29,63,0x363f43);box(35,55,54,63,0x363f43)
+            poly(0x2c323b,10,28,17,23,47,23,55,30,50,49,13,49)
+            poly(0xb33532,15,28,25,25,40,25,50,29,46,46,18,46)
+            box(25,29,39,41,0xeda947);box(31,29,34,46,0xf1d87c)
+            oval(16,2,49,31,0x8c583e);oval(18,3,47,28,0xd6a071)
+            oval(23,4,42,19,0xf1c293);oval(27,6,36,11,0xffe1ae)
+            box(20,17,43,22,0x161f27);box(21,18,30,21,0x2e3443);box(34,18,42,21,0x2e3443)
+            box(26,25,38,27,0x532f26)
+            box(8,30,16,46,0xc94b31);box(49,29,57,44,0xc94b31)
+            box(5,39,13,45,0x98634b);box(51,38,59,44,0x98634b)
+        },
+        // Captain Minoxidil: ridiculous polished bald head, moustache and twin serum launchers.
+        sprite{
+            oval(2,56,62,64,0x1b212a)
+            box(11,45,27,62,0x172333);box(36,45,53,62,0x172333)
+            box(8,58,29,64,0x343e49);box(36,58,56,64,0x343e49)
+            poly(0x0b3346,8,31,18,24,46,24,57,33,54,55,10,55)
+            poly(0x168b8a,13,29,23,27,42,27,50,31,47,50,16,50)
+            box(29,32,35,52,0xe3b74c);box(23,35,29,39,0xe7c877);box(35,35,42,39,0xe7c877)
+            // Oversized chrome bald dome and reflected road lights.
+            oval(12,2,52,36,0x493c34);oval(15,3,49,34,0xc48c65)
+            oval(20,5,45,27,0xe2b084);oval(25,6,39,15,0xffddb0)
+            box(17,20,49,24,0x142933);box(19,20,29,23,0x91f7ef);box(35,20,47,23,0x91f7ef)
+            poly(0x533024,24,28,31,30,33,31,39,28,36,34,29,34)
+            // Iconic M on his chest and serum vials at both shoulders.
+            box(7,23,16,49,0x2e5557);box(9,24,14,42,0x69cbb9)
+            box(48,23,57,49,0x2e5557);box(50,24,55,42,0x69cbb9)
+            box(7,20,16,25,0xffb63d);box(48,20,57,25,0xffb63d)
+            box(26,39,28,45,0xf6e7ad);box(29,40,32,43,0xf6e7ad)
+            box(33,40,36,43,0xf6e7ad);box(37,39,39,45,0xf6e7ad)
         })
     val loot=Array(DoomLootKind.entries.size){i->sprite{
         when(DoomLootKind.entries[i]){
@@ -435,8 +526,90 @@ private class DoomArt{
         },
         sprite{
             oval(2,51,62,62,0x212223);poly(0x30353a,5,41,18,25,43,24,57,38,62,54,4,54);poly(0x4e585b,10,39,20,28,40,27,51,39,49,48,12,48);box(21,29,39,37,0x202b30);box(8,43,15,49,0x8a7554);box(49,43,56,49,0x803a2c);box(10,53,22,61,0x252526);box(43,53,55,61,0x252526)
+        },
+        // Distinctive rounded blue Carvier hatchback.
+        sprite{
+            oval(1,53,63,63,0x262b2e);box(5,39,59,55,0x16343f)
+            poly(0x1a6899,5,34,16,29,20,18,42,18,51,29,59,34,59,50,5,50)
+            poly(0x74bed3,21,20,42,20,48,32,16,32)
+            box(9,35,55,48,0x308dbd);box(10,39,54,42,0x8dcee4)
+            oval(10,47,25,63,0x151b22);oval(41,47,56,63,0x151b22)
+            oval(15,52,22,60,0x8a9395);oval(44,52,51,60,0x8a9395)
+            box(6,37,12,43,0xffd987);box(52,37,58,43,0xffd987)
+        },
+        sprite{
+            oval(1,53,63,63,0x232526);box(5,39,59,55,0x4d2028)
+            poly(0xa93640,5,34,16,29,20,18,42,18,51,29,59,34,59,50,5,50)
+            poly(0x81c2cc,21,20,42,20,48,32,16,32)
+            box(9,35,55,48,0xd45a4d);box(10,39,54,42,0xffa69b)
+            oval(10,47,25,63,0x151b22);oval(41,47,56,63,0x151b22)
+            oval(15,52,22,60,0x8a9395);oval(44,52,51,60,0x8a9395)
+            box(6,37,12,43,0xffd987);box(52,37,58,43,0xffd987)
+        },
+        sprite{
+            oval(1,53,63,63,0x252b2d);box(5,39,59,55,0x493824)
+            poly(0xc68a2c,5,34,16,29,20,18,42,18,51,29,59,34,59,50,5,50)
+            poly(0xc6e1db,21,20,42,20,48,32,16,32)
+            box(9,35,55,48,0xe6ba4f);box(10,39,54,42,0xffe4a0)
+            oval(10,47,25,63,0x151b22);oval(41,47,56,63,0x151b22)
+            oval(15,52,22,60,0x8a9395);oval(44,52,51,60,0x8a9395)
+            box(6,37,12,43,0xffe3a0);box(52,37,58,43,0xffe3a0)
+        },
+        sprite{
+            box(30,31,35,63,0x929995);box(10,6,54,36,0xf2ece4);box(12,8,52,34,0xcf302b)
+            poly(0xf8f0df,16,15,21,8,43,8,49,15,49,27,43,33,21,33,16,27)
+            box(14,16,51,24,0xf0eee6)
+            box(20,18,44,21,0xd13630)
+        },
+        sprite{
+            box(30,32,35,64,0x929995);poly(0xe4f1ee,32,3,4,37,60,37)
+            poly(0xc93034,32,9,10,33,54,33)
+            box(15,27,49,31,0xfcf2e8)
+        },
+        sprite{
+            box(30,32,35,64,0x929995);box(7,4,57,37,0xe7f0ed);box(11,8,53,33,0x3476a4)
+            box(17,12,23,25,0xe9eeee);box(22,12,42,16,0xe9eeee)
+            poly(0xe9eeee,21,27,38,27,42,23,42,29,21,29)
+            box(22,31,44,33,0xf9f9e9)
+        },
+        sprite{
+            poly(0xb8b7ab,30,7,35,7,52,53,15,53)
+            poly(0xef9028,28,13,38,13,53,55,12,55)
+            box(21,52,44,60,0xe6e6d7);box(21,56,44,60,0xcf4d31)
+        },
+        sprite{
+            box(7,8,56,60,0x2b404f);box(10,10,53,58,0x2b6a8f)
+            box(13,12,51,30,0x78c4d9);box(16,14,48,28,0x264153)
+            box(7,34,57,38,0xe3f0ef);box(10,41,54,54,0x2b4659)
+            box(23,53,29,61,0x23343e);box(38,53,44,61,0x23343e)
+        },
+        sprite{
+            box(29,38,35,63,0x5c4731)
+            oval(8,4,56,42,0x244f34);oval(12,0,52,28,0x3e7842)
+            oval(4,20,42,52,0x34623a);oval(28,22,61,50,0x3c743b)
+            oval(17,8,41,25,0x6bb36d)
+        },
+        sprite{
+            box(4,2,60,62,0x2a3440);box(7,5,57,59,0x2f6679)
+            oval(20,8,45,32,0xd5a477);oval(24,9,39,21,0xffd4a2)
+            box(12,38,53,47,0x154d61);box(14,41,51,45,0xe8dfba)
+            box(11,50,54,56,0x134252);box(20,52,44,54,0xbfe9e3)
+        },
+        sprite{
+            box(18,49,46,63,0x58616e);box(23,24,42,53,0x9eaab1)
+            oval(12,2,52,37,0xaf7b60);oval(18,4,46,31,0xe9bc8b)
+            oval(25,5,38,14,0xffd7a8);box(18,19,47,23,0x18323b)
+            box(26,29,39,33,0x452b28)
+            box(12,52,53,56,0x162531)
+        },
+        sprite{
+            box(5,25,59,35,0xe9ece0);box(7,26,57,33,0xd35635)
+            for(k in 0..3)box(11+k*13,26,17+k*13,33,0xf7e9da)
+            box(5,35,12,54,0x889b96);box(52,35,59,54,0x889b96)
+            box(3,52,15,61,0x2f3237);box(49,52,61,61,0x2f3237)
         })
     val rocket=sprite{oval(10,10,54,54,0x963624);oval(16,16,48,48,0xff9440);oval(25,25,39,39,0xffedb0)}
     val bolt=sprite{oval(7,7,57,57,0x952b23);oval(15,15,49,49,0xff6728);oval(23,23,41,41,0xffeeac)}
+    val chromeBolt=sprite{oval(3,3,61,61,0x1c5b69);oval(11,11,53,53,0x62d7d0);oval(23,23,41,41,0xf8ffe7);box(26,0,38,14,0xffe1a4);box(26,50,38,64,0xffe1a4)}
     val wreck=sprite{poly(0x333133,0,52,16,40,31,47,43,37,63,51,58,61,5,61);box(18,47,33,55,0x7a7770);box(39,45,44,49,0x9a3929)}
 }
