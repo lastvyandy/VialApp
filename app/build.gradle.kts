@@ -7,7 +7,7 @@ android {
     namespace = "cl.vialapp.app"
 
     compileSdk {
-        version = release(37)
+        version = release(36)
     }
 
     defaultConfig {
