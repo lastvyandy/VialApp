@@ -372,7 +372,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         fun prop(k:DoomDecorKind,xx:Float,yy:Float,scale:Float=.82f,lift:Float=0f){
             decor+=DoomDecor(k,xx,yy,scale,lift)
         }
-        prop(DoomDecorKind.CAR_BLUE,5.4f,7.6f,.71f)
+        prop(DoomDecorKind.CAR_BLUE,7.1f,8.1f,.71f)
         prop(DoomDecorKind.CAR_RED,15.2f,3.5f,.70f)
         prop(DoomDecorKind.CAR_YELLOW,27.2f,7.8f,.74f)
         prop(DoomDecorKind.CAR_BLUE,29.5f,12.5f,.69f)
