@@ -799,6 +799,101 @@ private class DoomArt{
             for(k in 0..3)box(11+k*13,26,17+k*13,33,0xf7e9da)
             box(5,35,12,54,0x889b96);box(52,35,59,54,0x889b96)
             box(3,52,15,61,0x2f3237);box(49,52,61,61,0x2f3237)
+        },
+        // Server rack: permanently upright rectangular black cabinet with real rack LEDs.
+        sprite{
+            box(7,1,57,64,0x12151B);box(11,5,53,59,0x32383F)
+            box(15,7,49,56,0x131920)
+            for(k in 0..7){
+                val y=10+k*6
+                box(17,y,47,y+4,0x27313A)
+                box(20,y+1,34,y+2,0x59666B)
+                box(38,y+1,41,y+3,if(k%3==0)0x9E3E31 else 0x35825E)
+                box(43,y+1,45,y+3,0xCA933C)
+            }
+            box(5,58,59,63,0x1B1C22);box(11,1,53,5,0x69716D)
+        },
+        // Dead rack with hanging cables; clear static, machine-only silhouette.
+        sprite{
+            box(8,3,56,64,0x16181E);box(12,6,52,58,0x4C4B47)
+            for(k in 0..6){
+                val y=11+k*7
+                box(15,y,48,y+4,if(k%2==0)0x171D21 else 0x37342E)
+                box(17,y+1,27,y+2,0x7C5650)
+            }
+            poly(0xC49739,35,6,51,13,44,28,60,38,54,52,39,44,45,27,31,17)
+            box(8,58,56,64,0x242423)
+        },
+        // Small CRT terminal sitting on a desk; recognizable non-humanoid proportions.
+        sprite{
+            box(7,44,57,54,0x504A3E);box(11,51,16,63,0x272A2A);box(48,51,53,63,0x272A2A)
+            box(12,7,51,42,0x131A20);box(16,11,47,37,0x3B625C)
+            box(18,13,45,34,0x102F32)
+            for(k in 0..4)box(20,16+k*4,39-k*2,17+k*4,0x5B9B80)
+            box(28,40,35,45,0x555858);box(23,44,41,48,0xA19A7B)
+        },
+        // Coiled cable on the floor.
+        sprite{
+            oval(5,39,58,61,0x16191C)
+            oval(11,40,55,57,0x5E3E2F);oval(17,44,49,54,0x101D21)
+            oval(24,47,44,53,0x8E602F);oval(30,49,40,52,0x10191F)
+            box(4,51,16,57,0x343B3C);box(49,42,61,48,0x8A563B)
+        },
+        // Supaplex-inspired circuit board: original chip/grid illustration.
+        sprite{
+            box(4,4,60,61,0x0F1C25);box(7,7,57,57,0x2B5148)
+            for(k in 0..5){box(12+k*8,8,14+k*8,57,0xC28F36);box(8,13+k*8,56,15+k*8,0x6F9154)}
+            box(19,19,45,46,0x151C29);box(22,22,42,43,0x455B6B)
+            for(k in 0..4){box(24+k*4,17,26+k*4,20,0xD1AD55);box(24+k*4,44,26+k*4,47,0xD1AD55)}
+            box(27,28,38,35,0x8C3531);box(30,30,35,34,0xE6654B)
+        },
+        // Red magnetic disk / data node as a playful retro-software homage.
+        sprite{
+            oval(9,17,55,60,0x1A1D23);oval(13,9,51,54,0x8F292C)
+            oval(17,13,47,49,0xDC5044);oval(21,17,43,44,0x5E272C)
+            oval(27,25,37,35,0xE6C396)
+            box(22,42,42,46,0xF3B16C)
+        },
+        // Distinct VialApp CORE rack, with a V symbol instead of monster eyes.
+        sprite{
+            box(4,2,60,64,0x11181F);box(9,7,55,57,0x2F4144)
+            box(12,11,52,30,0x143E3B)
+            poly(0x6DD3A4,19,15,24,15,32,25,40,15,45,15,34,29,29,29)
+            box(12,33,52,54,0x17232A)
+            for(k in 0..3){box(16,37+k*4,44,39+k*4,0x515B5C);box(47,37+k*4,49,39+k*4,if(k%2==0)0x68C98A else 0xD85941)}
+            box(9,57,55,63,0x51564C)
+        },
+        // Transplant traffic teaching screens into the scary server.
+        sprite{
+            box(4,10,60,63,0x1A252C);box(8,13,56,52,0x61746F)
+            box(11,16,53,43,0x183D42)
+            box(16,21,49,26,0xD8DDC8)
+            box(20,30,45,34,0xD45736)
+            box(21,37,44,40,0xD3B65A)
+            box(26,53,38,60,0x222E33)
+        },
+        // Green coolant reservoir; horror lighting rather than bright cartoon blue.
+        sprite{
+            box(12,12,52,63,0x212929);oval(12,8,52,21,0x5A6C5D)
+            box(17,21,47,52,0x325548)
+            for(k in 0..4)box(20,25+k*5,43,26+k*5,0x478C53)
+            oval(16,48,48,60,0x1C2828)
+            box(9,54,55,61,0x4D544D);box(7,21,12,52,0x151B1D)
+        },
+        // Static metal warning placard with a red X.
+        sprite{
+            box(5,17,59,55,0x242A2D);box(8,20,56,52,0x554D3D)
+            poly(0xB34B33,14,24,20,24,32,33,44,24,50,24,37,37,50,47,43,47,32,41,21,47,14,47,27,37)
+            box(9,52,55,55,0xBB9E53)
+        },
+        // Axial ventilator: unmistakably a circular machine.
+        sprite{
+            box(8,8,56,57,0x21282B);oval(10,9,54,55,0x6C7870)
+            oval(15,14,49,49,0x151B21)
+            for(k in 0..3){val x=if(k%2==0)20 else 37;val y=if(k<2)22 else 38
+                oval(x-10,y-6,x+10,y+6,0x3D5154)}
+            oval(27,26,38,38,0xB49C65)
+            box(15,57,51,63,0x4D5553)
         })
     val rocket=sprite{oval(10,10,54,54,0x963624);oval(16,16,48,48,0xff9440);oval(25,25,39,39,0xffedb0)}
     val bolt=sprite{oval(7,7,57,57,0x952b23);oval(15,15,49,49,0xff6728);oval(23,23,41,41,0xffeeac)}
