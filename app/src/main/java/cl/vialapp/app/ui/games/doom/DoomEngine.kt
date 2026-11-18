@@ -529,7 +529,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         foe(DoomKind.RIVAL_GUARD,21.5f,19.5f);foe(DoomKind.SABOTEUR,14.5f,22.5f)
         foe(DoomKind.SABOTEUR,14.5f,6.5f);foe(DoomKind.HACKER,19.5f,9.5f)
         foe(DoomKind.RIVAL_GUARD,24.5f,5.5f);foe(DoomKind.CORRUPT_TECH,25.5f,8.5f)
-        foe(DoomKind.SABOTEUR,4.5f,7.5f);foe(DoomKind.HACKER,8.5f,9.5f)
+        foe(DoomKind.SABOTEUR,4.5f,7.5f);foe(DoomKind.HACKER,7.5f,9.5f)
         foe(DoomKind.CORRUPT_TECH,4.5f,9.5f)
         foe(DoomKind.SABOTEUR,33.5f,6.5f);foe(DoomKind.HACKER,40.5f,5.5f)
         foe(DoomKind.RIVAL_GUARD,40.5f,10.5f);foe(DoomKind.CORRUPT_TECH,34.5f,10.5f)
@@ -570,7 +570,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         item(DoomLootKind.AMMO,7.5f,33.5f)
         item(DoomLootKind.SHELLS,13.5f,27.5f)
         item(DoomLootKind.ROCKET,21.5f,29.5f) // secret only
-        item(DoomLootKind.ROCKET_AMMO,21.5f,30.5f)
+        item(DoomLootKind.ROCKET_AMMO,21.6f,29.4f)
         item(DoomLootKind.MEDKIT,18.5f,35.5f)
         item(DoomLootKind.COIN,11.5f,33.5f)
         item(DoomLootKind.PLASMA,30.5f,30.5f) // final stretch
