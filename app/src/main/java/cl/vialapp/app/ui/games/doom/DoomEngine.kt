@@ -492,13 +492,22 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             0,"BACKUP RESTAURADO. Los servidores auxiliares responden otra vez."))
         gate(29,6,2)   // blue credential from the gallery
         gate(29,18,7)  // backup electricity required to enter archive
-        gate(36,13,1,DoomChallenge(
+        gate(36,13,2,DoomChallenge(
             "NODO DE EXÁMENES · Semáforo rojo: ¿qué debes hacer?",
             listOf("Cruzar si está vacío","Detenerte antes de la línea","Acelerar"),
             1,"Luz roja: debes detenerte antes de la línea de detención."))
         gate(17,25,0)
         gate(28,31,6) // red credential unlocks core from storage
         gate(37,25,6) // alternate core entrance from archive
+        // Every checkpoint spans its WHOLE passage. Otherwise a player can
+        // simply walk around the locked tile in a three-cell-wide hallway.
+        for((xx,yy) in listOf(
+            10 to 17,10 to 19,16 to 11,18 to 11,
+            10 to 5,10 to 7,29 to 5,29 to 7,
+            29 to 17,29 to 19,35 to 13,37 to 13,
+            16 to 25,18 to 25,28 to 30,28 to 32,
+            36 to 25,38 to 25
+        ))grid[yy*width+xx]=4
 
         // Five small walled alcoves, each reachable ONLY via an unmarked wall.
         fun secretPocket(cx:Int,cy:Int){
@@ -745,6 +754,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     private fun openDoor(door:DoomDoor){
         if(door.kind==2&&!hasKey){tell("Se necesita la credencial azul.");return}
         if(door.kind==6&&!hasRedKey){tell("El núcleo requiere una credencial roja.");return}
+        if(level==5&&door.kind==6&&!powerRestored){tell("El núcleo necesita el backup activo.");return}
         if(door.kind==7&&!powerRestored){tell("Sin energía: activa el sistema de respaldo.");return}
         if(door.question!=null){pending=door;return}
         door.open=true;events+=DoomEvent.DOOR
@@ -876,7 +886,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         val rise=stairTier(floor(x).toInt(),floor(y).toInt())*.22f
         cameraElevation+=(rise-cameraElevation)*(d*9f).coerceIn(0f,1f)
         collect()
-        if(level==5&&x in 2.3f..9.2f&&y in 7.7f..10.7f&&coolantDamageCooldown<=0f){
+        if(level==5&&(x in 2.3f..4.9f||x in 7.1f..9.2f)&&y in 7.7f..10.7f&&coolantDamageCooldown<=0f){
             hurt(5);coolantDamageCooldown=.85f
         }
         if(input.fire)shoot();if(input.punch)punch()
