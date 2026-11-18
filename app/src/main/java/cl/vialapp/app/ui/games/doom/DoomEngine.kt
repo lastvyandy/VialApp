@@ -425,6 +425,195 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         grid[exitY*width+exitX]=6
         message="Carvier: Bienvenido a Zona Cero Capilar. Deten al Capitán Minoxidil."
     }
+    /**
+     * E1M5 · ASALTO AL SERVIDOR
+     * Nonlinear VialApp data-center raid. Keys, return loops and a real backup switch
+     * are more important than early access to every weapon.
+     */
+    private fun buildServerAssault(){
+        fun room(x1:Int,y1:Int,x2:Int,y2:Int,wall:Int){
+            for(yy in y1-1..y2+1)for(xx in x1-1..x2+1)
+                if(xx in 0 until width&&yy in 0 until height&&grid[yy*width+xx]!=0)
+                    grid[yy*width+xx]=wall
+            for(yy in y1..y2)for(xx in x1..x2)grid[yy*width+xx]=0
+        }
+        fun hall(x1:Int,y1:Int,x2:Int,y2:Int){
+            for(yy in y1..y2)for(xx in x1..x2)
+                if(xx in 1 until width-1&&yy in 1 until height-1)
+                    grid[yy*width+xx]=0
+        }
+        fun gate(xx:Int,yy:Int,kind:Int,q:DoomChallenge?=null){
+            doors+=DoomDoor(xx,yy,kind,q);grid[yy*width+xx]=5
+        }
+
+        room(1,14,9,22,2)        // silent maintenance entrance
+        room(11,12,23,24,1)      // hub to return to
+        room(11,2,27,10,3)       // dark server gallery
+        room(2,2,9,10,4)         // green coolant / secret passage
+        room(30,2,42,12,2)      // exam services: red key
+        room(30,14,42,24,3)     // backup archive: minigun
+        room(2,26,24,36,4)      // old server storage: hidden launcher
+        room(29,26,44,36,1)     // central core: final administrator
+
+        // Two routes in/out of several areas create genuine return loops.
+        fun connections(){
+            hall(9,17,11,19)  // entrance -> hub
+            hall(16,10,18,12) // hub -> gallery
+            hall(9,5,11,7)   // gallery -> coolant
+            hall(27,5,30,7)  // gallery -> exams
+            hall(23,17,30,19) // hub -> archives
+            hall(35,12,37,14) // exams -> archives
+            hall(16,24,18,26) // hub -> warehouse
+            hall(24,30,29,32) // warehouse -> core
+            hall(36,24,38,26) // archive -> core
+            hall(5,10,7,14) // coolant -> maintenance
+            hall(5,22,7,26) // maintenance -> storage
+        }
+        connections()
+
+        // Damaged support columns, rack islands and occluded sight lines.
+        for((xx,yy) in listOf(
+            3 to 2,8 to 3,8 to 9,12 to 4,12 to 5,15 to 4,15 to 5,
+            18 to 7,18 to 8,21 to 7,21 to 8,24 to 7,26 to 9,
+            13 to 13,12 to 22,22 to 23,21 to 13,
+            31 to 3,31 to 4,41 to 3,41 to 4,32 to 10,
+            31 to 16,31 to 17,34 to 22,40 to 22,41 to 17,
+            4 to 28,5 to 28,9 to 32,10 to 32,12 to 28,16 to 34,18 to 30,23 to 34,
+            30 to 28,31 to 28,40 to 28,41 to 28,42 to 29,32 to 34,36 to 34
+        ))grid[yy*width+xx]=when((xx+yy)%3){0->2;1->3;else->4}
+        connections()
+
+        gate(10,18,0)
+        gate(17,11,0)
+        gate(10,6,8,DoomChallenge(
+            "BACKUP VIALAPP · Los rivales desconectaron el servicio. ¿Qué es más seguro?",
+            listOf("Aislar el equipo comprometido y recuperar un respaldo verificado",
+                "Borrar todos los respaldos","Desactivar las alarmas y continuar"),
+            0,"BACKUP RESTAURADO. Los servidores auxiliares responden otra vez."))
+        gate(29,6,2)   // blue credential from the gallery
+        gate(29,18,7)  // backup electricity required to enter archive
+        gate(36,13,1,DoomChallenge(
+            "NODO DE EXÁMENES · Semáforo rojo: ¿qué debes hacer?",
+            listOf("Cruzar si está vacío","Detenerte antes de la línea","Acelerar"),
+            1,"Luz roja: debes detenerte antes de la línea de detención."))
+        gate(17,25,0)
+        gate(28,31,6) // red credential unlocks core from storage
+        gate(37,25,6) // alternate core entrance from archive
+
+        // Five small walled alcoves, each reachable ONLY via an unmarked wall.
+        fun secretPocket(cx:Int,cy:Int){
+            for(yy in cy-1..cy+1)for(xx in cx-1..cx+1)grid[yy*width+xx]=4
+            grid[cy*width+cx]=0
+            gate(cx,cy+1,4)
+        }
+        secretPocket(4,4)   // coolant: Berserk
+        secretPocket(20,4)  // servers: shells
+        secretPocket(38,5)  // exams: chip/disc Supaplex easter egg
+        secretPocket(39,19) // archives: armor
+        secretPocket(21,29) // storage: launcher
+
+        fun foe(kind:DoomKind,xx:Float,yy:Float){
+            enemies+=DoomEnemy(enemies.size,kind,xx,yy,cooldown=1.05f+random.nextFloat()*.95f)
+        }
+        foe(DoomKind.SABOTEUR,6.5f,16.5f);foe(DoomKind.SABOTEUR,8.5f,20.5f)
+        foe(DoomKind.SABOTEUR,12.5f,18.5f);foe(DoomKind.HACKER,18.5f,14.5f)
+        foe(DoomKind.RIVAL_GUARD,21.5f,19.5f);foe(DoomKind.SABOTEUR,14.5f,22.5f)
+        foe(DoomKind.SABOTEUR,14.5f,6.5f);foe(DoomKind.HACKER,19.5f,9.5f)
+        foe(DoomKind.RIVAL_GUARD,24.5f,5.5f);foe(DoomKind.CORRUPT_TECH,25.5f,8.5f)
+        foe(DoomKind.SABOTEUR,4.5f,7.5f);foe(DoomKind.HACKER,8.5f,9.5f)
+        foe(DoomKind.CORRUPT_TECH,4.5f,9.5f)
+        foe(DoomKind.SABOTEUR,33.5f,6.5f);foe(DoomKind.HACKER,40.5f,5.5f)
+        foe(DoomKind.RIVAL_GUARD,40.5f,10.5f);foe(DoomKind.CORRUPT_TECH,34.5f,10.5f)
+        foe(DoomKind.RIVAL_GUARD,32.5f,17.5f);foe(DoomKind.HACKER,35.5f,21.5f)
+        foe(DoomKind.CORRUPT_TECH,41.5f,22.5f);foe(DoomKind.SABOTEUR,41.5f,16.5f)
+        foe(DoomKind.SABOTEUR,6.5f,30.5f);foe(DoomKind.HACKER,13.5f,32.5f)
+        foe(DoomKind.RIVAL_GUARD,19.5f,33.5f);foe(DoomKind.CORRUPT_TECH,23.5f,35.5f)
+        foe(DoomKind.SABOTEUR,37.5f,27.5f);foe(DoomKind.RIVAL_GUARD,33.5f,32.5f)
+        foe(DoomKind.CORRUPT_TECH,41.5f,35.5f)
+        foe(DoomKind.ADMINISTRATOR,40.0f,30.5f)
+
+        fun item(kind:DoomLootKind,xx:Float,yy:Float){loot+=DoomLoot(kind,xx,yy)}
+        item(DoomLootKind.AMMO,2.5f,16.5f)
+        item(DoomLootKind.SHOTGUN,8.0f,18.5f) // early, not everything at once
+        item(DoomLootKind.SHELLS,8.5f,21.5f)
+        item(DoomLootKind.MEDKIT,2.5f,20.5f)
+        item(DoomLootKind.COIN,4.5f,17.5f)
+        item(DoomLootKind.SHELLS,14.5f,20.5f)
+        item(DoomLootKind.MEDKIT,20.5f,17.5f)
+        item(DoomLootKind.AMMO,13.5f,13.5f)
+        item(DoomLootKind.SHELLS,16.5f,4.5f)
+        item(DoomLootKind.KEY,25.5f,3.5f) // blue: exam processing
+        item(DoomLootKind.MEDKIT,26.5f,9.5f)
+        item(DoomLootKind.AMMO,11.5f,7.5f)
+        item(DoomLootKind.COIN,14.5f,9.5f)
+        item(DoomLootKind.BERSERK,4.5f,4.5f)
+        item(DoomLootKind.ARMOR,7.5f,3.5f)
+        item(DoomLootKind.SHELLS,20.5f,4.5f)
+        item(DoomLootKind.RED_KEY,40.5f,8.5f) // red: core
+        item(DoomLootKind.ARMOR,33.5f,4.5f)
+        item(DoomLootKind.CELL,38.5f,5.5f)
+        item(DoomLootKind.COIN,31.5f,8.5f)
+        item(DoomLootKind.MINIGUN,35.5f,18.5f) // after backup
+        item(DoomLootKind.BELT,40.5f,18.5f)
+        item(DoomLootKind.MEDKIT,34.5f,23.5f)
+        item(DoomLootKind.ARMOR,39.5f,19.5f)
+        item(DoomLootKind.CELL,33.5f,21.5f)
+        item(DoomLootKind.AMMO,7.5f,33.5f)
+        item(DoomLootKind.SHELLS,13.5f,27.5f)
+        item(DoomLootKind.ROCKET,21.5f,29.5f) // secret only
+        item(DoomLootKind.ROCKET_AMMO,21.5f,30.5f)
+        item(DoomLootKind.MEDKIT,18.5f,35.5f)
+        item(DoomLootKind.COIN,11.5f,33.5f)
+        item(DoomLootKind.PLASMA,30.5f,30.5f) // final stretch
+        item(DoomLootKind.CELL,30.5f,33.5f)
+        item(DoomLootKind.ARMOR,42.5f,33.5f)
+        item(DoomLootKind.MEDKIT,39.5f,35.5f)
+        item(DoomLootKind.ROCKET_AMMO,36.5f,35.5f)
+        item(DoomLootKind.COIN,41.5f,27.5f)
+
+        fun prop(kind:DoomDecorKind,xx:Float,yy:Float,scale:Float=.73f,lift:Float=0f){
+            decor+=DoomDecor(kind,xx,yy,scale,lift)
+        }
+        // Interior architecture: racks at perimeters, distinguishable from enemies.
+        for((xx,yy) in listOf(12.1f to 3.2f,16.1f to 3.2f,22.1f to 3.2f,
+            12.2f to 9.7f,20.2f to 9.7f,26.2f to 9.7f,27.1f to 4.2f,
+            31.1f to 3.2f,35.1f to 3.2f,41.1f to 3.2f,
+            31.1f to 11.7f,41.1f to 11.7f,31.1f to 15.1f,
+            42.1f to 15.1f,31.2f to 23.4f,42.1f to 23.4f,
+            30.2f to 27.1f,43.1f to 27.1f,30.2f to 35.9f,43.1f to 35.8f))
+            prop(DoomDecorKind.SERVER_RACK,xx,yy,.82f)
+        for((xx,yy) in listOf(13.1f to 4.2f,24.2f to 3.2f,
+            34.1f to 15.2f,39.1f to 22.8f,37.1f to 29.2f))
+            prop(DoomDecorKind.BROKEN_RACK,xx,yy,.68f)
+        prop(DoomDecorKind.VIALAPP_SERVER,18.5f,3.5f,1.07f)
+        prop(DoomDecorKind.VIALAPP_SERVER,39.3f,30.2f,1.12f)
+        prop(DoomDecorKind.TRAFFIC_TERMINAL,32.5f,8.5f,.67f)
+        prop(DoomDecorKind.TRAFFIC_TERMINAL,13.5f,17.5f,.60f)
+        prop(DoomDecorKind.WARNING_PANEL,9.1f,18.1f,.60f)
+        prop(DoomDecorKind.WARNING_PANEL,29.2f,31.4f,.55f)
+        prop(DoomDecorKind.CRT_MONITOR,6.5f,19.5f,.50f)
+        prop(DoomDecorKind.CRT_MONITOR,40.3f,20.5f,.55f)
+        prop(DoomDecorKind.CHIP_PANEL,38.5f,4.5f,.66f)
+        prop(DoomDecorKind.SUPAPLEX_DISK,38.5f,5.5f,.48f)
+        prop(DoomDecorKind.COOLANT_TANK,3.5f,3.5f,.65f)
+        prop(DoomDecorKind.COOLANT_TANK,8.5f,3.5f,.65f)
+        prop(DoomDecorKind.SERVER_FAN,4.5f,9.5f,.48f)
+        prop(DoomDecorKind.FIBER_CABLE,19.5f,21.5f,.59f)
+        prop(DoomDecorKind.FIBER_CABLE,17.5f,32.5f,.59f)
+        prop(DoomDecorKind.FIBER_CABLE,35.5f,33.5f,.59f)
+        for((xx,yy) in listOf(15.5f to 2.5f,23.5f to 2.5f,33.5f to 2.5f,
+            41.5f to 2.5f,15.5f to 13.5f,21.5f to 13.5f,
+            33.5f to 15.5f,41.5f to 15.5f,7.5f to 27.5f,
+            20.5f to 27.5f,31.5f to 27.5f,42.5f to 27.5f))
+            prop(DoomDecorKind.LAMP,xx,yy,.34f,.90f)
+        for((xx,yy) in listOf(16.5f to 8.5f,25.5f to 7.5f,
+            37.5f to 17.5f,8.5f to 34.5f,34.5f to 29.5f))
+            explosives+=DoomExplosive(xx,yy,explosives.size%2==0)
+
+        x=3.5f;y=18.5f;angle=0f
+        grid[exitY*width+exitX]=6
+        message="Carvier: Las autoescuelas rivales atacan VialApp. Recupera los servidores."
+    }
     /** Walkable terraced staircases in the damaged street. */
     fun stairTier(cx:Int,cy:Int):Int {
         if(level==5)return when {
