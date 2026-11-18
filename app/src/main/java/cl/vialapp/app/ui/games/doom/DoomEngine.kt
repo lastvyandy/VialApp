@@ -549,10 +549,10 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         item(DoomLootKind.COIN,4.5f,17.5f)
         item(DoomLootKind.SHELLS,14.5f,20.5f)
         item(DoomLootKind.MEDKIT,20.5f,17.5f)
-        item(DoomLootKind.AMMO,13.5f,13.5f)
+        item(DoomLootKind.AMMO,14.5f,13.5f)
         item(DoomLootKind.SHELLS,16.5f,4.5f)
         item(DoomLootKind.KEY,25.5f,3.5f) // blue: exam processing
-        item(DoomLootKind.MEDKIT,26.5f,9.5f)
+        item(DoomLootKind.MEDKIT,25.5f,9.5f)
         item(DoomLootKind.AMMO,11.5f,7.5f)
         item(DoomLootKind.COIN,14.5f,9.5f)
         item(DoomLootKind.BERSERK,4.5f,4.5f)
@@ -563,7 +563,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         item(DoomLootKind.CELL,38.5f,5.5f)
         item(DoomLootKind.COIN,31.5f,8.5f)
         item(DoomLootKind.MINIGUN,35.5f,18.5f) // after backup
-        item(DoomLootKind.BELT,40.5f,18.5f)
+        item(DoomLootKind.BELT,41.5f,18.5f)
         item(DoomLootKind.MEDKIT,34.5f,23.5f)
         item(DoomLootKind.ARMOR,39.5f,19.5f)
         item(DoomLootKind.CELL,33.5f,21.5f)
