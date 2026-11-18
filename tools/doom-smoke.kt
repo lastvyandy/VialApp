@@ -12,6 +12,40 @@ private fun walk(e:DoomEngine,x:Float,y:Float){
     }
     error("Blocked walking to "+x+","+y+" at "+e.x+","+e.y)
 }
+
+/** Visit a map cell using actual movement; find paths around walls and locked doors. */
+private fun route(e:DoomEngine,cx:Int,cy:Int){
+    val w=e.width;val h=e.height
+    val start=(floor(e.y).toInt()*w+floor(e.x).toInt())
+    val goal=cy*w+cx
+    check(e.cell(cx,cy)==0){"Destination blocked "+cx+","+cy+" cell "+e.cell(cx,cy)}
+    val prev=IntArray(w*h){-1}
+    val queue=ArrayDeque<Int>()
+    prev[start]=start;queue.addLast(start)
+    while(queue.isNotEmpty()&&prev[goal]<0){
+        val i=queue.removeFirst();val x=i%w;val y=i/w
+        for((dx,dy) in arrayOf(1 to 0,-1 to 0,0 to 1,0 to -1)){
+            val nx=x+dx;val ny=y+dy
+            if(nx !in 0 until w||ny !in 0 until h)continue
+            val ni=ny*w+nx
+            if(prev[ni]>=0||e.cell(nx,ny)!=0)continue
+            prev[ni]=i;queue.addLast(ni)
+        }
+    }
+    check(prev[goal]>=0){"No navigable route to "+cx+","+cy+" from "+e.x+","+e.y}
+    val chain=ArrayList<Int>();var cursor=goal
+    while(cursor!=start){chain+=cursor;cursor=prev[cursor]}
+    for(i in chain.asReversed())walk(e,i%w+.5f,i/w+.5f)
+}
+private fun openCheckpoint(e:DoomEngine,x:Int,y:Int,nearX:Int,nearY:Int,answer:Int?=null){
+    route(e,nearX,nearY)
+    e.interact()
+    if(answer!=null){
+        check(e.pending?.x==x&&e.pending?.y==y){"Wrong pending checkpoint "+x+","+y}
+        e.answer(answer)
+    }
+    check(e.doors.first{it.x==x&&it.y==y}.open){"Checkpoint did not open "+x+","+y}
+}
 fun main(){
     val combat=DoomEngine(19)
     check(combat.enemies.size==13&&combat.enemies.map{it.kind}.toSet().size==6)
@@ -217,5 +251,63 @@ fun main(){
     walk(steps,8.4f,5.5f);steps.interact();steps.answer(1)
     walk(steps,13.5f,5.5f);walk(steps,13.5f,7.5f)
     check(steps.stairTier(13,7)>0&&steps.cameraElevation>.15f)
-    println("DOOM smoke OK: combat, four missions, five weapons, coins, touch-ray doors, classroom gates, secret, credential, exit, all 12 face states, enemy deaths, reload and chain explosions.")
+    // E1M5: nonlinear server infiltration, hard credential gates, five actual secrets.
+    val fifth=DoomEngine(level=5)
+    check(fifth.levelTitle=="ASALTO AL SERVIDOR"&&fifth.width==46&&fifth.height==39)
+    check(fifth.secretTotal==5&&fifth.doors.count{it.kind==4}==5)
+    check(fifth.enemies.size>=28&&fifth.enemies.last().kind==DoomKind.ADMINISTRATOR)
+    check(fifth.enemies.all{it.kind in setOf(DoomKind.SABOTEUR,DoomKind.HACKER,DoomKind.RIVAL_GUARD,DoomKind.CORRUPT_TECH,DoomKind.ADMINISTRATOR)})
+    check(fifth.enemies.all{!fifth.solid(it.x,it.y,.18f)}){"E1M5 blocked enemies: "+fifth.enemies.filter{fifth.solid(it.x,it.y,.18f)}.map{it.kind.toString()+" at "+it.x+","+it.y}}
+    check(fifth.loot.all{!fifth.solid(it.x,it.y,.10f)}){"E1M5 blocked loot: "+fifth.loot.filter{fifth.solid(it.x,it.y,.10f)}.map{it.kind.toString()+" at "+it.x+","+it.y}}
+    check(fifth.owns(DoomWeapon.PISTOL)&&fifth.weapons.size==1)
+    check(!fifth.powerRestored&&!fifth.hasKey&&!fifth.hasRedKey)
+    check(fifth.stairTier(14,8)>fifth.stairTier(14,5))
+    fifth.enemies.forEach{it.hp=0}
+    route(fifth,8,18)
+    check(fifth.owns(DoomWeapon.SHOTGUN)&&!fifth.owns(DoomWeapon.MINIGUN)&&!fifth.owns(DoomWeapon.PLASMA))
+    openCheckpoint(fifth,10,18,9,18)
+    openCheckpoint(fifth,17,11,17,12)
+    route(fifth,25,3)
+    check(fifth.hasKey&&!fifth.hasRedKey&&fifth.missionObjective=="REACTIVA LOS RESPALDOS")
+    openCheckpoint(fifth,29,6,28,6)
+    route(fifth,40,8)
+    check(fifth.hasRedKey&&!fifth.powerRestored)
+    openCheckpoint(fifth,36,13,36,12,1)
+    route(fifth,35,18)
+    check(fifth.owns(DoomWeapon.MINIGUN)&&!fifth.owns(DoomWeapon.PLASMA))
+    route(fifth,37,24);fifth.interact()
+    check(!fifth.doors.first{it.x==37&&it.y==25}.open){"Backup switch must remain mandatory"}
+    openCheckpoint(fifth,10,6,11,6,0)
+    check(fifth.powerRestored&&fifth.questionsCorrect==2)
+    openCheckpoint(fifth,29,18,28,18)
+    openCheckpoint(fifth,37,25,37,24)
+    openCheckpoint(fifth,20,5,20,6)
+    route(fifth,20,4)
+    openCheckpoint(fifth,38,6,38,7)
+    route(fifth,38,5)
+    openCheckpoint(fifth,39,20,39,21)
+    route(fifth,39,19)
+    openCheckpoint(fifth,4,5,4,6)
+    route(fifth,4,4)
+    check(fifth.berserkActive)
+    openCheckpoint(fifth,17,25,17,24)
+    openCheckpoint(fifth,21,30,21,31)
+    route(fifth,21,29)
+    check(fifth.owns(DoomWeapon.ROCKET)&&fifth.secrets==5)
+    openCheckpoint(fifth,28,31,27,31)
+    route(fifth,30,30)
+    check(fifth.owns(DoomWeapon.PLASMA)&&fifth.owns(DoomWeapon.MINIGUN))
+    route(fifth,42,33);fifth.interact()
+    check(fifth.won&&fifth.questionsCorrect==2&&fifth.secretTotal==5)
+    // Boss at full and half health has distinct 3/7-shot volleys.
+    val bossFive=DoomEngine(level=5)
+    val administrator=bossFive.enemies.last()
+    bossFive.enemies.filter{it!==administrator}.forEach{it.hp=0}
+    administrator.x=6.5f;administrator.y=18.5f;administrator.cooldown=0f
+    bossFive.step(.025f)
+    check(bossFive.bolts.size==3&&bossFive.bossHealth==630)
+    administrator.hp=250;administrator.cooldown=0f
+    bossFive.bolts.clear();bossFive.step(.025f)
+    check(bossFive.bolts.size==7)
+    println("DOOM smoke OK: combat, five missions, five weapons, coins, touch-ray doors, classroom gates, secret, credential, exit, all 12 face states, enemy deaths, reload and chain explosions.")
 }
