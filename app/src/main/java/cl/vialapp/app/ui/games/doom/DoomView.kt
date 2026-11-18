@@ -36,6 +36,19 @@ internal class DoomView(context:Context):View(context){
     private var previousX=0f
     private var previousY=0f
     private data class Sprite(val x:Float,val y:Float,val size:Float,val art:IntArray,val hit:Boolean=false,val lift:Float=0f,val widthScale:Float=1f)
+    // Keep enemy scaling consistent between living and dying sprites.
+    private fun enemySpriteSize(kind: DoomKind, level: Int): Float = when (kind) {
+        DoomKind.BOSS -> if (level == 3) 1.55f else 1.33f
+        DoomKind.MINOXIDIL -> 1.83f
+        DoomKind.ADMINISTRATOR -> 1.64f
+        DoomKind.FLESH_STALKER -> 1.02f
+        DoomKind.RIVAL_GUARD -> 1.06f
+        DoomKind.HACKER -> .88f
+        DoomKind.DRONE -> .73f
+        DoomKind.HEAVY -> 1.12f
+        DoomKind.RUNNER -> .66f
+        else -> .91f
+    }
     private val sprites=ArrayList<Sprite>()
     override fun onDraw(canvas:Canvas){
         super.onDraw(canvas)
@@ -142,12 +155,12 @@ internal class DoomView(context:Context):View(context){
         for(a in e.enemies){
             if(a.hp>0){
                 val phase=if(a.alert)((e.elapsed*6+a.id*.4f).toInt() and 3)else 0
-                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.MINOXIDIL->1.83f;DoomKind.ADMINISTRATOR->1.64f;DoomKind.FLESH_STALKER->1.02f;DoomKind.RIVAL_GUARD->1.06f;DoomKind.HACKER->.88f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
+                val size = enemySpriteSize(a.kind, e.level)
                 val pose=if(a.attackFlash>0f)art.enemyAttack[a.kind.ordinal] else art.enemyFrames[a.kind.ordinal][phase]
                 sprites+=Sprite(a.x,a.y,size,pose,a.flash>0f,if(a.kind==DoomKind.DRONE).25f+sin(e.elapsed*4+a.id)*.07f else 0f)
             }else{
                 val frame=(a.deathAge/.12f).toInt().coerceIn(0,5)
-                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.MINOXIDIL->1.83f;DoomKind.ADMINISTRATOR->1.64f;DoomKind.FLESH_STALKER->1.02f;DoomKind.RIVAL_GUARD->1.06f;DoomKind.HACKER->.88f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
+                val size = enemySpriteSize(a.kind, e.level)
                 sprites+=Sprite(a.x,a.y,size,art.enemyDeath[a.kind.ordinal][frame],frame==0,if(a.kind==DoomKind.DRONE)(.25f*(1f-a.deathAge/.55f)).coerceAtLeast(0f)else 0f)
             }
         }
