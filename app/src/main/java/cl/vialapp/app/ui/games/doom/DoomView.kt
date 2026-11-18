@@ -49,11 +49,11 @@ internal class DoomView(context:Context):View(context){
         val muzzle=(if(e.shotFlash>0f).21f else 0f)+e.blastFlash*1.1f
         for(y in 0 until h){
             val rowDistance=(focal*.5f)/abs(y+.5f-horizon).coerceAtLeast(.5f)
-            val light=((if(e.level==4).70f else .90f)/(1f+rowDistance*.12f)+muzzle/(1f+rowDistance*.4f)).coerceIn(.09f,if(e.level==4).77f else .89f)
+            val light=((when(e.level){4->.70f;5->.64f;else->.90f})/(1f+rowDistance*.12f)+muzzle/(1f+rowDistance*.4f)).coerceIn(.09f,when(e.level){4->.77f;5->.75f;else->.89f})
             var fx=e.x+rowDistance*(ca-planeX);var fy=e.y+rowDistance*(sa-planeY)
             val sx=rowDistance*planeX*2/w;val sy=rowDistance*planeY*2/w
             val isFloor=y>=horizon
-            val tex=if(e.level==4&&isFloor)art.roadFloor else if(isFloor)art.floor else art.ceiling
+            val tex=when{e.level==5&&isFloor->art.serverFloor;e.level==5->art.serverCeiling;e.level==4&&isFloor->art.roadFloor;isFloor->art.floor;else->art.ceiling}
             for(x in 0 until w){
                 val tx=(fx*64).toInt() and 63;val ty=(fy*64).toInt() and 63
                 val cx=floor(fx).toInt();val cy=floor(fy).toInt()
@@ -62,7 +62,7 @@ internal class DoomView(context:Context):View(context){
                 val avenueLine=e.level==4&&isFloor&&(cy==5||cy==14||cy==22)&&ty in 29..33
                 val zebra=e.level==4&&isFloor&&(cy==8||cy==12||cy==20)&&cx%3!=0&&tx in 5..58&&ty in 5..55
                 val roadside=e.level==4&&isFloor&&(cx==1||cx==32||cy==1||cy==25)&&tx in 3..60
-                val stair=e.level==4&&isFloor&&e.stairTier(cx,cy)>0
+                val stair=e.level>=4&&isFloor&&e.stairTier(cx,cy)>0
                 val riser=stair&&ty in 0..8
                 val tread=stair&&ty in 9..13
                 val worn=stair&&((tx+y/5)and 15)<3
@@ -71,7 +71,11 @@ internal class DoomView(context:Context):View(context){
                     val xx=((x*2+(e.angle*150f).toInt()) and 511)
                     art.sky[yy*512+xx]
                 }else if(riser)0xff171c21.toInt() else if(tread)0xffa36d35.toInt() else if(worn)0xff775b45.toInt() else if(zebra)0xffa7a7a0.toInt() else if(avenueLine)0xffbc793a.toInt()
-                else if(roadside)0xffa9ada0.toInt() else if(fortressStripe)0xffbc8234.toInt() else if(e.level==3&&isFloor&&cx>=21&&cy>=16&&((tx in 1..4)||(ty in 1..4)))0xff8d3e24.toInt() else if(stripe)0xffad8d38.toInt() else if(isFloor&&cx>=16&&cy>=8&&((tx in 5..8)||(ty in 5..8)))0xff553630.toInt() else if(isFloor&&cx>=9&&cy<7&&cx<=14&&ty in 1..3)0xff627064.toInt() else tex[ty*64+tx]
+                else if(roadside)0xffa9ada0.toInt() else if(fortressStripe)0xffbc8234.toInt() else if(e.level==3&&isFloor&&cx>=21&&cy>=16&&((tx in 1..4)||(ty in 1..4)))0xff8d3e24.toInt() else if(stripe)0xffad8d38.toInt() else if(isFloor&&cx>=16&&cy>=8&&((tx in 5..8)||(ty in 5..8)))0xff553630.toInt() else if(isFloor&&cx>=9&&cy<7&&cx<=14&&e.level!=5&&ty in 1..3)0xff627064.toInt()
+                else if(e.level==5&&isFloor&&cx in 2..9&&cy in 7..10){
+                    // Toxic cooling channels with raised rusty walkways and Supaplex-green fluid.
+                    if(cx==5||cx==6||cy==7)art.serverFloor[ty*64+tx] else art.coolantFloor[ty*64+tx]
+                }else tex[ty*64+tx]
                 val edge=.83f+.17f*(1f-abs(x-w*.5f)/(w*.5f))
                 pixels[y*w+x]=if(e.level==4&&!isFloor)color else shade(color,light*edge)
                 fx+=sx;fy+=sy
@@ -85,9 +89,17 @@ internal class DoomView(context:Context):View(context){
             val top=horizon-lineHeight*.5f
             val tx=(ray.u*64).toInt().coerceIn(0,63)
             val door=if(ray.cell==5)e.doors.firstOrNull{it.x==ray.mapX&&it.y==ray.mapY} else null
-            val tex=if(e.level==4){if(door?.kind==4)art.roadWalls[4] else if(door!=null)art.roadGates[door.kind.coerceIn(0,3)] else art.roadWalls[(ray.cell-1).coerceIn(0,5)]}
-                else if(door!=null)art.doors[door.kind.coerceIn(0,3)] else art.walls[(ray.cell-1).coerceIn(0,5)]
-            val light=(((if(e.level==4).83f else 1.08f)+muzzle)/(1f+d*.17f)*(if(ray.side==1).76f else 1f)).coerceIn(.15f,1.15f)
+            val tex=when{
+                e.level==5&&door?.kind==4->art.serverWalls[3]
+                e.level==5&&door!=null->art.serverGates[door.kind.coerceIn(0,8)]
+                e.level==5->art.serverWalls[(ray.cell-1).coerceIn(0,5)]
+                e.level==4&&door?.kind==4->art.roadWalls[4]
+                e.level==4&&door!=null->art.roadGates[door.kind.coerceIn(0,3)]
+                e.level==4->art.roadWalls[(ray.cell-1).coerceIn(0,5)]
+                door!=null->art.doors[door.kind.coerceIn(0,3)]
+                else->art.walls[(ray.cell-1).coerceIn(0,5)]
+            }
+            val light=(((when(e.level){4->.83f;5->.78f;else->1.08f})+muzzle)/(1f+d*.17f)*(if(ray.side==1).76f else 1f)).coerceIn(.15f,1.15f)
             for(y in top.toInt().coerceIn(0,h-1)..(top+lineHeight).toInt().coerceIn(0,h-1)){
                 val ty=((y-top)*64/lineHeight).toInt().coerceIn(0,63)
                 val color=tex[ty*64+tx]
@@ -115,6 +127,10 @@ internal class DoomView(context:Context):View(context){
                 DoomDecorKind.CAPILLARY_AD->1.45f
                 DoomDecorKind.ROAD_BARRIER->1.55f
                 DoomDecorKind.CONE->.72f
+                DoomDecorKind.SERVER_RACK,DoomDecorKind.BROKEN_RACK->.83f
+                DoomDecorKind.CRT_MONITOR,DoomDecorKind.TRAFFIC_TERMINAL->1.35f
+                DoomDecorKind.FIBER_CABLE->1.28f
+                DoomDecorKind.SUPAPLEX_DISK->.88f
                 DoomDecorKind.SIGN_STOP,DoomDecorKind.SIGN_YIELD,DoomDecorKind.SIGN_PEDESTRIAN->.71f
                 else->1f
             }
@@ -126,12 +142,12 @@ internal class DoomView(context:Context):View(context){
         for(a in e.enemies){
             if(a.hp>0){
                 val phase=if(a.alert)((e.elapsed*6+a.id*.4f).toInt() and 3)else 0
-                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.MINOXIDIL->1.83f;DoomKind.FLESH_STALKER->1.02f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
+                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.MINOXIDIL->1.83f;DoomKind.ADMINISTRATOR->1.64f;DoomKind.FLESH_STALKER->1.02f;DoomKind.RIVAL_GUARD->1.06f;DoomKind.HACKER->.88f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
                 val pose=if(a.attackFlash>0f)art.enemyAttack[a.kind.ordinal] else art.enemyFrames[a.kind.ordinal][phase]
                 sprites+=Sprite(a.x,a.y,size,pose,a.flash>0f,if(a.kind==DoomKind.DRONE).25f+sin(e.elapsed*4+a.id)*.07f else 0f)
             }else{
                 val frame=(a.deathAge/.12f).toInt().coerceIn(0,5)
-                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.MINOXIDIL->1.83f;DoomKind.FLESH_STALKER->1.02f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
+                val size=when(a.kind){DoomKind.BOSS->if(e.level==3)1.55f else 1.33f;DoomKind.MINOXIDIL->1.83f;DoomKind.ADMINISTRATOR->1.64f;DoomKind.FLESH_STALKER->1.02f;DoomKind.RIVAL_GUARD->1.06f;DoomKind.HACKER->.88f;DoomKind.DRONE->.73f;DoomKind.HEAVY->1.12f;DoomKind.RUNNER->.66f;else->.91f}
                 sprites+=Sprite(a.x,a.y,size,art.enemyDeath[a.kind.ordinal][frame],frame==0,if(a.kind==DoomKind.DRONE)(.25f*(1f-a.deathAge/.55f)).coerceAtLeast(0f)else 0f)
             }
         }
@@ -145,7 +161,7 @@ internal class DoomView(context:Context):View(context){
             val size=(focal*s.size/z).coerceAtMost(2200f)
             val bottom=horizon+focal*.5f/z-focal*s.lift/z;val top=bottom-size
             val spriteWidth=size*s.widthScale;val left=px-spriteWidth*.5f
-            val light=((if(e.level==4).98f else 1.25f)/(1f+z*.14f)).coerceIn(.25f,1f)
+            val light=((if(e.level==4||e.level==5).98f else 1.25f)/(1f+z*.14f)).coerceIn(.25f,1f)
             for(xx in left.toInt().coerceAtLeast(0)..(left+spriteWidth).toInt().coerceAtMost(w-1)){
                 if(z>=depth[xx])continue
                 val tx=((xx-left)*64/spriteWidth).toInt().coerceIn(0,63)
@@ -369,6 +385,105 @@ private class DoomArt{
         p.textSize=7f;p.textAlign=Paint.Align.CENTER;p.typeface=android.graphics.Typeface.DEFAULT_BOLD;p.color=android.graphics.Color.WHITE
         c.drawText(when(kind){0->"DESVIO";1->"CONTROL";2->"CERRADO";else->"BONUS"},32f,22f,p)
         IntArray(4096).also{bg.getPixels(it,0,64,0,0,64,64);bg.recycle()}
+    }
+    /** Texture atlas for the server raid: corroded panels, old computer racks and warning lamps. */
+    val serverFloor=IntArray(4096){i->
+        val x=i%64;val y=i/64;val n=((x*41+y*17) xor (x*y*3)) and 17
+        when {
+            x%16==0||y%16==0->rgb(18+n/3,23+n/3,25+n/3)
+            x%16 in 1..2||y%16 in 1..2->rgb(76+n/2,76+n/2,69+n/2)
+            (x/6+y/8)%13==0->rgb(79+n,48+n/2,42+n/2)
+            else->rgb(50+n,52+n,50+n)
+        }
+    }
+    val coolantFloor=IntArray(4096){i->
+        val x=i%64;val y=i/64;val a=((x*3+y*7+(x xor y)*11) and 31)
+        val border=x in 0..3||y in 0..3||x in 60..63||y in 60..63
+        when{
+            border->rgb(76+a/2,73+a/3,56+a/2)
+            a in 0..5->rgb(14,31+a*3,17)
+            a in 6..18->rgb(24,75+a*2,31+a)
+            else->rgb(11,37+a,18)
+        }
+    }
+    val serverCeiling=IntArray(4096){i->
+        val x=i%64;val y=i/64
+        val red=(x in 19..45&&y in 16..24)||(x in 19..45&&y in 43..51)
+        val n=((x*13+y*29) and 11)
+        when{
+            red&&(x+y)%4==0->rgb(244,37+n,27)
+            red->rgb(170+n*3,17+n,15+n)
+            x%16==0||y%16==0->rgb(11,13,17)
+            x%16 in 1..2||y%16 in 1..2->rgb(60+n,60+n,56+n)
+            else->rgb(26+n,29+n,32+n)
+        }
+    }
+    val serverWalls=Array(6){kind->IntArray(4096){i->
+        val x=i%64;val y=i/64;val n=grain(x,y)
+        when(kind){
+            // Cold gray modular infrastructure.
+            0->when{
+                y%16 in 0..2||x%16 in 0..2->rgb(16+n,17+n,22+n)
+                y%16 in 3..4||x%16 in 3..4->rgb(95+n,94+n,88+n)
+                x%16 in 11..12&&y%16 in 6..10->rgb(125+n,36+n,27+n)
+                else->rgb(54+n,58+n,61+n)
+            }
+            // Server-room black modules and glowing red power diodes.
+            1->when{
+                x%18 in 0..2||y%14 in 0..2->rgb(69+n,73+n,76+n)
+                y%14 in 4..10&&x%18 in 5..14->if((x+y)%19<3)rgb(161+n,32+n,24+n)else rgb(16+n,21+n,26+n)
+                x%18==15&&y%14 in 5..7->rgb(80,138+n,91+n)
+                else->rgb(34+n,39+n,43+n)
+            }
+            // Industrial cooling/brown panels, rust and vents.
+            2->when{
+                x%12 in 0..2->rgb(21+n,25+n,27+n)
+                y%16==0||y%16==1->rgb(116+n,89+n,61+n)
+                x%12 in 4..7&&y%16 in 4..8->rgb(28+n,63+n,44+n)
+                else->rgb(85+n,69+n,56+n)
+            }
+            // Corrugated walls, also used to hide false door texture.
+            3->when{
+                x%12 in 0..2->rgb(23+n,27+n,31+n)
+                x%12==3->rgb(113+n,111+n,102+n)
+                y%32 in 0..2->rgb(34+n,37+n,38+n)
+                else->rgb(66+n,73+n,75+n)
+            }
+            // Supaplex-inspired circuitry / inset chips and ducts.
+            4->when{
+                x in 9..54&&y in 8..47->when{
+                    x in 15..48&&y in 15..39->if((x/4+y/4)%3==0)rgb(83+n,125+n,80+n)else rgb(18+n,55+n,49+n)
+                    x%6 in 0..1||y%8 in 0..1->rgb(176+n,123+n,45+n)
+                    else->rgb(31+n,65+n,56+n)
+                }
+                x%16 in 0..2||y%16 in 0..2->rgb(38+n,45+n,42+n)
+                else->rgb(72+n,76+n,62+n)
+            }
+            else->when{
+                y in 7..12||y in 49..54->rgb(100+n,33+n,28+n)
+                x%12 in 0..2->rgb(27+n,32+n,36+n)
+                y in 19..41&&x in 15..50->rgb(18+n,31+n,32+n)
+                else->rgb(59+n,60+n,59+n)
+            }
+        }
+    }}
+    val serverGates=Array(9){kind->
+        val b=Bitmap.createBitmap(64,64,Bitmap.Config.ARGB_8888)
+        b.setPixels(serverWalls[0],0,64,0,0,64,64)
+        val c=Canvas(b);val p=Paint().apply{isAntiAlias=false}
+        fun box(l:Float,t:Float,r:Float,b:Float,col:Int){
+            p.color=col or 0xff000000.toInt()
+            c.drawRect(l,t,r,b,p)
+        }
+        box(7f,4f,57f,60f,0x1B2025);box(10f,6f,54f,57f,0x5F6564)
+        for(k in 0..5){box(12f,25f+k*5,52f,27f+k*5,0x1A2026)}
+        val face=when(kind){2->0x285184;6->0x8E312C;7->0x5C3322;8->0x397153;else->0x354957}
+        box(15f,9f,49f,24f,face)
+        p.textSize=8f;p.textAlign=Paint.Align.CENTER;p.typeface=android.graphics.Typeface.MONOSPACE
+        p.color=android.graphics.Color.WHITE
+        c.drawText(when(kind){2->"BLUE";6->"RED";7->"BACKUP";8->"RESET";1->"VIAL";else->"CORE"},32f,20f,p)
+        box(47f,33f,51f,40f,if(kind==2)0x58B2E9 else if(kind==6)0xE45C42 else 0xA4B67A)
+        IntArray(4096).also{b.getPixels(it,0,64,0,0,64,64);b.recycle()}
     }
     private class Ink(val c:Canvas){
         private val p=Paint().apply{isAntiAlias=false}
