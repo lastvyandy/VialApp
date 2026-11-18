@@ -126,7 +126,7 @@ private fun DrawScope.pixelText(text:String,x:Float,y:Float,unit:Float,color:Col
             }
             t("E1M"+e.level,160f,6f,1.35f,ivory,true)
             t(e.levelTitle,160f,21f,1.8f,red,true)
-            t(if(e.won&&e.level==3)"FORTALEZA CAIDA" else if(e.won)"COMPLETADO" else "MISION FALLIDA",160f,43f,2.05f,red,true)
+            t(if(e.won&&e.level==5)"SERVIDOR ASEGURADO" else if(e.won&&e.level==3)"FORTALEZA CAIDA" else if(e.won)"COMPLETADO" else "MISION FALLIDA",160f,43f,2.05f,red,true)
             for((i,m) in metrics.withIndex()){
                 val y=69f+i*20f
                 t(m.first,24f,y,1.85f,ochre)

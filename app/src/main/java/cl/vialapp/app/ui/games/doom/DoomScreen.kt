@@ -67,8 +67,8 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
     val session=remember(context){SessionManager(context)}
     var run by remember{mutableStateOf<DoomEngine?>(null)}
     val levels=remember(context,userKey){context.getSharedPreferences("doom_levels",android.content.Context.MODE_PRIVATE)}
-    var unlocked by remember(userKey){mutableIntStateOf(if(levels.getBoolean(userKey+"_level4",false))4 else if(levels.getBoolean(userKey+"_level3",false))3 else if(levels.getBoolean(userKey+"_level2",false))2 else 1)}
-    fun unlockNext(level:Int){if(level<4&&unlocked<level+1){unlocked=level+1;levels.edit().putBoolean(userKey+"_level"+unlocked,true).apply()}}
+    var unlocked by remember(userKey){mutableIntStateOf(if(levels.getBoolean(userKey+"_level5",false))5 else if(levels.getBoolean(userKey+"_level4",false))4 else if(levels.getBoolean(userKey+"_level3",false))3 else if(levels.getBoolean(userKey+"_level2",false))2 else 1)}
+    fun unlockNext(level:Int){if(level<5&&unlocked<level+1){unlocked=level+1;levels.edit().putBoolean(userKey+"_level"+unlocked,true).apply()}}
     val engine=run
     cl.vialapp.app.ui.GameLandscape(active=engine!=null)
     val audio=LocalGameAudio.current
@@ -80,8 +80,8 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
             Text("DON PELAO",fontSize=36.sp,fontWeight=FontWeight.Black,color=Red)
             Text("OPERACIÓN CAOS VIAL",fontSize=23.sp,fontWeight=FontWeight.Black,color=Gold)
             DoomPreview(Modifier.fillMaxWidth().aspectRatio(16f/9f))
-            Text("EPISODIO 01 · CUATRO SECTORES",color=Gold,fontWeight=FontWeight.Bold)
-            Text("Carvier: Atraviesa cuatro sectores, respeta las señales y enfrenta al Capitán Minoxidil en Zona Cero Capilar.",color=White)
+            Text("EPISODIO 01 · CINCO SECTORES",color=Gold,fontWeight=FontWeight.Bold)
+            Text("Carvier: Salvemos VialApp. Las autoescuelas rivales sabotean el servidor; Don Pelao debe infiltrarse, recuperar las credenciales y restaurar el backup.",color=White)
             Text("Pantalla: stick izquierdo para moverse, desliza para mirar, mantén pulsado para disparar y toca las puertas para usar.",color=White,fontSize=13.sp)
             Text("Mando Xbox Bluetooth: stick izquierdo mover · derecho mirar · RT disparar o golpear · LT puños berserk · A usar · X recargar · Y/RB cambiar arma · LB arma anterior · START pausar.",color=Gold,fontSize=12.sp)
             Text("Récord: "+store.getHighScore(GameProgressStore.PELAO_DOOM)+" · Prototipo jugable",color=Gold,fontSize=12.sp)
@@ -97,9 +97,12 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
             Button(onClick={run=DoomEngine(level=4);audio?.play("start")},enabled=unlocked>=4,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF187D86))){
                 Text(if(unlocked>=4)"E1M4 · ZONA CERO CAPILAR" else "E1M4 · COMPLETA E1M3",fontWeight=FontWeight.Black)
             }
-            Text("E1M4: avenida exterior, autos, señales chilenas y el Capitán Minoxidil.",color=White,fontSize=12.sp)
+            Button(onClick={run=DoomEngine(level=5);audio?.play("start")},enabled=unlocked>=5,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF672C31))){
+                Text(if(unlocked>=5)"E1M5 · ASALTO AL SERVIDOR" else "E1M5 · COMPLETA E1M4",fontWeight=FontWeight.Black)
+            }
+            Text("E1M5: exploración, salas de servidores, credenciales, cinco secretos y saboteadores humanos.",color=White,fontSize=12.sp)
         }
-    }else key(engine){DoomRun(engine,store,session,onMenu={run=null},onRetry={run=DoomEngine(level=engine.level);audio?.play("start")},onNext=if(engine.level<4){{run=DoomEngine(level=engine.level+1);audio?.play("start")}}else null,onComplete={unlockNext(engine.level)})}
+    }else key(engine){DoomRun(engine,store,session,onMenu={run=null},onRetry={run=DoomEngine(level=engine.level);audio?.play("start")},onNext=if(engine.level<5){{run=DoomEngine(level=engine.level+1);audio?.play("start")}}else null,onComplete={unlockNext(engine.level)})}
 }
 
 @Composable
@@ -272,7 +275,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     Column(Modifier.fillMaxSize().background(Dark).padding(horizontal=5.dp,vertical=3.dp)){
         Row(Modifier.fillMaxWidth().height(34.dp),verticalAlignment=Alignment.CenterVertically){
             DoomUtilityIcon("Salir",UtilityGlyph.EXIT,!saving){if(finished&&!saving)onMenu()else if(!finished){clear();paused=true;exit=true}}
-            Text("SECTOR 0"+e.level+"  /  "+e.kills+"/"+e.enemies.size+(if(e.level==4)" HORRORES" else " ROBOTS"),color=Gold,fontWeight=FontWeight.Bold,fontSize=11.sp,modifier=Modifier.weight(1f))
+            Text("SECTOR 0"+e.level+"  /  "+e.kills+"/"+e.enemies.size+(when(e.level){4->" HORRORES";5->" SABOTEADORES";else->" ROBOTS"}),color=Gold,fontWeight=FontWeight.Bold,fontSize=11.sp,modifier=Modifier.weight(1f))
             DoomUtilityIcon("Efectos de sonido",UtilityGlyph.SOUND,true,audio?.enabled==true){audio?.let{it.setEffectsEnabled(!it.enabled)}}
             if(music!=null)DoomUtilityIcon("Música",UtilityGlyph.MUSIC,true,musicEnabled){musicEnabled=!musicEnabled;musicPrefs.edit().putBoolean("doom_music_enabled",musicEnabled).apply()}
             DoomUtilityIcon(if(paused)"Continuar" else "Pausa",if(paused)UtilityGlyph.PLAY else UtilityGlyph.PAUSE,!finished&&challenge==null&&!exit){clear();paused=!paused}
@@ -296,12 +299,13 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                 e.targetHint()?.let{hint->
                     Text(hint,Modifier.align(Alignment.Center).offset(y=19.dp).background(Dark.copy(alpha=.83f),RoundedCornerShape(3.dp)).padding(horizontal=7.dp,vertical=3.dp),color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
                 }
-                DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(5.dp).size(72.dp,54.dp))
+                DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(5.dp).size(if(e.level==5)94.dp else 72.dp,if(e.level==5)73.dp else 54.dp))
+                if(e.level==5)Text(e.missionObjective,Modifier.align(Alignment.BottomCenter).padding(bottom=6.dp).background(Dark.copy(alpha=.87f),RoundedCornerShape(3.dp)).padding(horizontal=7.dp,vertical=3.dp),color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
                 if(gamepad.connected)Text("MANDO XBOX",Modifier.align(Alignment.TopStart).padding(6.dp).background(Dark.copy(alpha=.78f)).padding(horizontal=5.dp,vertical=3.dp),color=Gold,fontSize=9.sp,fontWeight=FontWeight.Bold)
                 if(e.berserkActive)Text("BERSERK · "+ceil(e.berserkTime).toInt()+" s",Modifier.align(Alignment.TopStart).padding(7.dp).background(Color(0xFF821F17).copy(alpha=.92f),RoundedCornerShape(4.dp)).padding(horizontal=7.dp,vertical=4.dp),color=Color(0xFFFFE5A0),fontSize=12.sp,fontWeight=FontWeight.Black)
-                if(e.level>=3&&e.bossAlive&&e.enemies.any{(it.kind==DoomKind.BOSS||it.kind==DoomKind.MINOXIDIL)&&it.alert}){
-                    Column(Modifier.align(Alignment.TopCenter).padding(top=6.dp).width(if(e.level==4)172.dp else 126.dp).background(Dark.copy(alpha=.82f)).padding(3.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                        Text(e.bossName,color=Gold,fontSize=if(e.level==4)8.sp else 9.sp,fontWeight=FontWeight.Black)
+                if(e.level>=3&&e.bossAlive&&e.enemies.any{(it.kind==DoomKind.BOSS||it.kind==DoomKind.MINOXIDIL||it.kind==DoomKind.ADMINISTRATOR)&&it.alert}){
+                    Column(Modifier.align(Alignment.TopCenter).padding(top=6.dp).width(if(e.level>=4)172.dp else 126.dp).background(Dark.copy(alpha=.82f)).padding(3.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                        Text(e.bossName,color=Gold,fontSize=if(e.level>=4)8.sp else 9.sp,fontWeight=FontWeight.Black)
                         Box(Modifier.fillMaxWidth().height(5.dp).background(Color(0xFF45271D))){Box(Modifier.fillMaxWidth((e.bossHealth.toFloat()/e.bossMaxHp).coerceIn(0f,1f)).fillMaxHeight().background(Red))}
                     }
                 }
