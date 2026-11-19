@@ -9,10 +9,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Practice is a learning dashboard, not a static catalogue.
- *
- * The UI appears immediately. A failed or slow statistics request never hides
- * the learning route, diagnostic exam, simulator or offline resources.
+ * La idea es que Practicar le diga al alumno qué hacer, no que sea una lista de botones.
+ * La pantalla se muestra igual aunque las estadísticas tarden o falle la conexión.
  */
 @Composable
 fun PracticeScreen(
@@ -32,6 +30,7 @@ fun PracticeScreen(
     var error by remember{mutableStateOf("")}
     var retry by remember{mutableIntStateOf(0)}
 
+    // No dejamos la pantalla esperando indefinidamente al servidor. Si falla, el alumno puede seguir estudiando.
     LaunchedEffect(retry){
         loading=true
         error=""
