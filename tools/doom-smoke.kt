@@ -32,6 +32,7 @@ private fun route(e:DoomEngine,cx:Int,cy:Int){
             if(nx !in 0 until w||ny !in 0 until h)continue
             val ni=ny*w+nx
             if(prev[ni]>=0||e.cell(nx,ny)!=0)continue
+            if(e.level==5&&abs(e.floorHeight(nx+.5f,ny+.5f)-e.floorHeight(x+.5f,y+.5f))>.115f)continue
             prev[ni]=i;queue.addLast(ni)
         }
     }
@@ -260,21 +261,25 @@ fun main(){
     check(fifth.secretTotal==7&&fifth.doors.count{it.kind==4}==7)
     check(fifth.notes.size==9&&fifth.notesRead==0)
     check(fifth.enemies.size>=28&&fifth.enemies.last().kind==DoomKind.ADMINISTRATOR)
+    check(fifth.doors.count{it.question!=null}==9)
+    check(fifth.doors.filter{it.kind in setOf(2,6,7)}.all{it.question!=null})
     check(fifth.enemies.all{it.kind in setOf(DoomKind.SABOTEUR,DoomKind.HACKER,DoomKind.RIVAL_GUARD,DoomKind.CORRUPT_TECH,DoomKind.ADMINISTRATOR)})
     check(fifth.enemies.all{!fifth.solid(it.x,it.y,.18f)}){"E1M5 blocked enemies: "+fifth.enemies.filter{fifth.solid(it.x,it.y,.18f)}.map{it.kind.toString()+" at "+it.x+","+it.y}}
     check(fifth.loot.all{!fifth.solid(it.x,it.y,.10f)}){"E1M5 blocked loot: "+fifth.loot.filter{fifth.solid(it.x,it.y,.10f)}.map{it.kind.toString()+" at "+it.x+","+it.y}}
     check(fifth.owns(DoomWeapon.PISTOL)&&fifth.weapons.size==1)
     check(!fifth.powerRestored&&!fifth.hasKey&&!fifth.hasRedKey)
-    check(fifth.stairTier(14,8)>fifth.stairTier(14,5))
+    check(fifth.stairTier(14,8)<fifth.stairTier(14,5))
+    check(fifth.floorHeight(14.5f,6.5f)==.4f)
+    check(fifth.floorHeight(16.5f,9.5f)==0f)
     check(fifth.stairTier(22,4)==4&&fifth.stairTier(37,16)==5)
     fifth.enemies.forEach{it.hp=0}
     route(fifth,8,18)
     check(fifth.owns(DoomWeapon.SHOTGUN)&&!fifth.owns(DoomWeapon.MINIGUN)&&!fifth.owns(DoomWeapon.PLASMA))
-    openCheckpoint(fifth,10,18,9,18)
-    openCheckpoint(fifth,17,11,17,12)
+    openCheckpoint(fifth,10,18,9,18,0)
+    openCheckpoint(fifth,17,11,17,12,1)
     route(fifth,25,3)
     check(fifth.hasKey&&!fifth.hasRedKey&&fifth.missionObjective=="REACTIVA LOS RESPALDOS")
-    openCheckpoint(fifth,29,6,28,6)
+    openCheckpoint(fifth,29,6,28,6,2)
     route(fifth,40,8)
     check(fifth.hasRedKey&&!fifth.powerRestored)
     openCheckpoint(fifth,36,13,36,12,1)
@@ -283,9 +288,9 @@ fun main(){
     route(fifth,37,24);fifth.interact()
     check(!fifth.doors.first{it.x==37&&it.y==25}.open){"Backup switch must remain mandatory"}
     openCheckpoint(fifth,10,6,11,6,0)
-    check(fifth.powerRestored&&fifth.questionsCorrect==2)
-    openCheckpoint(fifth,29,18,28,18)
-    openCheckpoint(fifth,37,25,37,24)
+    check(fifth.powerRestored&&fifth.questionsCorrect>=5)
+    openCheckpoint(fifth,29,18,28,18,0)
+    openCheckpoint(fifth,37,25,37,24,2)
     openCheckpoint(fifth,20,5,20,6)
     route(fifth,20,4)
     openCheckpoint(fifth,38,6,38,7)
@@ -295,7 +300,7 @@ fun main(){
     openCheckpoint(fifth,4,5,4,6)
     route(fifth,4,4)
     check(fifth.berserkActive)
-    openCheckpoint(fifth,17,25,17,24)
+    openCheckpoint(fifth,17,25,17,24,1)
     openCheckpoint(fifth,21,30,21,31)
     route(fifth,21,29)
     check(fifth.owns(DoomWeapon.ROCKET)&&fifth.secrets==5)
@@ -304,11 +309,11 @@ fun main(){
     openCheckpoint(fifth,39,11,39,12)
     route(fifth,39,10)
     check(fifth.secrets==7)
-    openCheckpoint(fifth,28,31,27,31)
+    openCheckpoint(fifth,28,31,27,31,0)
     route(fifth,30,30)
     check(fifth.owns(DoomWeapon.PLASMA)&&fifth.owns(DoomWeapon.MINIGUN))
     route(fifth,42,33);fifth.interact()
-    check(fifth.won&&fifth.questionsCorrect==2&&fifth.secretTotal==7)
+    check(fifth.won&&fifth.questionsCorrect==9&&fifth.secretTotal==7)
     val dossier=DoomEngine(level=5)
     dossier.enemies.forEach{it.hp=0}
     route(dossier,4,19)
