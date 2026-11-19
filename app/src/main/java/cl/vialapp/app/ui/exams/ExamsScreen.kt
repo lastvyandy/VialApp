@@ -28,6 +28,7 @@ import cl.vialapp.app.data.api.ExamHistoryResult
 import cl.vialapp.app.data.api.ExtraExamRequest
 import cl.vialapp.app.data.session.SessionManager
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 private const val PAGE_SIZE=50
@@ -55,6 +56,7 @@ fun ExamsScreen(
     val c=MaterialTheme.colorScheme
     val context=LocalContext.current
     val session=remember(context){SessionManager(context)}
+    val scope=rememberCoroutineScope()
     val license=remember(licenseClass){classCode(licenseClass)}
     var selected by rememberSaveable(category){mutableStateOf(category)}
     var tab by rememberSaveable{mutableStateOf("categories")}
@@ -355,15 +357,47 @@ fun ExamsScreen(
                     }
                 }
                 item{
-                    OutlinedButton(onClick={
-                        if(!unlockBusy){
-                            unlockBusy=true
-                            // The server checks Premium entitlement and that existing
-                            // assignments in the category have been completed.
-                            val ignored=unlockBusy
-                        }
-                    },enabled=false,modifier=Modifier.fillMaxWidth()){
-                        Text("Más exámenes con Premium")
+                    OutlinedButton(
+                        onClick={
+                            if(!unlockBusy){
+                                scope.launch{
+                                    unlockBusy=true
+                                    try{
+                                        val token=session.getAccessToken()
+                                        if(token==null){
+                                            warning="Debes iniciar sesión para solicitar otro examen."
+                                        }else if(license !in setOf("B","C")){
+                                            warning="Este desbloqueo está disponible para clases B y C."
+                                        }else{
+                                            val result=ApiClient.api.unlockExtraExam(
+                                                "Bearer $token",
+                                                ExtraExamRequest(license,selected?:"Mixto")
+                                            )
+                                            when{
+                                                result.isSuccessful->{
+                                                    warning="¡Nuevo examen asignado! Ya puedes comenzar."
+                                                    page=0
+                                                    reload++
+                                                }
+                                                result.code()==403->
+                                                    warning="Los exámenes adicionales requieren Premium de esta clase de licencia."
+                                                result.code()==409->
+                                                    warning="Completa primero los exámenes disponibles o comprueba si ya agotaste el catálogo de esta categoría."
+                                                else->warning="No se pudo asignar un examen adicional. Reintenta."
+                                            }
+                                        }
+                                    }catch(e:CancellationException){throw e}
+                                    catch(_:Exception){
+                                        warning="No se pudo conectar. Reintenta al recuperar la conexión."
+                                    }finally{unlockBusy=false}
+                                }
+                            }
+                        },
+                        enabled=!unlockBusy,
+                        modifier=Modifier.fillMaxWidth()
+                    ){
+                        if(unlockBusy)CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp)
+                        else Text("Solicitar otro examen · Premium")
                     }
                 }
                 item{
