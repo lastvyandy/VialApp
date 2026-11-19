@@ -89,6 +89,8 @@ private data class BottomItem(
 
 
 @Composable
+// Acá conectamos las pantallas y decidimos adónde va cada botón.
+// Mantengo las rutas juntas para no terminar navegando a cualquier cosa.
 fun VialAppNavigation(
     user: UserResponse,
     onUserUpdated: (UserResponse) -> Unit,
@@ -101,6 +103,7 @@ fun VialAppNavigation(
         LocalContext.current
 
     // Photo state belongs to the signed-in account, independently of mascot selection.
+    // La foto depende de la cuenta; no hay que confundirla con la mascota que eligió.
     val avatarKey = remember(user.id) { mutableStateOf<String?>(null) }
     val avatarLoaded = remember(user.id) { mutableStateOf(false) }
     LaunchedEffect(user.id) {
@@ -164,6 +167,7 @@ fun VialAppNavigation(
             ?.route
 
 
+    // Si viene desde el widget, lo llevamos a Practicar sin saltarnos la configuración inicial.
     LaunchedEffect(openPracticeRequested,currentRoute) {
         if(openPracticeRequested && currentRoute!=null && currentRoute !in setOf("study_setup","mascot_selection")) {
             if(currentRoute!="practice") navController.navigate("practice") { launchSingleTop=true }
@@ -267,7 +271,7 @@ fun VialAppNavigation(
 
 
     fun openGameOrActivity(route:String){
-        // Returning from Rally through its garage shortcut should not stack a second Rally screen.
+        // Si venimos del garaje de Rally, volvemos a la partida anterior en vez de abrir otra.
         if(navController.previousBackStackEntry?.destination?.route==route)navController.popBackStack()
         else navController.navigate(route){launchSingleTop=true}
     }
