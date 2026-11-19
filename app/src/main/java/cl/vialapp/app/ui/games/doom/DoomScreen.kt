@@ -146,6 +146,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     var revision by remember{mutableIntStateOf(0)}
     var drive by remember{mutableStateOf(DoomInput())}
     var paused by remember{mutableStateOf(false)}
+    var mapOpen by remember(e){mutableStateOf(false)}
     var exit by remember{mutableStateOf(false)}
     var reward by remember{mutableStateOf<GameRunResult?>(null)}
     var saving by remember{mutableStateOf(false)}
@@ -179,9 +180,9 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
         if(id==0)null else runCatching{MediaPlayer.create(context,id)?.apply{isLooping=true;setVolume(.24f,.24f)}}.getOrNull()
     }
     DisposableEffect(music){onDispose{runCatching{music?.release()}}}
-    LaunchedEffect(music,musicEnabled,paused,finished,ready,challenge,note){
+    LaunchedEffect(music,musicEnabled,paused,finished,ready,challenge,note,mapOpen){
         if(music!=null)runCatching{
-            val volume=if(challenge==null&&note==null).24f else .10f
+            val volume=if(challenge==null&&note==null&&!mapOpen).24f else .10f
             music.setVolume(volume,volume)
             if(musicEnabled&&!paused&&!finished&&ready){if(!music.isPlaying)music.start()}
             else if(music.isPlaying)music.pause()
@@ -201,6 +202,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     BackHandler{
         when{
             e.finished&&!saving->onMenu()
+            mapOpen->{mapOpen=false}
             note!=null->change{e.closeNote()}
             challenge!=null->change{e.dismissChallenge()}
             exit->{exit=false}
@@ -210,12 +212,16 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     }
     LaunchedEffect(challenge){selectedAnswer=0}
     // Poll one-shot gamepad buttons when the simulation is stopped by pause or a quiz.
-    LaunchedEffect(e,gamepad,ready,paused,challenge,note,finished,resultVisible,exit){
+    LaunchedEffect(e,gamepad,ready,paused,challenge,note,mapOpen,finished,resultVisible,exit){
         while(true){
             withFrameNanos{}
             if(!ready)continue
             for(action in gamepad.consumeActions()){
                 when {
+                    mapOpen -> when(action){
+                        DoomPadAction.USE,DoomPadAction.CANCEL,DoomPadAction.PAUSE->mapOpen=false
+                        else->Unit
+                    }
                     note!=null -> when(action){
                         DoomPadAction.USE,DoomPadAction.CANCEL->change{e.closeNote()}
                         else->Unit
@@ -250,15 +256,15 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             }
         }
     }
-    LaunchedEffect(e,ready,paused,challenge,note,finished){
-        if(!ready||paused||challenge!=null||note!=null||finished)return@LaunchedEffect
+    LaunchedEffect(e,ready,paused,challenge,note,mapOpen,finished){
+        if(!ready||paused||challenge!=null||note!=null||mapOpen||finished)return@LaunchedEffect
         var last=withFrameNanos{it}
         var carry=0f
-        while(!paused&&e.pending==null&&e.activeNote==null&&!e.finished){
+        while(!paused&&e.pending==null&&e.activeNote==null&&!mapOpen&&!e.finished){
             val now=withFrameNanos{it}
             carry+=((now-last)/1_000_000_000f).coerceIn(0f,.1f);last=now
             var updated=false
-            while(carry>=1f/30f&&!e.finished&&e.pending==null&&e.activeNote==null){
+            while(carry>=1f/30f&&!e.finished&&e.pending==null&&e.activeNote==null&&!mapOpen){
                 val pad=gamepad.snapshot()
                 e.step(1f/30f,DoomInput(
                     forward=(drive.forward+pad.forward).coerceIn(-1f,1f),
@@ -317,7 +323,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                 Text(e.message,Modifier.align(Alignment.TopCenter).padding(top=6.dp).background(Dark.copy(alpha=.84f),RoundedCornerShape(3.dp)).padding(horizontal=9.dp,vertical=4.dp),
                     color=Gold,fontSize=11.sp,textAlign=TextAlign.Center)
             }
-            if(!paused&&!finished&&challenge==null&&note==null){
+            if(!paused&&!finished&&challenge==null&&note==null&&!mapOpen){
                 DoomTouchControls(
                     modifier=Modifier.fillMaxSize(),
                     onInput={drive=it},
@@ -330,7 +336,9 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                 e.targetHint()?.let{hint->
                     Text(hint,Modifier.align(Alignment.Center).offset(y=19.dp).background(Dark.copy(alpha=.83f),RoundedCornerShape(3.dp)).padding(horizontal=7.dp,vertical=3.dp),color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
                 }
-                DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(5.dp).size(if(e.level==5)94.dp else 72.dp,if(e.level==5)73.dp else 54.dp))
+                DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(5.dp)
+                    .size(if(e.level==5)94.dp else 72.dp,if(e.level==5)73.dp else 54.dp)
+                    .clickable{clear();mapOpen=true})
                 if(e.level==5)Column(
                     Modifier.align(Alignment.BottomCenter).padding(bottom=6.dp)
                         .background(Dark.copy(alpha=.87f),RoundedCornerShape(3.dp))
@@ -358,32 +366,37 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             }
 
         }
-        DoomStatusBar(e,tick,!finished&&!paused&&challenge==null&&note==null,
+        DoomStatusBar(e,tick,!finished&&!paused&&challenge==null&&note==null&&!mapOpen,
             onSelect={w->change{e.selectWeapon(w)}},onReload={change{e.reload()}})
 
     }
-    if(note!=null&&!finished){
-        // Full-screen dossier pauses the simulation; no scrolling or firing behind it.
-        Box(Modifier.fillMaxSize().background(Color(0xF2151818)),contentAlignment=Alignment.Center){
-            Column(
-                Modifier.fillMaxWidth(.86f).widthIn(max=560.dp).heightIn(max=350.dp)
-                    .border(2.dp,Color(0xFF756A53),RoundedCornerShape(5.dp))
-                    .background(Color(0xFF292B2A),RoundedCornerShape(5.dp))
-                    .padding(12.dp),
-                verticalArrangement=Arrangement.spacedBy(8.dp)
-            ){
-                Text("ARCHIVO RECUPERADO  ·  VIALAPP",color=Gold,fontSize=11.sp,fontWeight=FontWeight.Black)
-                Text(note.title,color=White,fontSize=18.sp,fontWeight=FontWeight.Black)
-                Column(Modifier.weight(1f,fill=false).verticalScroll(rememberScrollState())){
-                    Text(note.body,color=Color(0xFFE1D9C5),fontSize=14.sp,lineHeight=20.sp)
+    if(mapOpen&&!finished){
+        Box(Modifier.fillMaxSize().background(Color(0xF50B1114)),
+            contentAlignment=Alignment.Center){
+            Column(Modifier.fillMaxSize().padding(10.dp),
+                horizontalAlignment=Alignment.CenterHorizontally,
+                verticalArrangement=Arrangement.spacedBy(5.dp)){
+                Text("MAPA TACTICO  /  E1M"+e.level,
+                    color=Gold,fontSize=17.sp,fontWeight=FontWeight.Black,
+                    fontFamily=androidx.compose.ui.text.font.FontFamily.Monospace)
+                Box(Modifier.fillMaxWidth().weight(1f).border(2.dp,Color(0xFF82765C))
+                    .background(Color(0xFF11171A)),contentAlignment=Alignment.Center){
+                    DoomMap(e,tick,Modifier.fillMaxHeight(.94f)
+                        .aspectRatio(e.width.toFloat()/e.height),expanded=true)
                 }
-                if(gamepad.connected)Text("A / B PARA CERRAR",color=Gold,fontSize=10.sp)
-                Button(onClick={clear();change{e.closeNote()}},modifier=Modifier.align(Alignment.End),
-                    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF6C4A36))){
-                    Text("CERRAR INFORME",color=White,fontWeight=FontWeight.Bold)
+                Text("ROJO: DON PELAO  ·  ORO: ACCESOS  ·  VERDE: SALIDA  ·  AZUL: INFORMES",
+                    color=White,fontSize=10.sp,
+                    fontFamily=androidx.compose.ui.text.font.FontFamily.Monospace)
+                Button(onClick={mapOpen=false},
+                    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF783D34))){
+                    Text("CERRAR MAPA",color=White,fontWeight=FontWeight.Bold)
                 }
             }
         }
+    }
+    if(note!=null&&!finished){
+        DoomDossier(note=note,number=e.notes.indexOf(note)+1,total=e.notes.size,
+            controller=gamepad.connected,onClose={clear();change{e.closeNote()}})
     }
     if(challenge!=null&&!finished){
         // Inline overlay retains Activity focus, allowing Xbox A/D-pad to answer the quiz.
