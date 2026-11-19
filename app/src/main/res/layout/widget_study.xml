@@ -1,32 +1,108 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:padding="14dp" android:gravity="center_vertical"
-    android:background="@drawable/widget_study_background">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="horizontal" android:gravity="center_vertical">
-        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="VIALAPP  /  TU RUTA"
-                android:textColor="#9DCCFF" android:textSize="10sp" android:textStyle="bold" android:maxLines="1" />
-            <TextView android:id="@+id/widget_level" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Nivel 3" android:textColor="#F5F9FF" android:textSize="22sp" android:textStyle="bold" android:maxLines="2" />
-            <TextView android:id="@+id/widget_streak" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Racha: 5 días" android:textColor="#D3E4F8" android:textSize="12sp" android:maxLines="2" />
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_study_background"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:padding="12dp">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="VIALAPP  /  TU RUTA"
+                android:textSize="10sp"
+                android:textColor="#87CDC4"
+                android:textStyle="bold"
+                android:maxLines="1"/>
+            <TextView
+                android:id="@+id/widget_level"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:text="Nivel 3"
+                android:textSize="22sp"
+                android:textColor="#F5F9FF"
+                android:textStyle="bold"
+                android:maxLines="1"/>
+            <TextView
+                android:id="@+id/widget_streak"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Racha: 5 días"
+                android:textSize="11sp"
+                android:textColor="#F0C888"
+                android:maxLines="1"/>
         </LinearLayout>
-        <ImageView android:id="@+id/widget_mascot" android:layout_width="64dp" android:layout_height="64dp"
-            android:layout_marginStart="7dp" android:scaleType="fitCenter" android:src="@drawable/mascot_carvier"
-            android:contentDescription="@string/widget_mascot_description" android:background="@drawable/widget_mascot_background" />
+        <ImageView
+            android:id="@+id/widget_mascot"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="8dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/mascot_carvier"
+            android:contentDescription="@string/widget_mascot_description"/>
     </LinearLayout>
-    <ProgressBar android:id="@+id/widget_progress" style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent" android:layout_height="8dp" android:layout_marginTop="9dp"
-        android:max="500" android:progress="270" android:progressTint="#7EC9FE" android:progressBackgroundTint="#435A77" />
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
-        android:layout_marginTop="7dp" android:gravity="center_vertical">
-        <TextView android:id="@+id/widget_xp" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-            android:text="270/500 XP · Nivel siguiente" android:textColor="#D3E4F8" android:textSize="11sp" android:maxLines="2" />
-        <TextView android:id="@+id/widget_action" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginStart="6dp" android:gravity="center" android:background="@drawable/widget_action_background"
-            android:paddingHorizontal="12dp" android:paddingVertical="9dp" android:text="Practicar  ›" android:textSize="13sp"
-            android:textStyle="bold" android:textColor="#102846" android:minHeight="36dp" />
+    <ProgressBar
+        android:id="@+id/widget_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="7dp"
+        android:layout_marginTop="7dp"
+        android:max="500"
+        android:progress="270"
+        android:progressTint="#79CFBE"
+        android:progressBackgroundTint="#3D5966"/>
+    <TextView
+        android:id="@+id/widget_xp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:text="270/500 XP"
+        android:textColor="#BCD2DE"
+        android:textSize="10sp"
+        android:maxLines="1"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="7dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <TextView
+            android:id="@+id/widget_today"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Misión diaria"
+            android:textColor="#E0E8E5"
+            android:textSize="11sp"
+            android:maxLines="2"
+            android:ellipsize="end"/>
+        <TextView
+            android:id="@+id/widget_action"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:gravity="center"
+            android:background="@drawable/widget_action_background"
+            android:paddingHorizontal="11dp"
+            android:paddingVertical="7dp"
+            android:minHeight="32dp"
+            android:text="PRACTICAR ›"
+            android:textSize="11sp"
+            android:textColor="#12303C"
+            android:textStyle="bold"
+            android:maxLines="1"/>
     </LinearLayout>
 </LinearLayout>
