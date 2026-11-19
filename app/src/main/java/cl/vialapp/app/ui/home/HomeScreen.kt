@@ -121,6 +121,7 @@ fun HomeScreen(
     var journeyError by remember(user.id) { mutableStateOf<String?>(null) }
     var xpError by remember(user.id) { mutableStateOf<String?>(null) }
     var retrySync by remember(user.id) { mutableIntStateOf(0) }
+    // aca cargamos la ruta segun la licencia. Si la cambia, tenemos que pedirla de nuevo.
     LaunchedEffect(user.id, user.licenseClass,retrySync) {
         journeyLoading = true
         journeyError = null
@@ -203,6 +204,7 @@ fun HomeScreen(
     } ?: "Licencia"
 
     val summary = stats?.summary
+    // Si no hay exámenes registrados, todavía no podemos recomendarle temas por errores.
     val hasExamHistory = (summary?.totalTests ?: 0)>0
     val historyKnown = !dashboardLoading&&summary!=null
     val priorityCategory = if(hasExamHistory)stats?.categories
@@ -347,9 +349,10 @@ fun HomeScreen(
                 error=journeyError,onRetry={retrySync++})
         }
 
+        // Dejo la práctica justo después del camino a la licencia para que sea fácil encontrarla.
         item(key="home_smart_practice") {
-            // These light-only colors are not in VialPalette.darkPalette. Use
-            // explicit dark surfaces so the card never remains white in night mode.
+            // Ojo con estos colores: si usamos el fondo claro directamente, en modo oscuro queda blanco.
+            // Por eso cambiamos el fondo y el del icono según el tema.
             val darkMode = LocalVialAppearance.current.dark
             val practiceBackground = if (darkMode) MaterialTheme.colorScheme.primaryContainer
                 else Color(0xFFEAF3FF)
