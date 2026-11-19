@@ -249,6 +249,8 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             require(level==5)
             buildServerAssault()
         }
+        // E1M1-E1M4 now contain optional story evidence like the server level.
+        notes+=DoomStory.fieldNotes(level)
     }
     private fun buildFortress(){
         // Three mandatory checkpoints along a dogleg route, two independent supply secrets.
