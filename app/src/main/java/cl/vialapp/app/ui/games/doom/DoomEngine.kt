@@ -51,6 +51,8 @@ internal fun doomFaceState(hp:Int,look:Int,angry:Boolean,berserk:Boolean):DoomFa
         else->when{look<0->DoomFaceState.LEFT;look>0->DoomFaceState.RIGHT;else->DoomFaceState.NORMAL}
     }
 }
+// Acá va la lógica de las partidas: movimiento, enemigos, puertas y objetivos.
+// El dibujo del juego se hace aparte, así no mezclamos las dos cosas.
 internal class DoomEngine(seed:Int=19,val level:Int=1){
     val levelTitle get()=when(level){2->"TUNEL BAJO CONTROL";3->"LA FORTALEZA VIAL";4->"ZONA CERO CAPILAR";5->"ASALTO AL SERVIDOR";else->"ESTACIONAMIENTO INFERNAL"}
     val exitX get()=when(level){2->1;3->28;4->32;5->43;else->20}
@@ -438,6 +440,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
      * Nonlinear VialApp data-center raid. Keys, return loops and a real backup switch
      * are more important than early access to every weapon.
      */
+    // Este mapa es para explorar. Los secretos y credenciales tienen que encontrarse jugando.
     private fun buildServerAssault(){
         fun room(x1:Int,y1:Int,x2:Int,y2:Int,wall:Int){
             for(yy in y1-1..y2+1)for(xx in x1-1..x2+1)
@@ -869,6 +872,8 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             else{won=true;events+=DoomEvent.VICTORY;tell(if(level==5)"¡VialApp vuelve a estar en línea! Servidor asegurado." else "¡Sector recuperado!")}
     }
     // Accessible fallback, also used in the deterministic progression test.
+    // Primero revisamos si hay una nota cerca; después viene la salida y las puertas.
+    // No tiene sentido abrir otra cosa mientras el alumno está respondiendo una pregunta.
     fun interact(){
         if(finished||pending!=null||activeNote!=null)return
         nearbyNote()?.let{readNote(it);return}
@@ -991,6 +996,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             if(l.kind!=DoomLootKind.COIN)events+=DoomEvent.LOOT
         }
     }
+    // Avanzamos la partida en pasos cortos para que no se descontrole si baja el rendimiento.
     fun step(dt:Float,input:DoomInput=DoomInput()){
         if(finished||pending!=null||activeNote!=null||dt<=0f)return
         val d=dt.coerceAtMost(.05f);elapsed+=d
