@@ -730,7 +730,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         if(level==5)return when {
             // Gallery: a western flight and an eastern descent to the exam doors.
             cx in 12..15&&cy in 6..10 -> (10-cy).coerceIn(0,4)
-            cx in 25..27&&cy in 6..9 -> (9-cy).coerceIn(0,3)
+            cx in 24..27&&cy==6 -> (28-cx).coerceIn(0,4)
             cx in 14..26&&cy in 2..5 -> 4
             // Archives: a climb from the backup floor to the inspection balcony.
             cx in 31..34&&cy in 18..23 -> (23-cy).coerceIn(0,5)
