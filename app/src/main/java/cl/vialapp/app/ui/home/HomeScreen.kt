@@ -204,6 +204,7 @@ fun HomeScreen(
 
     val summary = stats?.summary
     val hasExamHistory = (summary?.totalTests ?: 0)>0
+    val historyKnown = !dashboardLoading&&summary!=null
     val priorityCategory = if(hasExamHistory)stats?.categories
         ?.filter{it.totalAnswered>=8&&it.incorrectas>0}
         ?.maxWithOrNull(compareBy<cl.vialapp.app.data.api.CategoryStatResponse>{
@@ -367,6 +368,7 @@ fun HomeScreen(
                                 fontSize=11.sp,fontWeight=FontWeight.ExtraBold)
                             Text(
                                 when {
+                                    !historyKnown -> "Preparando tu siguiente paso"
                                     !hasExamHistory -> "Descubramos tu punto de partida"
                                     priorityCategory!=null -> "Hoy: "+priorityCategory.categoria
                                     else -> "Sigue reforzando tus conocimientos"
@@ -376,19 +378,24 @@ fun HomeScreen(
                         }
                     }
                     Text(when {
+                        !historyKnown -> "Puedes continuar estudiando mientras consultamos tu historial de exámenes."
                         !hasExamHistory -> "Realiza tu primer examen para que podamos identificar qué temas necesitas practicar."
                         priorityCategory!=null -> "Tienes "+priorityCategory.incorrectas+" errores registrados y "+
                             priorityCategory.successPercentage+"% de aciertos en este tema. Puedes repasarlo con una práctica corta."
                         else -> "Ya registramos tus exámenes. Sigue practicando y descubre nuevas recomendaciones."
                     },color=HomeGray,fontSize=13.sp,lineHeight=19.sp)
                     Button(
-                        onClick=if(!hasExamHistory)onExam else onPractice,
+                        onClick=if(!historyKnown||!hasExamHistory)onExam else onPractice,
                         modifier=Modifier.fillMaxWidth(),
                         shape=RoundedCornerShape(13.dp),
                         colors=ButtonDefaults.buttonColors(containerColor=VialActionBlue,
                             contentColor=Color.White)
                     ){
-                        Text(if(!hasExamHistory)"Hacer mi primer examen" else "Practicar ahora",
+                        Text(when{
+                            !historyKnown -> "Ver mis exámenes"
+                            !hasExamHistory -> "Hacer mi primer examen"
+                            else -> "Practicar ahora"
+                        },
                             fontWeight=FontWeight.Bold)
                     }
                     if(hasExamHistory&&hasPremiumForLicense){
