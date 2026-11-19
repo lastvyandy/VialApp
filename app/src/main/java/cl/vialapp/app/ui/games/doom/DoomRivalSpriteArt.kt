@@ -1,6 +1,6 @@
 package cl.vialapp.app.ui.games.doom
 
-import android.util.Base64
+import java.util.Base64
 import java.util.zip.Inflater
 
 /**
@@ -61,7 +61,7 @@ internal object DoomRivalSpriteArt {
     }]
 
     private fun decode(encoded: String): IntArray {
-        val raw = Base64.decode(encoded, Base64.NO_WRAP)
+        val raw = Base64.getDecoder().decode(encoded)
         val count = raw[0].toInt() and 0xff
         require(count in 1..254) { "Invalid Doom rival color count" }
         val offset = 1 + count * 3
