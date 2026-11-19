@@ -648,13 +648,13 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             "23:14. Las autoescuelas rivales llegaron juntas y forzaron la entrada. Dijeron que, si VialApp dejaba de funcionar, nadie podría practicar ni rendir sus exámenes. El guardia de recepción no volvió a contestar.")
         report(12.5f,15.5f,"02 · ALERTA DE CARVIER",
             "Las solicitudes de licencias están congeladas. Afuera hay choques en los cruces y las radios de tránsito no paran de sonar. Don Pelao, entra por mantenimiento. La escopeta quedó en el acceso, pero las armas pesadas siguen encerradas.")
-        report(16.5f,9.5f,"03 · TURNO DEL DATA CENTER",
+        report(23.5f,4.5f,"03 · TURNO DEL DATA CENTER",
             "No dañaron los servidores por accidente. Primero cortaron la replicación, después alteraron las credenciales del nodo de exámenes. Subí por la escalera de servicio para revisar los racks superiores. Hay sangre en la pasarela.")
         report(6.5f,6.5f,"04 · SISTEMA DE REFRIGERACIÓN",
             "El refrigerante se está filtrando por las rejillas. Las puertas falsas de este sector se instalaron para guardar suministros de emergencia. Si todo falla, busca el interruptor que permite recuperar una copia verificada.")
         report(34.5f,11.5f,"05 · CORREO INTERCEPTADO",
             "De: Coordinación de Escuelas Rivales. Orden: mantener VialApp desconectada hasta que nuestras sedes recuperen a sus alumnos. No destruir el núcleo antes de copiar los registros; el Administrador quiere quedarse con ellos.")
-        report(32.5f,22.5f,"06 · BITÁCORA DE RESPALDOS",
+        report(37.5f,16.5f,"06 · BITÁCORA DE RESPALDOS",
             "La planta secundaria puede reactivar el servicio, pero primero hay que aislar el equipo comprometido. Encendí la alimentación del archivo. Escuché a varios instructores subir por la pasarela metálica.")
         report(11.5f,29.5f,"07 · ALMACÉN OLVIDADO",
             "En este depósito hay un muro hueco. Alguien escondió allí un lanzacohetes por si la sala central caía. No aparece en los planos. También se guardaron botiquines en el rincón occidental.")
