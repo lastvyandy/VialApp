@@ -24,8 +24,9 @@ internal enum class DoomDecorKind { BARREL, CRATE, TERMINAL, LAMP, WRECK,
     CAR_BLUE, CAR_RED, CAR_YELLOW, SIGN_STOP, SIGN_YIELD, SIGN_PEDESTRIAN, CONE,
     BUS_STOP, TREE, CAPILLARY_AD, DEMON_TOTEM, ROAD_BARRIER,
     SERVER_RACK, BROKEN_RACK, CRT_MONITOR, FIBER_CABLE, CHIP_PANEL, SUPAPLEX_DISK,
-    VIALAPP_SERVER, TRAFFIC_TERMINAL, COOLANT_TANK, WARNING_PANEL, SERVER_FAN }
+    VIALAPP_SERVER, TRAFFIC_TERMINAL, COOLANT_TANK, WARNING_PANEL, SERVER_FAN, RAILING }
 internal data class DoomDecor(val kind:DoomDecorKind,val x:Float,val y:Float,val scale:Float,val lift:Float=0f)
+internal data class DoomNote(val x:Float,val y:Float,val title:String,val body:String,var read:Boolean=false)
 internal data class DoomRocket(var x:Float,var y:Float,val vx:Float,val vy:Float,var life:Float=2.2f)
 internal data class DoomBolt(var x:Float,var y:Float,val vx:Float,val vy:Float,val damage:Int,var life:Float=3f,val chrome:Boolean=false,val toxic:Boolean=false)
 internal data class DoomChallenge(val prompt:String,val answers:List<String>,val correct:Int,val explanation:String)
@@ -67,6 +68,11 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     val bolts=mutableListOf<DoomBolt>()
     val rockets=mutableListOf<DoomRocket>()
     val decor=mutableListOf<DoomDecor>()
+    val notes=mutableListOf<DoomNote>()
+    var activeNote:DoomNote?=null
+        private set
+    val notesRead get()=notes.count{it.read}
+    private var serverAmbushMask=0
     val explosives=mutableListOf<DoomExplosive>()
     val explosions=mutableListOf<DoomExplosion>()
     private val events=ArrayList<DoomEvent>()
@@ -483,6 +489,14 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         ))grid[yy*width+xx]=when((xx+yy)%3){0->2;1->3;else->4}
         connections()
 
+        // Additional damaged partitions create cover and stop the open rooms looking like empty boxes.
+        // Every partition is optional cover; the inter-room gates remain the only mandatory locks.
+        for((xx,yy) in listOf(
+            5 to 15,5 to 21,17 to 16,18 to 16,18 to 21,
+            36 to 7,37 to 7,36 to 8,36 to 21,37 to 21,
+            8 to 30,8 to 31,19 to 31,34 to 30,34 to 31
+        ))if(grid[yy*width+xx]==0)grid[yy*width+xx]=4
+
         gate(10,18,0)
         gate(17,11,0)
         gate(10,6,8,DoomChallenge(
@@ -520,6 +534,8 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         secretPocket(38,5)  // exams: chip/disc Supaplex easter egg
         secretPocket(39,19) // archives: armor
         secretPocket(21,29) // storage: launcher
+        secretPocket(5,34)  // forgotten lower storage / medical supplies
+        secretPocket(39,10) // rival instructor's hidden exam orders
 
         fun foe(kind:DoomKind,xx:Float,yy:Float){
             enemies+=DoomEnemy(enemies.size,kind,xx,yy,cooldown=1.05f+random.nextFloat()*.95f)
@@ -540,6 +556,15 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         foe(DoomKind.SABOTEUR,37.5f,27.5f);foe(DoomKind.RIVAL_GUARD,33.5f,32.5f)
         foe(DoomKind.CORRUPT_TECH,41.5f,35.5f)
         foe(DoomKind.ADMINISTRATOR,40.0f,30.5f)
+        // Deliberate pockets of resistance: quiet corridors alternate with multi-enemy crossfire.
+        foe(DoomKind.SABOTEUR,16.5f,22.5f)
+        foe(DoomKind.RIVAL_GUARD,20.5f,16.5f)
+        foe(DoomKind.SABOTEUR,17.5f,8.5f)
+        foe(DoomKind.HACKER,22.5f,9.5f)
+        foe(DoomKind.RIVAL_GUARD,37.5f,8.5f)
+        foe(DoomKind.CORRUPT_TECH,36.5f,16.5f)
+        foe(DoomKind.SABOTEUR,14.5f,29.5f)
+        foe(DoomKind.RIVAL_GUARD,35.5f,35.5f)
 
         fun item(kind:DoomLootKind,xx:Float,yy:Float){loot+=DoomLoot(kind,xx,yy)}
         item(DoomLootKind.AMMO,2.5f,16.5f)
@@ -579,6 +604,36 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         item(DoomLootKind.MEDKIT,39.5f,35.5f)
         item(DoomLootKind.ROCKET_AMMO,36.5f,35.5f)
         item(DoomLootKind.COIN,41.5f,27.5f)
+        item(DoomLootKind.MEDKIT,5.5f,34.5f)
+        item(DoomLootKind.ROCKET_AMMO,5.5f,34.6f)
+        item(DoomLootKind.COIN,39.5f,10.5f)
+        item(DoomLootKind.SHELLS,17.5f,21.5f)
+        item(DoomLootKind.SHELLS,22.5f,9.5f)
+        item(DoomLootKind.BELT,32.5f,23.5f)
+        item(DoomLootKind.MEDKIT,36.5f,31.5f)
+
+        // Physical reports, read with USE. The player reconstructs the sabotage in fragments.
+        fun report(xx:Float,yy:Float,title:String,body:String){
+            notes+=DoomNote(xx,yy,title,body)
+        }
+        report(4.5f,19.5f,"01 · REGISTRO DE SEGURIDAD",
+            "23:14. Las autoescuelas rivales llegaron juntas y forzaron la entrada. Dijeron que, si VialApp dejaba de funcionar, nadie podría practicar ni rendir sus exámenes. El guardia de recepción no volvió a contestar.")
+        report(12.5f,15.5f,"02 · ALERTA DE CARVIER",
+            "Las solicitudes de licencias están congeladas. Afuera hay choques en los cruces y las radios de tránsito no paran de sonar. Don Pelao, entra por mantenimiento. La escopeta quedó en el acceso, pero las armas pesadas siguen encerradas.")
+        report(16.5f,9.5f,"03 · TURNO DEL DATA CENTER",
+            "No dañaron los servidores por accidente. Primero cortaron la replicación, después alteraron las credenciales del nodo de exámenes. Subí por la escalera de servicio para revisar los racks superiores. Hay sangre en la pasarela.")
+        report(6.5f,6.5f,"04 · SISTEMA DE REFRIGERACIÓN",
+            "El refrigerante se está filtrando por las rejillas. Las puertas falsas de este sector se instalaron para guardar suministros de emergencia. Si todo falla, busca el interruptor que permite recuperar una copia verificada.")
+        report(34.5f,11.5f,"05 · CORREO INTERCEPTADO",
+            "De: Coordinación de Escuelas Rivales. Orden: mantener VialApp desconectada hasta que nuestras sedes recuperen a sus alumnos. No destruir el núcleo antes de copiar los registros; el Administrador quiere quedarse con ellos.")
+        report(32.5f,22.5f,"06 · BITÁCORA DE RESPALDOS",
+            "La planta secundaria puede reactivar el servicio, pero primero hay que aislar el equipo comprometido. Encendí la alimentación del archivo. Escuché a varios instructores subir por la pasarela metálica.")
+        report(11.5f,29.5f,"07 · ALMACÉN OLVIDADO",
+            "En este depósito hay un muro hueco. Alguien escondió allí un lanzacohetes por si la sala central caía. No aparece en los planos. También se guardaron botiquines en el rincón occidental.")
+        report(39.5f,10.5f,"08 · ÓRDENES SECRETAS",
+            "Una última orden del consorcio: culpar a VialApp del caos en las calles. Los choques no son un fallo del sistema; ellos desconectaron los semáforos de práctica y falsificaron los registros.")
+        report(41.5f,34.5f,"09 · MENSAJE SIN ENVIAR",
+            "Si estás leyendo esto, llegaste al núcleo. Recupera el respaldo y derriba al Administrador. Ya nadie sabe conducir allá afuera. VialApp tiene que volver a estar en línea.")
 
         fun prop(kind:DoomDecorKind,xx:Float,yy:Float,scale:Float=.73f,lift:Float=0f){
             decor+=DoomDecor(kind,xx,yy,scale,lift)
@@ -610,6 +665,30 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         prop(DoomDecorKind.FIBER_CABLE,19.5f,21.5f,.59f)
         prop(DoomDecorKind.FIBER_CABLE,17.5f,32.5f,.59f)
         prop(DoomDecorKind.FIBER_CABLE,35.5f,33.5f,.59f)
+        // Broken consoles, shelves and cables at readable scale; keep central walking lanes clear.
+        for((xx,yy) in listOf(
+            2.0f to 15.1f,2.1f to 22.0f,7.9f to 15.1f,8.0f to 22.0f,
+            11.3f to 13.1f,22.6f to 13.1f,11.2f to 23.2f,22.6f to 23.3f,
+            12.1f to 2.3f,19.1f to 2.3f,26.2f to 2.3f,
+            30.4f to 3.0f,42.4f to 4.1f,30.3f to 11.0f,
+            30.4f to 15.0f,42.0f to 23.0f,3.0f to 27.1f,
+            10.9f to 35.4f,22.4f to 34.8f,29.9f to 27.2f,43.2f to 35.4f
+        ))prop(DoomDecorKind.BROKEN_RACK,xx,yy,.57f)
+        for((xx,yy) in listOf(
+            3.0f to 16.0f,7.6f to 17.0f,12.1f to 20.0f,21.2f to 18.0f,
+            14.0f to 8.7f,23.2f to 8.9f,32.4f to 6.3f,41.5f to 9.6f,
+            32.3f to 20.2f,40.2f to 16.2f,8.0f to 29.0f,
+            20.2f to 33.0f,33.0f to 31.3f
+        ))prop(DoomDecorKind.CRT_MONITOR,xx,yy,.43f)
+        for((xx,yy) in listOf(
+            6.4f to 22.0f,16.8f to 23.0f,21.2f to 14.0f,
+            25.5f to 9.2f,39.5f to 3.2f,30.8f to 22.0f,
+            11.2f to 32.0f,18.5f to 28.0f,42.8f to 28.4f
+        ))prop(DoomDecorKind.FIBER_CABLE,xx,yy,.40f)
+        // Railings outline two overhead service platforms. The ramps remain walkable.
+        for(xx in 17..25)if(xx!=20)prop(DoomDecorKind.RAILING,xx+.5f,5.8f,.45f,.64f)
+        for(xx in 35..41)prop(DoomDecorKind.RAILING,xx+.5f,18.0f,.42f,.85f)
+        for(xx in 18..22)prop(DoomDecorKind.RAILING,xx+.5f,29.6f,.38f,.66f)
         for((xx,yy) in listOf(15.5f to 2.5f,23.5f to 2.5f,33.5f to 2.5f,
             41.5f to 2.5f,15.5f to 13.5f,21.5f to 13.5f,
             33.5f to 15.5f,41.5f to 15.5f,7.5f to 27.5f,
@@ -621,15 +700,20 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
 
         x=3.5f;y=18.5f;angle=0f
         grid[exitY*width+exitX]=6
-        message="Carvier: Las autoescuelas rivales atacan VialApp. Recupera los servidores."
+        message="Carvier: Las escuelas rivales tomaron el centro de datos. Busca la escopeta y lee los informes."
     }
     /** Walkable terraced staircases in the damaged street. */
     fun stairTier(cx:Int,cy:Int):Int {
         if(level==5)return when {
-            cx in 12..16&&cy in 5..9 -> (cy-4).coerceIn(0,4)
-            cx in 4..8&&cy in 6..10 -> (cy-5).coerceIn(0,4)
-            cx in 14..18&&cy in 29..34 -> (cy-28).coerceIn(0,5)
-            cx in 31..35&&cy in 28..34 -> (cy-27).coerceIn(0,5)
+            // Server gallery: ascent from the floor to the elevated rack inspection deck.
+            cx in 12..15&&cy in 6..10 -> (10-cy).coerceIn(0,4)
+            cx in 16..26&&cy in 2..5 -> 4
+            // Archives: emergency stair to the guarded backup mezzanine.
+            cx in 31..34&&cy in 18..23 -> (23-cy).coerceIn(0,5)
+            cx in 35..41&&cy in 15..17 -> 5
+            // Lower warehouse: small elevated service walkway and hidden supplies.
+            cx in 15..17&&cy in 30..35 -> (35-cy).coerceIn(0,5)
+            cx in 18..23&&cy in 27..29 -> 5
             else->0
         }
         if(level!=4)return 0
@@ -671,6 +755,30 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     }
     fun drainEvents():List<DoomEvent> = events.toList().also{events.clear()}
     private fun tell(s:String){message=s;messageTime=3.5f}
+    private fun nearbyNote(distance:Float=1.25f):DoomNote? =
+        notes.filter{!it.read&&hypot(it.x-x,it.y-y)<=distance&&visible(x,y,it.x,it.y)}
+            .minByOrNull{hypot(it.x-x,it.y-y)}
+    private fun facingNote(horizontal:Float):DoomNote? {
+        val target=nearbyNote(1.6f)?:return null
+        val direction=atan2(target.y-y,target.x-x)
+        val look=angle+atan(horizontal*.66f)
+        return if(abs(atan2(sin(direction-look),cos(direction-look)))<.36f)target else null
+    }
+    private fun readNote(note:DoomNote){
+        note.read=true;activeNote=note;events+=DoomEvent.LOOT
+    }
+    fun closeNote(){activeNote=null}
+    private fun serverWave(flag:Int,trigger:Boolean,vararg foes:Triple<DoomKind,Float,Float>){
+        if(!trigger||(serverAmbushMask and flag)!=0)return
+        serverAmbushMask=serverAmbushMask or flag
+        var spawned=0
+        for((kind,xx,yy) in foes){
+            if(solid(xx,yy,.24f)||hypot(xx-x,yy-y)<2.3f)continue
+            enemies+=DoomEnemy(enemies.size,kind,xx,yy,cooldown=1.1f+random.nextFloat()*.8f)
+            spawned++
+        }
+        if(spawned>0)tell("¡Alerta! Refuerzos de las autoescuelas rivales.")
+    }
     private fun phase(value:DoomWeaponPhase,duration:Float){
         weaponPhase=value;phaseDuration=duration;weaponProgress=0f
     }
@@ -723,6 +831,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         return ray(x,y,c-s*p,s+c*p)
     }
     fun targetHint(horizontal:Float=0f):String?{
+        if(activeNote==null&&facingNote(horizontal)!=null)return "LEER DOCUMENTO"
         val hit=screenRay(horizontal)
         if(hit.distance>1.7f)return null
         if(hit.cell==6)return if(bossAlive)(when(level){4->"CAPITÁN EN PIE";5->"SABOTAJE EN CURSO";else->"NÚCLEO ACTIVO"}) else "TOCA PARA SALIR"
@@ -731,7 +840,10 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         return when {door.kind==2&&!hasKey->"REQUIERE LLAVE AZUL";door.kind==6&&!hasRedKey->"REQUIERE LLAVE ROJA";door.kind==7&&!powerRestored->"BACKUP SIN ENERGIA";door.kind==4->"MURO SOSPECHOSO";door.question!=null->"TOCA EL TERMINAL";else->"TOCA PARA ABRIR"}
     }
     fun touchInteract(horizontal:Float,vertical:Float=0f):Boolean{
-        if(finished||pending!=null)return false
+        if(finished||pending!=null||activeNote!=null)return false
+        if(abs(vertical)<.5f){
+            facingNote(horizontal)?.let{readNote(it);return true}
+        }
         val hit=screenRay(horizontal)
         if(hit.distance>1.7f||abs(vertical)>.5f/(1.32f*hit.distance)+.03f)return false
         if(hit.cell==6){interactExit();return true}
@@ -745,7 +857,8 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     }
     // Accessible fallback, also used in the deterministic progression test.
     fun interact(){
-        if(finished||pending!=null)return
+        if(finished||pending!=null||activeNote!=null)return
+        nearbyNote()?.let{readNote(it);return}
         if(hypot(exitX+.5f-x,exitY+.5f-y)<1.55f){interactExit();return}
         val door=doors.filter{!it.open}.minByOrNull{hypot(it.x+.5f-x,it.y+.5f-y)}
         if(door==null||hypot(door.x+.5f-x,door.y+.5f-y)>1.6f){tell("Acércate a una puerta o terminal.");return}
@@ -866,7 +979,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         }
     }
     fun step(dt:Float,input:DoomInput=DoomInput()){
-        if(finished||pending!=null||dt<=0f)return
+        if(finished||pending!=null||activeNote!=null||dt<=0f)return
         val d=dt.coerceAtMost(.05f);elapsed+=d
         fireCooldown=(fireCooldown-d).coerceAtLeast(0f);punchCooldown=(punchCooldown-d).coerceAtLeast(0f);punchSwing=(punchSwing-d).coerceAtLeast(0f);berserkTime=(berserkTime-d).coerceAtLeast(0f);shotFlash=(shotFlash-d).coerceAtLeast(0f);hurtFlash=(hurtFlash-d).coerceAtLeast(0f);messageTime=(messageTime-d).coerceAtLeast(0f)
         advanceWeapon(d)
@@ -886,6 +999,14 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         val rise=stairTier(floor(x).toInt(),floor(y).toInt())*.22f
         cameraElevation+=(rise-cameraElevation)*(d*9f).coerceIn(0f,1f)
         collect()
+        if(level==5){
+            serverWave(1,hasKey&&x in 15f..27f&&y in 2f..10f,
+                Triple(DoomKind.SABOTEUR,18.5f,8.5f),Triple(DoomKind.HACKER,24.5f,9.5f))
+            serverWave(2,powerRestored&&x in 30f..42f&&y in 14f..24f,
+                Triple(DoomKind.RIVAL_GUARD,39.5f,23.5f),Triple(DoomKind.SABOTEUR,33.5f,22.5f))
+            serverWave(4,hasRedKey&&powerRestored&&x in 29f..44f&&y in 26f..36f,
+                Triple(DoomKind.CORRUPT_TECH,32.5f,29.5f),Triple(DoomKind.SABOTEUR,41.5f,29.5f))
+        }
         if(level==5&&(x in 2.3f..4.9f||x in 7.1f..9.2f)&&y in 7.7f..10.7f&&coolantDamageCooldown<=0f){
             hurt(5);coolantDamageCooldown=.85f
         }
