@@ -21,11 +21,10 @@ import cl.vialapp.app.ui.learning.LearningPathEntry
 import cl.vialapp.app.ui.theme.vialColor
 
 /**
- * Student-first practice dashboard.
- *
- * A new student starts with the learning route and a diagnostic exam.
- * After a sufficiently large sample of answers, a concrete weak category
- * appears before the learning route. No paid feature is a prerequisite.
+ * Primero mostramos lo que el alumno necesita para avanzar.
+ * Si es nuevo, parte con la ruta y un examen de diagnóstico.
+ * Si ya tenemos suficientes respuestas, le mostramos qué tema debería reforzar.
+ * No hacemos que una función Premium sea obligatoria para comenzar.
  */
 @Composable
 internal fun PracticeDashboard(
@@ -44,6 +43,7 @@ internal fun PracticeDashboard(
 ) {
     val c=MaterialTheme.colorScheme
     val primary=vialColor(Color(0xFF2563EB))
+    // No sirve recomendar una materia solo porque tuvo una pregunta mala. Usamos los datos que ya alcanzan.
     val priority=remember(stats){recommendedPriority(stats)}
     val categories=remember(stats){rankedPracticeCategories(stats)}
     var expanded by rememberSaveable{mutableStateOf(false)}
@@ -81,6 +81,7 @@ internal fun PracticeDashboard(
             }
         }
 
+        // Si todavía no hay una prioridad confiable, mejor ofrecer una evaluación inicial.
         if(priority==null){
             item {
                 Card(
