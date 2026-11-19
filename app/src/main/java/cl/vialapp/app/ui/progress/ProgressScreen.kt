@@ -79,6 +79,7 @@ fun ProgressScreen(
     }
 
 
+    // Cada licencia tiene sus propios resultados, por eso volvemos a consultar al cambiarla.
     LaunchedEffect(userKey, licenseClass) {
 
         loading = true
@@ -733,6 +734,7 @@ private fun ProgressContent(
                 }
             ) { test ->
 
+                // El botón abre ese mismo examen, no uno nuevo elegido al azar.
                 RecentTestCard(test=test,onRepeat={onRepeatExam(test.testId)})
             }
         }
@@ -1037,6 +1039,7 @@ private fun ProgressCategoryCard(
 
 
 @Composable
+// Mostramos el resultado y dejamos la opción de intentarlo otra vez desde acá.
 private fun RecentTestCard(
     test: RecentTestResponse,
     onRepeat: () -> Unit
