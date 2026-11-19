@@ -100,7 +100,7 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
             Button(onClick={run=DoomEngine(level=5);audio?.play("start")},enabled=unlocked>=5,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF672C31))){
                 Text(if(unlocked>=5)"E1M5 · ASALTO AL SERVIDOR" else "E1M5 · COMPLETA E1M4",fontWeight=FontWeight.Black)
             }
-            Text("E1M5: exploración, salas de servidores, credenciales, cinco secretos y saboteadores humanos.",color=White,fontSize=12.sp)
+            Text("E1M5: pasarelas, siete secretos, archivos para leer y sabotaje a los servidores.",color=White,fontSize=12.sp)
         }
     }else key(engine){DoomRun(engine,store,session,onMenu={run=null},onRetry={run=DoomEngine(level=engine.level);audio?.play("start")},onNext=if(engine.level<5){{run=DoomEngine(level=engine.level+1);audio?.play("start")}}else null,onComplete={unlockNext(engine.level)})}
 }
@@ -144,6 +144,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     fun change(action:()->Unit){action();drain();revision++}
     val tick=revision
     val challenge=e.pending?.question
+    val note=e.activeNote
     val finished=e.finished
     val configuration=LocalConfiguration.current
     val ready=configuration.screenWidthDp>=configuration.screenHeightDp
@@ -154,9 +155,10 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
         if(id==0)null else runCatching{MediaPlayer.create(context,id)?.apply{isLooping=true;setVolume(.24f,.24f)}}.getOrNull()
     }
     DisposableEffect(music){onDispose{runCatching{music?.release()}}}
-    LaunchedEffect(music,musicEnabled,paused,finished,ready,challenge){
+    LaunchedEffect(music,musicEnabled,paused,finished,ready,challenge,note){
         if(music!=null)runCatching{
-            music.setVolume(if(challenge==null).24f else .12f,if(challenge==null).24f else .12f)
+            val volume=if(challenge==null&&note==null).24f else .10f
+            music.setVolume(volume,volume)
             if(musicEnabled&&!paused&&!finished&&ready){if(!music.isPlaying)music.start()}
             else if(music.isPlaying)music.pause()
         }
@@ -175,6 +177,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     BackHandler{
         when{
             e.finished&&!saving->onMenu()
+            note!=null->change{e.closeNote()}
             challenge!=null->change{e.dismissChallenge()}
             exit->{exit=false}
             paused->{clear();paused=false}
@@ -183,12 +186,16 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
     }
     LaunchedEffect(challenge){selectedAnswer=0}
     // Poll one-shot gamepad buttons when the simulation is stopped by pause or a quiz.
-    LaunchedEffect(e,gamepad,ready,paused,challenge,finished,resultVisible,exit){
+    LaunchedEffect(e,gamepad,ready,paused,challenge,note,finished,resultVisible,exit){
         while(true){
             withFrameNanos{}
             if(!ready)continue
             for(action in gamepad.consumeActions()){
                 when {
+                    note!=null -> when(action){
+                        DoomPadAction.USE,DoomPadAction.CANCEL->change{e.closeNote()}
+                        else->Unit
+                    }
                     challenge!=null&&!e.finished -> when(action){
                         DoomPadAction.UP->selectedAnswer=(selectedAnswer-1+challenge.answers.size)%challenge.answers.size
                         DoomPadAction.DOWN->selectedAnswer=(selectedAnswer+1)%challenge.answers.size
@@ -219,15 +226,15 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             }
         }
     }
-    LaunchedEffect(e,ready,paused,challenge,finished){
-        if(!ready||paused||challenge!=null||finished)return@LaunchedEffect
+    LaunchedEffect(e,ready,paused,challenge,note,finished){
+        if(!ready||paused||challenge!=null||note!=null||finished)return@LaunchedEffect
         var last=withFrameNanos{it}
         var carry=0f
-        while(!paused&&e.pending==null&&!e.finished){
+        while(!paused&&e.pending==null&&e.activeNote==null&&!e.finished){
             val now=withFrameNanos{it}
             carry+=((now-last)/1_000_000_000f).coerceIn(0f,.1f);last=now
             var updated=false
-            while(carry>=1f/30f&&!e.finished&&e.pending==null){
+            while(carry>=1f/30f&&!e.finished&&e.pending==null&&e.activeNote==null){
                 val pad=gamepad.snapshot()
                 e.step(1f/30f,DoomInput(
                     forward=(drive.forward+pad.forward).coerceIn(-1f,1f),
@@ -282,11 +289,11 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
         }
         Box(Modifier.weight(1f).fillMaxWidth().border(2.dp,Color(0xFF69645B))){
             AndroidView(factory={DoomView(it).apply{engine=e}},update={view->view.engine=e;if(tick>=0)view.invalidate()},modifier=Modifier.fillMaxSize())
-            if(e.messageTime>0f&&challenge==null&&!finished){
+            if(e.messageTime>0f&&challenge==null&&note==null&&!finished){
                 Text(e.message,Modifier.align(Alignment.TopCenter).padding(top=6.dp).background(Dark.copy(alpha=.84f),RoundedCornerShape(3.dp)).padding(horizontal=9.dp,vertical=4.dp),
                     color=Gold,fontSize=11.sp,textAlign=TextAlign.Center)
             }
-            if(!paused&&!finished&&challenge==null){
+            if(!paused&&!finished&&challenge==null&&note==null){
                 DoomTouchControls(
                     modifier=Modifier.fillMaxSize(),
                     onInput={drive=it},
@@ -300,7 +307,15 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                     Text(hint,Modifier.align(Alignment.Center).offset(y=19.dp).background(Dark.copy(alpha=.83f),RoundedCornerShape(3.dp)).padding(horizontal=7.dp,vertical=3.dp),color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
                 }
                 DoomMap(e,tick,Modifier.align(Alignment.TopEnd).padding(5.dp).size(if(e.level==5)94.dp else 72.dp,if(e.level==5)73.dp else 54.dp))
-                if(e.level==5)Text(e.missionObjective,Modifier.align(Alignment.BottomCenter).padding(bottom=6.dp).background(Dark.copy(alpha=.87f),RoundedCornerShape(3.dp)).padding(horizontal=7.dp,vertical=3.dp),color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
+                if(e.level==5)Column(
+                    Modifier.align(Alignment.BottomCenter).padding(bottom=6.dp)
+                        .background(Dark.copy(alpha=.87f),RoundedCornerShape(3.dp))
+                        .padding(horizontal=7.dp,vertical=3.dp),horizontalAlignment=Alignment.CenterHorizontally
+                ){
+                    Text(e.missionObjective,color=Gold,fontSize=10.sp,fontWeight=FontWeight.Black)
+                    Text("INFORMES ${e.notesRead}/${e.notes.size} · SECRETOS ${e.secrets}/${e.secretTotal}",
+                        color=White.copy(alpha=.85f),fontSize=8.sp)
+                }
                 if(gamepad.connected)Text("MANDO XBOX",Modifier.align(Alignment.TopStart).padding(6.dp).background(Dark.copy(alpha=.78f)).padding(horizontal=5.dp,vertical=3.dp),color=Gold,fontSize=9.sp,fontWeight=FontWeight.Bold)
                 if(e.berserkActive)Text("BERSERK · "+ceil(e.berserkTime).toInt()+" s",Modifier.align(Alignment.TopStart).padding(7.dp).background(Color(0xFF821F17).copy(alpha=.92f),RoundedCornerShape(4.dp)).padding(horizontal=7.dp,vertical=4.dp),color=Color(0xFFFFE5A0),fontSize=12.sp,fontWeight=FontWeight.Black)
                 if(e.level>=3&&e.bossAlive&&e.enemies.any{(it.kind==DoomKind.BOSS||it.kind==DoomKind.MINOXIDIL||it.kind==DoomKind.ADMINISTRATOR)&&it.alert}){
@@ -310,7 +325,7 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
                     }
                 }
             }
-            if(paused&&!finished&&challenge==null){
+            if(paused&&!finished&&challenge==null&&note==null){
                 DoomPauseMenu(confirmExit=exit,
                     onContinue={clear();exit=false;paused=false},
                     onExit={clear();exit=true},
@@ -319,9 +334,32 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             }
 
         }
-        DoomStatusBar(e,tick,!finished&&!paused&&challenge==null,
+        DoomStatusBar(e,tick,!finished&&!paused&&challenge==null&&note==null,
             onSelect={w->change{e.selectWeapon(w)}},onReload={change{e.reload()}})
 
+    }
+    if(note!=null&&!finished){
+        // Full-screen dossier pauses the simulation; no scrolling or firing behind it.
+        Box(Modifier.fillMaxSize().background(Color(0xF2151818)),contentAlignment=Alignment.Center){
+            Column(
+                Modifier.fillMaxWidth(.86f).widthIn(max=560.dp).heightIn(max=350.dp)
+                    .border(2.dp,Color(0xFF756A53),RoundedCornerShape(5.dp))
+                    .background(Color(0xFF292B2A),RoundedCornerShape(5.dp))
+                    .padding(12.dp),
+                verticalArrangement=Arrangement.spacedBy(8.dp)
+            ){
+                Text("ARCHIVO RECUPERADO  ·  VIALAPP",color=Gold,fontSize=11.sp,fontWeight=FontWeight.Black)
+                Text(note.title,color=White,fontSize=18.sp,fontWeight=FontWeight.Black)
+                Column(Modifier.weight(1f,fill=false).verticalScroll(rememberScrollState())){
+                    Text(note.body,color=Color(0xFFE1D9C5),fontSize=14.sp,lineHeight=20.sp)
+                }
+                if(gamepad.connected)Text("A / B PARA CERRAR",color=Gold,fontSize=10.sp)
+                Button(onClick={clear();change{e.closeNote()}},modifier=Modifier.align(Alignment.End),
+                    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF6C4A36))){
+                    Text("CERRAR INFORME",color=White,fontWeight=FontWeight.Bold)
+                }
+            }
+        }
     }
     if(challenge!=null&&!finished){
         // Inline overlay retains Activity focus, allowing Xbox A/D-pad to answer the quiz.
