@@ -14,7 +14,7 @@ internal object DoomStory {
         else->error("Nivel desconocido: $level")
     }
 
-    fun intro(level:Int):List<DoomStoryCard>=when(level){
+    fun intro(level:Int):List<DoomStoryCard> = when(level){
         1->listOf(
             DoomStoryCard("00:17 · ALARMA EN LAS PISTAS",
                 "Una alarma interrumpe las prácticas de VialApp. Los accesos del estacionamiento se cierran y los vehículos quedan atrapados. Carvier pierde contacto con el personal de seguridad."),
@@ -59,7 +59,7 @@ internal object DoomStory {
     }
 
     /** Physical story documents; E1M5 already has its own nine map-specific notes. */
-    fun fieldNotes(level:Int):List<DoomNote>=when(level){
+    fun fieldNotes(level:Int):List<DoomNote> = when(level){
         1->listOf(
             DoomNote(4.5f,2.5f,"01 · PARTE DE SEGURIDAD",
                 "00:11. Los robots solo debían vigilar los conos y registrar infracciones de práctica. Esta noche recibieron instrucciones que no figuran en el servidor local. No obedecen ni el protocolo de apagado."),
