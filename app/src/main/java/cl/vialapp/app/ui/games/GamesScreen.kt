@@ -1,6 +1,8 @@
 package cl.vialapp.app.ui.games
 
 import cl.vialapp.app.ui.games.arcade.GameAudioSetting
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
@@ -70,47 +72,56 @@ fun GamesScreen(
     var gameProgress by remember(userKey){mutableStateOf(progressStore.snapshot())}
     var rallyExams by remember(userKey){mutableIntStateOf(progressStore.rallyExamCount())}
 
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf("") }
-    var sourceTest by remember { mutableStateOf<AssignedTest?>(null) }
+    // Local progress renders immediately. Neither remote progress nor questions
+    // should hold the whole arcade menu in a loading state.
+    var sourceTest by remember(userKey,licenseClass){mutableStateOf<AssignedTest?>(null)}
+    var examLoading by remember(userKey,licenseClass){mutableStateOf(true)}
+    var examProblem by remember(userKey,licenseClass){mutableStateOf("")}
+    var retryExam by remember(userKey,licenseClass){mutableIntStateOf(0)}
 
-    LaunchedEffect(licenseClass) {
-        loading = true
-        error = ""
-
-        try {
-            val token = sessionManager.getAccessToken()
-            if (token == null) {
-                error = "No se encontró una sesión válida."
-                return@LaunchedEffect
-            }
-
-            // Sincronizar XP y progreso con el servidor al entrar a juegos
-            try {
-                gameProgress=progressStore.syncFromBackend(ApiClient.api, token)
+    LaunchedEffect(userKey){
+        val token=sessionManager.getAccessToken()
+        if(token!=null){
+            withTimeoutOrNull(8_000L){
+                val latest=progressStore.syncFromBackend(ApiClient.api,token)
+                gameProgress=latest
                 rallyExams=progressStore.rallyExamCount()
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
-
-            val response = ApiClient.api.getTests(
-                authorization = "Bearer $token",
-                licenseClass = licenseClass,
-                category = null
-            )
-
-            if (response.isSuccessful) {
-                val tests = response.body()?.tests ?: emptyList()
-                sourceTest = tests.firstOrNull { !it.isLocked }
-            } else {
-                error = "No pudimos preparar los minijuegos."
+        }
+    }
+    // Only the classic bald challenge needs an unlocked assigned exam.
+    LaunchedEffect(userKey,licenseClass,retryExam){
+        sourceTest=null
+        examLoading=true
+        examProblem=""
+        try {
+            val token=sessionManager.getAccessToken()
+            if(token==null){
+                examProblem="Inicia sesión para cargar los exámenes del reto clásico."
+            }else{
+                val response=withTimeoutOrNull(7_000L){
+                    ApiClient.api.getTests(
+                        authorization="Bearer $token",
+                        licenseClass=licenseClass,
+                        category=null
+                    )
+                }
+                when{
+                    response==null->examProblem="El examen tardó demasiado en responder. Pulsa para reintentar."
+                    !response.isSuccessful->examProblem="No pudimos cargar los exámenes. Pulsa para reintentar."
+                    else->{
+                        sourceTest=response.body()?.tests?.firstOrNull{!it.isLocked}
+                        if(sourceTest==null)
+                            examProblem="No hay un examen disponible para este reto. Puedes seguir jugando a los demás."
+                    }
+                }
             }
-
-        } catch (e: Exception) {
-            error = "No se pudo conectar con VialApp."
-            e.printStackTrace()
-        } finally {
-            loading = false
+        }catch(cancelled:CancellationException){
+            throw cancelled
+        }catch(e:Exception){
+            examProblem="No fue posible conectar con los exámenes. Pulsa para reintentar."
+        }finally{
+            examLoading=false
         }
     }
 
@@ -299,11 +310,21 @@ fun GamesScreen(
                 record = progressStore.getHighScore(GameProgressStore.BALD_CHALLENGE),
                 title = GameCatalog.title(GameProgressStore.BALD_CHALLENGE),
                 subtitle = "5 rondas · 3 vidas · Pelao Power",
-                description = "Responde rápido, arma combos y llega al BOSS con el modo x2 cargado.",
+                description = when {
+                    sourceTest!=null -> "Responde rápido, arma combos y llega al BOSS con el modo x2 cargado."
+                    examLoading -> "Buscando un examen disponible para este reto. Los demás minijuegos ya pueden jugarse."
+                    else -> examProblem
+                },
                 accent = GamesGreen,
-                enabled = sourceTest != null && !loading,
+                enabled = !examLoading,
+                actionLabel = when {
+                    examLoading -> "PREPARANDO EXAMEN..."
+                    sourceTest!=null -> "JUGAR  ›"
+                    else -> "REINTENTAR  ↻"
+                },
                 onClick = {
-                    sourceTest?.id?.let { onOpenBaldChallenge(it) }
+                    val test=sourceTest
+                    if(test!=null)onOpenBaldChallenge(test.id) else retryExam++
                 }
             )
         }
@@ -350,31 +371,7 @@ fun GamesScreen(
             )
         }
 
-        if (loading) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = GamesBlue
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(text = "Preparando juegos...", color = GamesGray)
-                }
-            }
-        } else if (sourceTest == null) {
-            item {
-                Text(
-                    text = if (error.isNotBlank()) error else "El reto clásico requiere un examen accesible. Los demás juegos están disponibles.",
-                    color = GamesGray,
-                    fontSize = 13.sp
-                )
-            }
-        }
+
     }
 }
 
