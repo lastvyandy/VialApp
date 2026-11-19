@@ -97,8 +97,24 @@ interface VialApi {
     suspend fun getTests(
         @Header("Authorization") authorization: String,
         @Query("clase_licencia") licenseClass: String? = null,
-        @Query("categoria") category: String? = null
+        @Query("categoria") category: String? = null,
+        @Query("history_limit") historyLimit: Int = 50,
+        @Query("history_offset") historyOffset: Int = 0
     ): Response<TestsResponse>
+
+    @GET("tests/datos_tests")
+    suspend fun getExamCatalogCounts(): Response<List<ExamCategoryCount>>
+
+    @GET("users/me/tests")
+    suspend fun getMyExamHistory(
+        @Header("Authorization") authorization: String
+    ): Response<List<ExamHistoryResult>>
+
+    @POST("tests/unlock-extra")
+    suspend fun unlockExtraExam(
+        @Header("Authorization") authorization: String,
+        @Body request: ExtraExamRequest
+    ): Response<AssignedTest>
 
     @POST("tests/{testId}/attempts/start")
     suspend fun startExam(
