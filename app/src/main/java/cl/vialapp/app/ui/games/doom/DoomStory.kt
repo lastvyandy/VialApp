@@ -3,8 +3,29 @@ package cl.vialapp.app.ui.games.doom
 /** Narrative is deliberately independent of Compose so it can be checked by the
  * headless Doom smoke test. Nothing is downloaded while playing. */
 internal data class DoomStoryCard(val heading:String,val text:String)
+internal data class DoomMissionBrief(val subtitle:String,val teaser:String,val objective:String)
+
 
 internal object DoomStory {
+    fun brief(level:Int):DoomMissionBrief=when(level){
+        1->DoomMissionBrief("ROBOTS FUERA DE CONTROL",
+            "Una actualización desconocida convirtió los robots de práctica y drones en enemigos. La señal que los controla viene de fuera del estacionamiento.",
+            "Recupera la credencial y averigua quién está controlando las máquinas.")
+        2->DoomMissionBrief("EL CONVOY DE LAS MÁQUINAS",
+            "El túnel de pruebas está tomado. Los saboteadores lo están utilizando para trasladar unidades de combate hacia otras instalaciones.",
+            "Atravesar el túnel, recuperar los controles y seguir el rastro de las máquinas.")
+        3->DoomMissionBrief("EL ORIGEN DE LA CONSPIRACIÓN",
+            "El centro de control vial guarda órdenes y equipos que no pertenecen a VialApp. Alguien está financiando una operación mucho mayor.",
+            "Romper las defensas de la fortaleza y llegar a la central de mando.")
+        4->DoomMissionBrief("EL EXPERIMENTO DEL CAPITÁN",
+            "La ciudad está colapsada. Una fórmula experimental del Capitán Minoxidil convirtió varios reclutas en criaturas peligrosas.",
+            "Cruza Zona Cero y detén al Capitán Minoxidil.")
+        5->DoomMissionBrief("EL ÚLTIMO RESPALDO",
+            "Las autoescuelas rivales han ocupado el centro de datos. El sistema de licencias y exámenes está a punto de desaparecer.",
+            "Recupera las credenciales, restaura el respaldo y derrota al Administrador Rival.")
+        else->error("Nivel desconocido: $level")
+    }
+
     fun title(level:Int):String=when(level){
         1->"ESTACIONAMIENTO INFERNAL"
         2->"TUNEL BAJO CONTROL"
