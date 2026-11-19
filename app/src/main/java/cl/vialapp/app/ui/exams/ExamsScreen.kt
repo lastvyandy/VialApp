@@ -44,8 +44,9 @@ private fun displayExamName(name:String):String =
     name.replace(Regex("\\s\\d{8}-\\d{4}$"),"").trim()
 
 /**
- * Full exam catalogue navigation; actual exam access and daily limits continue
- * to be enforced by the backend. Catalog statistics never grant exam access.
+ * Acá se pueden revisar los exámenes por categoría y volver a los que ya hizo.
+ * Ojo: ver un examen en el catálogo no significa que esté desbloqueado.
+ * Los permisos y límites los sigue comprobando el servidor.
  */
 @Composable
 fun ExamsScreen(
@@ -110,6 +111,7 @@ fun ExamsScreen(
         }catch(e:CancellationException){throw e}
         catch(_:Exception){ /* The assigned list still works without catalog counts. */ }
     }
+    // Traemos los exámenes asignados por páginas. No hace falta descargar todo al entrar.
     LaunchedEffect(license,selected,reload,page){
         val initial=page==0
         if(initial){testsLoading=true;tests=emptyList()}else nextLoading=true
@@ -142,8 +144,8 @@ fun ExamsScreen(
         finally{testsLoading=false;nextLoading=false}
     }
 
-    // Read-only full catalog. Older deployed backends may not yet have this
-    // endpoint; keep the assigned-exams list functional as a fallback.
+    // El catálogo completo trae nombres y categorías, no las preguntas protegidas.
+    // Si el servidor todavía no tiene esta función, igual mostramos los exámenes asignados.
     LaunchedEffect(license,selected,catalogPage,reload){
         if(selected==null)return@LaunchedEffect
         catalogLoading=true
@@ -174,6 +176,7 @@ fun ExamsScreen(
         finally{catalogLoading=false}
     }
 
+    // El historial es otra cosa: acá queremos ver los intentos anteriores, incluso si fueron repetidos.
     LaunchedEffect(tab,reload){
         if(tab!="history")return@LaunchedEffect
         historyLoading=true
@@ -193,6 +196,7 @@ fun ExamsScreen(
         finally{historyLoading=false}
     }
 
+    // Si ya hay un examen empezado, no abrimos otro por encima sin avisar.
     fun openExam(id:Int){
         if(activeAttempt!=null&&activeAttempt?.testId!=id)pendingTest=id
         else onExamClick(id)
@@ -216,6 +220,7 @@ fun ExamsScreen(
     val assignedCounts=remember(tests){
         tests.groupingBy{groupName(it.categoria)}.eachCount()
     }
+    // Juntamos las categorías del catálogo con las que el alumno ya tiene asignadas.
     val categoryList=remember(catalogue,tests,license){
         val fromCatalog=catalogue.filter{classCode(it.licenseClass)==license}
             .groupBy{groupName(it.categoria)}
