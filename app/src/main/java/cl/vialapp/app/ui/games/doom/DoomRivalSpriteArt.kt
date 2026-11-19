@@ -88,6 +88,31 @@ internal object DoomRivalSpriteArt {
         } finally {
             inflater.end()
         }
-        return IntArray(bytes.size) { palette[bytes[it].toInt() and 0xff] }
+        val out=IntArray(bytes.size) { palette[bytes[it].toInt() and 0xff] }
+        // The original AI illustrations were on white paper. The extracted idle
+        // poses retained a few one-pixel white halos around dark silhouettes.
+        // Clean them ONCE at decode, not inside the 30fps render loop.
+        for(i in out.indices){
+            val color=out[i]
+            if(color==0)continue
+            val r=(color ushr 16)and 255
+            val g=(color ushr 8)and 255
+            val b=color and 255
+            val minimum=minOf(r,g,b)
+            val maximum=maxOf(r,g,b)
+            if(minimum<=210||maximum-minimum>=45)continue
+            val x=i and 63;val y=i shr 6
+            var bordersTransparency=false
+            for(oy in -1..1)for(ox in -1..1){
+                if(ox==0&&oy==0)continue
+                val xx=x+ox;val yy=y+oy
+                if(xx !in 0..63||yy !in 0..63||out[yy*64+xx]==0)
+                    bordersTransparency=true
+            }
+            // White specks at the outline are background, internal white
+            // highlights become muted metallic grey rather than glowing dots.
+            out[i]=if(bordersTransparency)0 else 0xff8b9797.toInt()
+        }
+        return out
     }
 }
