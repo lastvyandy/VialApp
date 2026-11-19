@@ -71,6 +71,7 @@ fun LearningPathScreen(
     var error by remember(userKey){mutableStateOf("")}
     var refresh by remember(userKey){mutableIntStateOf(0)}
     val listState=rememberLazyListState()
+    // La ruta se vuelve a pedir si cambia la licencia, pero el progreso sigue guardado en su cuenta.
     LaunchedEffect(userKey,licenseClass,refresh){
         loading=true;error=""
         try{
@@ -90,6 +91,7 @@ fun LearningPathScreen(
         catch(e:Exception){error=readError(e)}
         finally{loading=false}
     }
+    // Clase C tiene su propio recorrido. No queremos que parezca un apéndice del de autos.
     val motorcycle=isMotorcycleLicense(licenseClass)
     val motorcycleStages=chapters.count{it.id.startsWith("moto-")}
     val next=nextChapterIndex(chapters)
@@ -148,6 +150,7 @@ fun LearningPathScreen(
             }
             Spacer(Modifier.height(14.dp))
         }
+        // Si el backend todavía no tiene las etapas de moto, lo mostramos claramente.
         if(motorcycle)item(key="class_c_notice"){
             Surface(color=c.primaryContainer,shape=RoundedCornerShape(16.dp)){
                 Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
