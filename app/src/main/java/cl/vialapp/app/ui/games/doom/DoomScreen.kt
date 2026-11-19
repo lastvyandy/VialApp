@@ -77,34 +77,12 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
     val audio=LocalGameAudio.current
     if(engine==null&&introLevel==0){
         BackHandler{onBack()}
-        Column(Modifier.fillMaxSize().background(Dark).verticalScroll(rememberScrollState()).padding(18.dp),
-            verticalArrangement=Arrangement.spacedBy(12.dp)){
-            TextButton(onClick=onBack){Text("‹ Minijuegos",color=Gold)}
-            Text("DON PELAO",fontSize=36.sp,fontWeight=FontWeight.Black,color=Red)
-            Text("OPERACIÓN CAOS VIAL",fontSize=23.sp,fontWeight=FontWeight.Black,color=Gold)
-            DoomPreview(Modifier.fillMaxWidth().aspectRatio(16f/9f))
-            Text("EPISODIO 01 · CINCO SECTORES",color=Gold,fontWeight=FontWeight.Bold)
-            Text("Cinco sectores conectados por un sabotaje. Robots reprogramados, drones, experimentos capilares y autoescuelas rivales: Don Pelao tendrá que descubrir qué ocurre y recuperar VialApp.",color=White)
-            Text("Pantalla: stick izquierdo para moverse, desliza para mirar, mantén pulsado para disparar y toca las puertas para usar.",color=White,fontSize=13.sp)
-            Text("Mando Xbox Bluetooth: stick izquierdo mover · derecho mirar · RT disparar o golpear · LT puños berserk · A usar · X recargar · Y/RB cambiar arma · LB arma anterior · START pausar.",color=Gold,fontSize=12.sp)
-            Text("Récord: "+store.getHighScore(GameProgressStore.PELAO_DOOM)+" · Prototipo jugable",color=Gold,fontSize=12.sp)
-            Button(onClick={showStory(1)},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
-                Text("E1M1 · ESTACIONAMIENTO INFERNAL",fontWeight=FontWeight.Black,color=Color.White)
-            }
-            Button(onClick={showStory(2)},enabled=unlocked>=2,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
-                Text(if(unlocked>=2)"E1M2 · TUNEL BAJO CONTROL" else "E1M2 · COMPLETA E1M1",fontWeight=FontWeight.Black)
-            }
-            Button(onClick={showStory(3)},enabled=unlocked>=3,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
-                Text(if(unlocked>=3)"E1M3 · LA FORTALEZA VIAL" else "E1M3 · COMPLETA E1M2",fontWeight=FontWeight.Black)
-            }
-            Button(onClick={showStory(4)},enabled=unlocked>=4,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF187D86))){
-                Text(if(unlocked>=4)"E1M4 · ZONA CERO CAPILAR" else "E1M4 · COMPLETA E1M3",fontWeight=FontWeight.Black)
-            }
-            Button(onClick={showStory(5)},enabled=unlocked>=5,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF672C31))){
-                Text(if(unlocked>=5)"E1M5 · ASALTO AL SERVIDOR" else "E1M5 · COMPLETA E1M4",fontWeight=FontWeight.Black)
-            }
-            Text("E1M5: instalaciones tomadas, siete secretos, informes ocultos y exámenes de conducción.",color=White,fontSize=12.sp)
-        }
+        DoomMissionMenu(
+            unlocked=unlocked,
+            record=store.getHighScore(GameProgressStore.PELAO_DOOM),
+            onBack=onBack,
+            onStart={selected->if(selected<=unlocked)showStory(selected)}
+        )
     }else if(engine==null){
         DoomStoryScreen(
             level=introLevel,
