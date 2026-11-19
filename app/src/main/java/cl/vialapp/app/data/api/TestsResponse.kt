@@ -55,3 +55,27 @@ data class AssignedTest(
     @SerializedName("locked_reason")
     val lockedReason: String?
 )
+
+/** Catalog counts contain metadata only; they do not grant access to exam questions. */
+data class ExamCategoryCount(
+    @SerializedName("clase_licencia") val licenseClass: String,
+    val categoria: String,
+    val cantidad: Int
+)
+
+/** One completed attempt, independent of whether its exam is still assigned. */
+data class ExamHistoryResult(
+    val id: Int,
+    @SerializedName("test_id") val testId: Int,
+    val categoria: String?,
+    @SerializedName("clase_licencia") val licenseClass: String?,
+    val puntaje: Int?,
+    val correctas: Int?,
+    @SerializedName("total_preguntas") val totalQuestions: Int?,
+    val fecha: String?
+)
+
+data class ExtraExamRequest(
+    @SerializedName("clase_licencia") val licenseClass: String,
+    val categoria: String
+)
