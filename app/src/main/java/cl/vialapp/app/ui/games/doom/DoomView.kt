@@ -27,7 +27,6 @@ internal class DoomView(context:Context):View(context){
                 val ratio=if(width>0&&height>0)height.toFloat()/width else 224f/400f
                 h=(w*ratio).roundToInt().coerceIn(112,300)
                 pixels=IntArray(w*h);depth=FloatArray(w)
-                riserDepth=FloatArray(w*h){Float.POSITIVE_INFINITY}
                 bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
                 lowCanvas=Canvas(bitmap)
             }
@@ -37,7 +36,6 @@ internal class DoomView(context:Context):View(context){
     private var h=224
     private var pixels=IntArray(w*h)
     private var depth=FloatArray(w)
-    private var riserDepth=FloatArray(w*h) { Float.POSITIVE_INFINITY }
     private var bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
     private var lowCanvas=Canvas(bitmap)
     private val artFilter=Paint().apply{isAntiAlias=false;isFilterBitmap=false}
@@ -46,7 +44,7 @@ internal class DoomView(context:Context):View(context){
         if(width<=0||height<=0)return
         val next=(w*height.toFloat()/width).roundToInt().coerceIn(112,300)
         if(next==h)return
-        h=next;pixels=IntArray(w*h);riserDepth=FloatArray(w*h) { Float.POSITIVE_INFINITY }
+        h=next;pixels=IntArray(w*h)
         bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);lowCanvas=Canvas(bitmap)
     }
     private val brush=Paint().apply{isAntiAlias=false;isFilterBitmap=false}
@@ -84,7 +82,7 @@ internal class DoomView(context:Context):View(context){
         val moving=hypot(e.x-previousX,e.y-previousY)>.001f
         previousX=e.x;previousY=e.y
         val horizon=h*.5f+e.lookPitch*h*.30f+(if(e.level==5)0f else e.cameraElevation*17f)+(if(moving)sin(e.walk*1.65f)*1.1f else 0f)+e.blastFlash*sin(e.elapsed*70f)*5f+e.recoil*1.6f
-        val eyeHeight=if(e.level==5).56f+e.cameraElevation else .5f
+        val eyeHeight=if(e.level==5).56f else .5f
         val muzzle=(if(e.shotFlash>0f).21f else 0f)+e.blastFlash*1.1f
         for(y in 0 until h){
             val rowDistance=(focal*(if(e.level==5)eyeHeight else .5f))/abs(y+.5f-horizon).coerceAtLeast(.5f)
@@ -94,25 +92,6 @@ internal class DoomView(context:Context):View(context){
             val isFloor=y>=horizon
             val tex=when{e.level==5&&isFloor->art.serverFloor;e.level==5->art.serverCeiling;e.level==4&&isFloor->art.roadFloor;isFloor->art.floor;else->art.ceiling}
             for(x in 0 until w){
-                if(e.level==5&&isFloor){
-                    // Predict the floor tile using ordinary row-casting, then correct
-                    // only when it is raised. No 4x-per-pixel ray iterations.
-                    val rayX=ca+planeX*(2f*x/w-1f)
-                    val rayY=sa+planeY*(2f*x/w-1f)
-                    val baseX=e.x+rowDistance*rayX
-                    val baseY=e.y+rowDistance*rayY
-                    val firstHeight=e.floorHeight(baseX,baseY)
-                    val fraction=(eyeHeight-firstHeight).coerceAtLeast(.06f)/eyeHeight
-                    var fx2=e.x+(baseX-e.x)*fraction
-                    var fy2=e.y+(baseY-e.y)*fraction
-                    val correctedHeight=e.floorHeight(fx2,fy2)
-                    if(correctedHeight!=firstHeight){
-                        val correction=(eyeHeight-correctedHeight).coerceAtLeast(.06f)/eyeHeight
-                        fx2=e.x+(baseX-e.x)*correction
-                        fy2=e.y+(baseY-e.y)*correction
-                    }
-                    fx=fx2;fy=fy2
-                }
                 val tx=(fx*64).toInt() and 63;val ty=(fy*64).toInt() and 63
                 val cx=floor(fx).toInt();val cy=floor(fy).toInt()
                 val stripe=isFloor&&((cx in 1..7&&cy==3)||(cx in 9..14&&cy==11))&&ty in 29..32
@@ -120,34 +99,16 @@ internal class DoomView(context:Context):View(context){
                 val avenueLine=e.level==4&&isFloor&&(cy==5||cy==14||cy==22)&&ty in 29..33
                 val zebra=e.level==4&&isFloor&&(cy==8||cy==12||cy==20)&&cx%3!=0&&tx in 5..58&&ty in 5..55
                 val roadside=e.level==4&&isFloor&&(cx==1||cx==32||cy==1||cy==25)&&tx in 3..60
-                // Distinct horizontal metal treads make E1M5 stairs readable.
-                // Walkway plates are not striped like stair risers.
-                val stepTier=if(e.level==5&&isFloor)e.stairTier(cx,cy)else 0
-                val serverFlight=e.level==5&&isFloor&&stepTier>0&&(
-                    cx in 12..15&&cy in 6..10 ||
-                    cx in 24..27&&cy==6 ||
-                    cx in 31..34&&cy in 18..23 ||
-                    cx in 15..17&&cy in 30..35)
-                val flightCoord=if(cx in 24..27&&cy==6)tx else ty
+                // Keep E1M4's old street-step markings; E1M5 is fully flat.
                 val stair=e.level==4&&isFloor&&e.stairTier(cx,cy)>0
                 val riser=stair&&(ty in 0..9||ty in 30..38)
                 val tread=stair&&(ty in 10..13||ty in 39..42)
                 val worn=stair&&((tx+y/5)and 15)<3
-                val catwalk=e.level==5&&isFloor&&stepTier>=4&&!serverFlight
                 val color=if(e.level==4&&!isFloor){
                     val yy=(y*64/horizon.toInt().coerceAtLeast(1)).coerceIn(0,63)
                     val xx=((x*2+(e.angle*150f).toInt()) and 511)
                     art.sky[yy*512+xx]
-                }else if(serverFlight){
-                    when {
-                        flightCoord in 0..5 -> 0xff99764a.toInt() // worn safety lip
-                        flightCoord in 6..11 -> 0xff1d262a.toInt()
-                        flightCoord in 51..55 -> 0xff57635d.toInt()
-                        else -> 0xff3b4648.toInt()
-                    }
-                }else if(riser)0xff202a30.toInt() else if(tread)0xffa36d35.toInt() else if(worn)0xff775b45.toInt()
-                else if(catwalk&&(tx%12 in 0..1||ty%12 in 0..1))0xff606b66.toInt()
-                else if(catwalk)0xff292f31.toInt() else if(zebra)0xffa7a7a0.toInt() else if(avenueLine)0xffbc793a.toInt()
+                }else if(riser)0xff202a30.toInt() else if(tread)0xffa36d35.toInt() else if(worn)0xff775b45.toInt() else if(zebra)0xffa7a7a0.toInt() else if(avenueLine)0xffbc793a.toInt()
                 else if(roadside)0xffa9ada0.toInt() else if(fortressStripe)0xffbc8234.toInt() else if(e.level==3&&isFloor&&cx>=21&&cy>=16&&((tx in 1..4)||(ty in 1..4)))0xff8d3e24.toInt() else if(stripe)0xffad8d38.toInt() else if(isFloor&&cx>=16&&cy>=8&&((tx in 5..8)||(ty in 5..8)))0xff553630.toInt() else if(isFloor&&cx>=9&&cy<7&&cx<=14&&e.level!=5&&ty in 1..3)0xff627064.toInt()
                 else if(e.level==5&&isFloor&&cx in 2..9&&cy in 7..10){
                     // Toxic cooling channels with raised rusty walkways and Supaplex-green fluid.
@@ -163,19 +124,13 @@ internal class DoomView(context:Context):View(context){
             val ray=e.ray(e.x,e.y,ca+planeX*p,sa+planeY*p)
             val d=ray.distance;depth[x]=d
             val wallHeight=if(e.level==5)1.65f else 1f
-            val wallBase=if(e.level==5){
-                // Anchor wall textures to the floor on the player's side of the
-                // wall. Raised platforms must not make the walls sink below them.
-                val contact=(d-.035f).coerceAtLeast(.01f)
-                e.floorHeight(e.x+contact*(ca+planeX*p),e.y+contact*(sa+planeY*p))
-            }else 0f
             val lineHeight=(focal*wallHeight/d).coerceAtMost(5000f)
-            val top=if(e.level==5)horizon+focal*(eyeHeight-wallBase-wallHeight)/d else horizon-lineHeight*.5f
+            val top=if(e.level==5)horizon+focal*(eyeHeight-wallHeight)/d else horizon-lineHeight*.5f
             val tx=(ray.u*64).toInt().coerceIn(0,63)
             val door=if(ray.cell==5)e.doors.firstOrNull{it.x==ray.mapX&&it.y==ray.mapY} else null
             val tex=when{
                 e.level==5&&door?.kind==4->art.serverWalls[3]
-                e.level==5&&door!=null->art.serverGates[door.kind.coerceIn(0,8)]
+                e.level==5&&door!=null->art.serverWalls[1] // Smaller inset gate drawn over the frame below
                 e.level==5->art.serverWalls[(ray.cell-1).coerceIn(0,5)]
                 e.level==4&&door?.kind==4->art.roadWalls[4]
                 e.level==4&&door!=null->art.roadGates[door.kind.coerceIn(0,3)]
@@ -183,17 +138,28 @@ internal class DoomView(context:Context):View(context){
                 door!=null->art.doors[door.kind.coerceIn(0,3)]
                 else->art.walls[(ray.cell-1).coerceIn(0,5)]
             }
+            val insetServerDoor=e.level==5&&door!=null&&door.kind!=4
+            val gateTexture=if(insetServerDoor)art.serverGates[door!!.kind.coerceIn(0,8)]else null
+            val gateU=((tx-14)*64/36).coerceIn(0,63)
             val emergency=if(e.level==5)(.90f+.10f*sin(e.elapsed*2.5f+(ray.mapX+ray.mapY)*.19f))else 1f
             val light=(((when(e.level){4->.83f;5->.63f;else->1.08f})+muzzle)/(1f+d*.17f)*(if(ray.side==1).76f else 1f)*emergency).coerceIn(.12f,1.15f)
             for(y in top.toInt().coerceIn(0,h-1)..(top+lineHeight).toInt().coerceIn(0,h-1)){
                 val ty=((y-top)*64/lineHeight).toInt().coerceIn(0,63)
-                val color=tex[ty*64+tx]
+                val color=if(insetServerDoor){
+                    when {
+                        tx in 14..49&&ty in 24..63 ->
+                            gateTexture!![((ty-24)*64/40).coerceIn(0,63)*64+gateU]
+                        (tx in 11..13||tx in 50..52)&&ty>=21 ->
+                            if(ty%12<=2)0xff7d7769.toInt() else 0xff343c3d.toInt()
+                        ty in 21..23&&tx in 11..52 -> 0xff77786e.toInt()
+                        else -> tex[ty*64+tx]
+                    }
+                }else tex[ty*64+tx]
                 val edge=.86f+.14f*(1f-abs(x-w*.5f)/(w*.5f))
-                val lit=if(ray.cell==5&&ty in 8..24&&tx in 17..47)max(light,.66f)else light
+                val lit=if(insetServerDoor&&ty in 31..43&&tx in 20..42)max(light,.64f)else light
                 pixels[y*w+x]=shade(color,lit*edge)
             }
         }
-        if(e.level==5)drawServerStairRisers(e,ca,sa,planeX,planeY,focal,horizon,eyeHeight)
         sprites.clear()
         for(p in e.decor)if(hypot(p.x-e.x,p.y-e.y)>.31f){
             // World props are scenery, not upright enemies. Preserve their silhouette in perspective.
@@ -220,17 +186,17 @@ internal class DoomView(context:Context):View(context){
                 DoomDecorKind.SIGN_STOP,DoomDecorKind.SIGN_YIELD,DoomDecorKind.SIGN_PEDESTRIAN->.71f
                 else->1f
             }
-            val lift=if(e.level==5)e.floorHeight(p.x,p.y) else p.lift
+            val lift=if(e.level==5)0f else p.lift
             sprites+=Sprite(p.x,p.y,size,art.decor[p.kind.ordinal],false,lift,aspect)
         }
         for(n in e.notes)if(!n.read){
-            val lift=if(e.level==5)e.floorHeight(n.x,n.y) else 0f
+            val lift=0f
             sprites+=Sprite(n.x,n.y,.48f,art.decor[DoomDecorKind.DOCUMENT.ordinal],false,.05f+lift)
         }
-        for(b in e.explosives)if(!b.exploded)sprites+=Sprite(b.x,b.y,if(b.crate).70f else .77f,art.explosive[if(b.crate)1 else 0],false,if(e.level==5)e.floorHeight(b.x,b.y)else 0f)
+        for(b in e.explosives)if(!b.exploded)sprites+=Sprite(b.x,b.y,if(b.crate).70f else .77f,art.explosive[if(b.crate)1 else 0],false,0f)
         for(b in e.explosions){val frame=((.52f-b.time)/.52f*6).toInt().coerceIn(0,5);sprites+=Sprite(b.x,b.y,1.05f+frame*.13f,art.explosion[frame],true,.12f)}
         for(l in e.loot)if(!l.taken){
-            val lift=if(e.level==5)e.floorHeight(l.x,l.y) else 0f
+            val lift=0f
             sprites+=Sprite(l.x,l.y,if(l.kind==DoomLootKind.BERSERK).68f else .46f,art.loot[l.kind.ordinal],false,lift)
         }
         for(a in e.enemies){
@@ -238,13 +204,13 @@ internal class DoomView(context:Context):View(context){
                 val phase=if(a.moving)(a.walkPhase.toInt() and 3)else 0
                 val size = enemySpriteSize(a.kind, e.level)
                 val pose=if(a.attackFlash>0f)art.enemyAttack[a.kind.ordinal] else art.enemyFrames[a.kind.ordinal][phase]
-                val platform=if(e.level==5)e.floorHeight(a.x,a.y) else 0f
+                val platform=0f
                 val hover=if(a.kind==DoomKind.DRONE).25f+sin(e.elapsed*4+a.id)*.07f else 0f
                 sprites+=Sprite(a.x,a.y,size,pose,a.flash>0f,platform+hover)
             }else{
                 val frame=(a.deathAge/.12f).toInt().coerceIn(0,5)
                 val size = enemySpriteSize(a.kind, e.level)
-                val platform=if(e.level==5)e.floorHeight(a.x,a.y) else 0f
+                val platform=0f
                 val hover=if(a.kind==DoomKind.DRONE)(.25f*(1f-a.deathAge/.55f)).coerceAtLeast(0f)else 0f
                 sprites+=Sprite(a.x,a.y,size,art.enemyDeath[a.kind.ordinal][frame],frame==0,platform+hover)
             }
@@ -267,7 +233,7 @@ internal class DoomView(context:Context):View(context){
                 for(yy in top.toInt().coerceAtLeast(0)..bottom.toInt().coerceAtMost(h-1)){
                     val ty=((yy-top)*64/size).toInt().coerceIn(0,63)
                     val color=s.art[ty*64+tx]
-                    if(color ushr 24!=0&&(e.level!=5||z<riserDepth[yy*w+xx]))
+                    if(color ushr 24!=0)
                         pixels[yy*w+xx]=shade(color,if(s.hit)1.45f else light)
                 }
             }
@@ -314,66 +280,6 @@ internal class DoomView(context:Context):View(context){
                 Log.d("PelaoDoomPerf","E1M5 rendering avg %.1f ms (%d frames, %dx%d)".format(
                     java.util.Locale.US,avgMs,profileFrameCount,w,h))
                 profileWindowStart=ended;profileFrameNanos=0L;profileFrameCount=0
-            }
-        }
-    }
-    /**
-     * Draw visible stair edges using grid-boundary DDA. Previous implementation
-     * ray-marched every 0.045 world units in every column (very expensive on
-     * phones) and drew bright striped 'barricades' over the hallway.
-     *
-     * This version checks at most one tile edge per grid crossing, draws only
-     * faces rising away from the player and keeps a small pixel depth buffer.
-     */
-    private fun drawServerStairRisers(e:DoomEngine,ca:Float,sa:Float,planeX:Float,planeY:Float,
-                                     focal:Float,horizon:Float,eyeHeight:Float){
-        riserDepth.fill(Float.POSITIVE_INFINITY)
-        for(screenX in 0 until w){
-            val rayX=ca+planeX*(2f*screenX/w-1f)
-            val rayY=sa+planeY*(2f*screenX/w-1f)
-            val deltaX=if(abs(rayX)<.00001f)1e8f else abs(1f/rayX)
-            val deltaY=if(abs(rayY)<.00001f)1e8f else abs(1f/rayY)
-            val stepX=if(rayX<0f)-1 else 1
-            val stepY=if(rayY<0f)-1 else 1
-            var mapX=floor(e.x).toInt()
-            var mapY=floor(e.y).toInt()
-            var distX=(if(stepX<0)e.x-mapX else mapX+1-e.x)*deltaX
-            var distY=(if(stepY<0)e.y-mapY else mapY+1-e.y)*deltaY
-            var previous=e.stairTier(mapX,mapY)
-            val far=depth[screenX].coerceAtMost(17f)
-            var steps=0
-            while(steps++<40){
-                val distance:Float
-                if(distX<distY){
-                    distance=distX;distX+=deltaX;mapX+=stepX
-                }else{
-                    distance=distY;distY+=deltaY;mapY+=stepY
-                }
-                if(distance>=far||mapX !in 0 until e.width||mapY !in 0 until e.height)break
-                val tier=e.stairTier(mapX,mapY)
-                if(tier>previous&&distance>.23f){
-                    val top=(horizon+focal*(eyeHeight-tier*.10f)/distance).toInt()
-                    val bottom=(horizon+focal*(eyeHeight-previous*.10f)/distance).toInt()
-                    if(top<=bottom&&bottom>=0&&top<h){
-                        val first=top.coerceAtLeast(0)
-                        val last=bottom.coerceAtMost(h-1)
-                        // Industrial steel: muted riser and a thin worn copper lip.
-                        val light=(.71f/(1f+distance*.035f)).coerceAtLeast(.24f)
-                        for(py in first..last){
-                            val idx=py*w+screenX
-                            if(distance<riserDepth[idx]){
-                                val color=when{
-                                    py>=bottom-2 -> 0xff76583c.toInt()
-                                    screenX%11==0 -> 0xff454d4b.toInt()
-                                    else -> 0xff313a3e.toInt()
-                                }
-                                pixels[idx]=shade(color,light)
-                                riserDepth[idx]=distance
-                            }
-                        }
-                    }
-                }
-                previous=tier
             }
         }
     }
