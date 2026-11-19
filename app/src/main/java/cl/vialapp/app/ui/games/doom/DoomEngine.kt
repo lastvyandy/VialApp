@@ -61,9 +61,6 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     val width=when(level){3->30;4->34;5->46;else->22}
     val height=when(level){3->23;4->27;5->39;else->17}
     private val grid=IntArray(width*height){1}
-    // 2.5D data is immutable after map generation. Cache tiers once, rather than
-    // re-evaluating the stair layout thousands of times in the renderer.
-    private val serverTiers=ByteArray(width*height)
     private val random=Random(seed)
     val doors=mutableListOf<DoomDoor>()
     val enemies=mutableListOf<DoomEnemy>()
@@ -492,7 +489,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         ))grid[yy*width+xx]=when((xx+yy)%3){0->2;1->3;else->4}
         connections()
 
-        // Open the actual stairs and upper landings instead of hiding them inside rack pillars.
+        // Keep these gallery and warehouse passages free of obstructing pillars.
         for((xx,yy) in listOf(15 to 4,15 to 5,18 to 30,26 to 9))
             if(grid[yy*width+xx]!=5)grid[yy*width+xx]=0
 
@@ -558,10 +555,10 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             gate(cx,cy+entranceDy,4)
         }
         secretPocket(4,4)   // coolant: Berserk
-        secretPocket(20,4,-1)  // upper gallery secret; reached from balcony
+        secretPocket(20,4,-1)  // hidden server gallery store room
         secretPocket(38,5)  // exams: chip/disc Supaplex easter egg
         secretPocket(39,19) // archives: armor
-        secretPocket(21,29,-1) // launcher above the warehouse stairs
+        secretPocket(21,29,-1) // launcher hidden behind warehouse racks
         secretPocket(5,34)  // forgotten lower storage / medical supplies
         secretPocket(39,10) // rival instructor's hidden exam orders
 
@@ -649,13 +646,13 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         report(12.5f,15.5f,"02 · ALERTA DE CARVIER",
             "Las solicitudes de licencias están congeladas. Afuera hay choques en los cruces y las radios de tránsito no paran de sonar. Don Pelao, entra por mantenimiento. La escopeta quedó en el acceso, pero las armas pesadas siguen encerradas.")
         report(23.5f,4.5f,"03 · TURNO DEL DATA CENTER",
-            "No dañaron los servidores por accidente. Primero cortaron la replicación, después alteraron las credenciales del nodo de exámenes. Subí por la escalera de servicio para revisar los racks superiores. Hay sangre en la pasarela.")
+            "No dañaron los servidores por accidente. Primero cortaron la replicación, después alteraron las credenciales del nodo de exámenes. Revisé los racks del fondo, detrás de una pared falsa. Hay sangre junto al pasillo de servicio.")
         report(6.5f,6.5f,"04 · SISTEMA DE REFRIGERACIÓN",
             "El refrigerante se está filtrando por las rejillas. Las puertas falsas de este sector se instalaron para guardar suministros de emergencia. Si todo falla, busca el interruptor que permite recuperar una copia verificada.")
         report(34.5f,11.5f,"05 · CORREO INTERCEPTADO",
             "De: Coordinación de Escuelas Rivales. Orden: mantener VialApp desconectada hasta que nuestras sedes recuperen a sus alumnos. No destruir el núcleo antes de copiar los registros; el Administrador quiere quedarse con ellos.")
         report(37.5f,16.5f,"06 · BITÁCORA DE RESPALDOS",
-            "La planta secundaria puede reactivar el servicio, pero primero hay que aislar el equipo comprometido. Encendí la alimentación del archivo. Escuché a varios instructores subir por la pasarela metálica.")
+            "La planta secundaria puede reactivar el servicio, pero primero hay que aislar el equipo comprometido. Encendí la alimentación del archivo. Escuché a varios instructores entrar por el corredor técnico.")
         report(11.5f,29.5f,"07 · ALMACÉN OLVIDADO",
             "En este depósito hay un muro hueco. Alguien escondió allí un lanzacohetes por si la sala central caía. No aparece en los planos. También se guardaron botiquines en el rincón occidental.")
         report(39.5f,10.5f,"08 · ÓRDENES SECRETAS",
@@ -713,11 +710,6 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             25.5f to 9.2f,39.5f to 3.2f,30.8f to 22.0f,
             11.2f to 32.0f,18.5f to 28.0f,42.8f to 28.4f
         ))prop(DoomDecorKind.FIBER_CABLE,xx,yy,.40f)
-        // Railings outline two overhead service platforms. The ramps remain walkable.
-        // Handrails stand ON the raised platforms. Their geometry is not levitating.
-        for(xx in 17..25)if(xx!=20)prop(DoomDecorKind.RAILING,xx+.5f,5.8f,.34f)
-        for(xx in 35..39)prop(DoomDecorKind.RAILING,xx+.5f,18.3f,.34f)
-        for(xx in 18..19)prop(DoomDecorKind.RAILING,xx+.5f,29.4f,.34f)
         // Ceiling panels already contain the warning lights. Do not place floating
         // lamp billboards in mid-air; they looked like disconnected items.
         for((xx,yy) in listOf(16.5f to 8.5f,25.5f to 7.5f,
@@ -727,27 +719,9 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         x=3.5f;y=18.5f;angle=0f
         grid[exitY*width+exitX]=6
         message="Carvier: Las escuelas rivales tomaron el centro de datos. Busca la escopeta y lee los informes."
-        for(yy in 0 until height)for(xx in 0 until width)
-            serverTiers[yy*width+xx]=serverRawTier(xx,yy).toByte()
     }
-    /** Immutable stage layout. Only its values, not this function, are used per frame. */
-    private fun serverRawTier(cx:Int,cy:Int):Int = when {
-        // Gallery: two flights reach the upper rack deck and the blue-key gate.
-        cx in 12..15&&cy in 6..10 -> (10-cy).coerceIn(0,4)
-        cx in 24..27&&cy==6 -> (28-cx).coerceIn(0,4)
-        cx in 14..26&&cy in 2..5 -> 4
-        // Archives: raised maintenance bay, with supplies and sightlines above.
-        cx in 31..34&&cy in 18..23 -> (23-cy).coerceIn(0,5)
-        cx in 34..39&&cy in 15..18 -> 5
-        // Warehouse: upper storage balcony leads to the secret launcher.
-        cx in 15..17&&cy in 30..35 -> (35-cy).coerceIn(0,5)
-        cx in 17..23&&cy in 27..30 -> 5
-        else->0
-    }
-    /** Cached stair tiers, shared by navigation, floor projection and collectibles. */
+    /** E1M5 is deliberately flat: no hidden steps, ledges or height collision. */
     fun stairTier(cx:Int,cy:Int):Int {
-        if(level==5)return if(cx in 0 until width&&cy in 0 until height)
-            serverTiers[cy*width+cx].toInt() else 0
         if(level!=4)return 0
         return when {
             cx in 12..16&&cy in 6..9 -> (cy-5).coerceIn(0,4)
@@ -756,20 +730,11 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             else->0
         }
     }
-    /** E1M5: query a cached tile; no map searches or dynamic allocations. */
-    fun floorHeight(px:Float,py:Float):Float {
-        if(level!=5)return 0f
-        val cx=floor(px).toInt();val cy=floor(py).toInt()
-        return if(cx in 0 until width&&cy in 0 until height)
-            serverTiers[cy*width+cx].toInt()*.10f else 0f
-    }
+    fun floorHeight(px:Float,py:Float):Float = 0f
 
-    private fun canMove(fromX:Float,fromY:Float,toX:Float,toY:Float,r:Float):Boolean {
-        if(solid(toX,toY,r))return false
-        // A vertical drop/ledge is not a staircase. The player and rivals must
-        // approach high balconies via the actual risers, never teleport through a wall.
-        return level!=5||abs(floorHeight(toX,toY)-floorHeight(fromX,fromY))<=.115f
-    }
+    private fun canMove(fromX:Float,fromY:Float,toX:Float,toY:Float,r:Float):Boolean =
+        !solid(toX,toY,r)
+
     fun cell(cx:Int,cy:Int):Int{
         if(cx !in 0 until width||cy !in 0 until height)return 1
         val t=grid[cy*width+cx]
