@@ -139,14 +139,16 @@ internal fun PracticeDashboard(
                 Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                     Text(if(priority==null)"MIDE TU PUNTO DE PARTIDA" else "COMPRUEBA TU AVANCE",
                         color=c.onPrimaryContainer,fontWeight=FontWeight.Bold,fontSize=11.sp)
-                    Text(if(priority==null)"Realiza tu primera evaluación"
+                    Text(if(priority==null&&stats.isEmpty()&&!loading)"Realiza tu primera evaluación"
+                         else if(priority==null)"Construyamos tu diagnóstico"
                          else "¿Listo para poner a prueba lo aprendido?",
                         color=c.onPrimaryContainer,fontWeight=FontWeight.Bold,fontSize=17.sp)
-                    Text(if(priority==null)"Un examen nos ayuda a detectar qué contenidos reforzar."
+                    Text(if(priority==null&&stats.isEmpty())"Un primer examen nos ayuda a detectar qué contenidos reforzar."
+                         else if(priority==null)"Aún necesitamos más respuestas para crear una recomendación fiable."
                          else "Un examen completo permite actualizar tus resultados por categoría.",
                         color=c.onPrimaryContainer,fontSize=13.sp)
                     Button(onClick=onTakeExam,modifier=Modifier.fillMaxWidth()){
-                        Text(if(priority==null)"Ir a mis exámenes" else "Realizar un examen")
+                        Text(if(priority==null&&stats.isEmpty()&&!loading)"Hacer mi primer examen" else "Realizar un examen")
                     }
                 }
             }
