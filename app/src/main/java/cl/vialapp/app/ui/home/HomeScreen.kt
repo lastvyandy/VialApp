@@ -348,17 +348,24 @@ fun HomeScreen(
         }
 
         item(key="home_smart_practice") {
+            // These light-only colors are not in VialPalette.darkPalette. Use
+            // explicit dark surfaces so the card never remains white in night mode.
+            val darkMode = LocalVialAppearance.current.dark
+            val practiceBackground = if (darkMode) MaterialTheme.colorScheme.primaryContainer
+                else Color(0xFFEAF3FF)
+            val practiceIconBackground = if (darkMode) Color(0xFF314D80)
+                else Color(0xFFD6E8FF)
             Card(
                 modifier=Modifier.fillMaxWidth(),
                 shape=RoundedCornerShape(22.dp),
                 border=HomeCardBorder,
-                colors=CardDefaults.cardColors(containerColor=vialColor(Color(0xFFEAF3FF)))
+                colors=CardDefaults.cardColors(containerColor=practiceBackground)
             ){
                 Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
                     Row(verticalAlignment=Alignment.CenterVertically,
                         horizontalArrangement=Arrangement.spacedBy(11.dp)){
                         Surface(shape=RoundedCornerShape(13.dp),
-                            color=vialColor(Color(0xFFD6E8FF))){
+                            color=practiceIconBackground){
                             Icon(painterResource(R.drawable.ic_award_target),
                                 contentDescription=null,tint=HomeBlue,
                                 modifier=Modifier.padding(12.dp).size(23.dp))
