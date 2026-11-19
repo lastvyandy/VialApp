@@ -32,6 +32,7 @@ internal data class StudyStep(val id: String, val title: String, val blocks: Lis
 internal data class StudyActivity(val title: String, val steps: List<StudyStep>, val review: Boolean)
 private data class ChapterGame(val route: String, val title: String, val detail: String)
 
+// Estos juegos son un repaso del capítulo, no reemplazan sus lecciones.
 private fun chapterGames(id: String): List<ChapterGame> = when (id) {
     "siniestros-transito", "persona-transito", "conduccion-circunstancias-especiales" ->
         listOf(ChapterGame("games/arena", "Don Pelao Arena", "Reacciona ante situaciones de riesgo."))
@@ -59,6 +60,7 @@ fun LearningChapterScreen(userKey: String, chapterId: String, mascotId: String?,
     var flashcards by remember(userKey, chapterId) { mutableStateOf(false) }
     var autoResumed by remember(userKey,chapterId){mutableStateOf(false)}
 
+    // Cargamos solo el capítulo que abrió. Si vuelve a entrar, recuperamos su avance.
     LaunchedEffect(userKey, chapterId, refresh) {
         loading = true
         error = ""
