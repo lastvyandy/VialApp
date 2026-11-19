@@ -62,7 +62,7 @@ internal class DoomView(context:Context):View(context){
         val muzzle=(if(e.shotFlash>0f).21f else 0f)+e.blastFlash*1.1f
         for(y in 0 until h){
             val rowDistance=(focal*.5f)/abs(y+.5f-horizon).coerceAtLeast(.5f)
-            val light=((when(e.level){4->.70f;5->.64f;else->.90f})/(1f+rowDistance*.12f)+muzzle/(1f+rowDistance*.4f)).coerceIn(.09f,when(e.level){4->.77f;5->.75f;else->.89f})
+            val light=((when(e.level){4->.70f;5->.49f;else->.90f})/(1f+rowDistance*.12f)+muzzle/(1f+rowDistance*.4f)).coerceIn(.09f,when(e.level){4->.77f;5->.62f;else->.89f})
             var fx=e.x+rowDistance*(ca-planeX);var fy=e.y+rowDistance*(sa-planeY)
             val sx=rowDistance*planeX*2/w;val sy=rowDistance*planeY*2/w
             val isFloor=y>=horizon
@@ -76,14 +76,17 @@ internal class DoomView(context:Context):View(context){
                 val zebra=e.level==4&&isFloor&&(cy==8||cy==12||cy==20)&&cx%3!=0&&tx in 5..58&&ty in 5..55
                 val roadside=e.level==4&&isFloor&&(cx==1||cx==32||cy==1||cy==25)&&tx in 3..60
                 val stair=e.level>=4&&isFloor&&e.stairTier(cx,cy)>0
-                val riser=stair&&ty in 0..8
-                val tread=stair&&ty in 9..13
+                val riser=stair&&(ty in 0..9||ty in 30..38)
+                val tread=stair&&(ty in 10..13||ty in 39..42)
                 val worn=stair&&((tx+y/5)and 15)<3
+                val catwalk=e.level==5&&isFloor&&e.stairTier(cx,cy)>=4
                 val color=if(e.level==4&&!isFloor){
                     val yy=(y*64/horizon.toInt().coerceAtLeast(1)).coerceIn(0,63)
                     val xx=((x*2+(e.angle*150f).toInt()) and 511)
                     art.sky[yy*512+xx]
-                }else if(riser)0xff171c21.toInt() else if(tread)0xffa36d35.toInt() else if(worn)0xff775b45.toInt() else if(zebra)0xffa7a7a0.toInt() else if(avenueLine)0xffbc793a.toInt()
+                }else if(riser)0xff202a30.toInt() else if(tread)0xffaa7332.toInt() else if(worn)0xff775b45.toInt()
+                else if(catwalk&&(tx%12 in 0..1||ty%12 in 0..1))0xff606b66.toInt()
+                else if(catwalk)0xff292f31.toInt() else if(zebra)0xffa7a7a0.toInt() else if(avenueLine)0xffbc793a.toInt()
                 else if(roadside)0xffa9ada0.toInt() else if(fortressStripe)0xffbc8234.toInt() else if(e.level==3&&isFloor&&cx>=21&&cy>=16&&((tx in 1..4)||(ty in 1..4)))0xff8d3e24.toInt() else if(stripe)0xffad8d38.toInt() else if(isFloor&&cx>=16&&cy>=8&&((tx in 5..8)||(ty in 5..8)))0xff553630.toInt() else if(isFloor&&cx>=9&&cy<7&&cx<=14&&e.level!=5&&ty in 1..3)0xff627064.toInt()
                 else if(e.level==5&&isFloor&&cx in 2..9&&cy in 7..10){
                     // Toxic cooling channels with raised rusty walkways and Supaplex-green fluid.
@@ -112,7 +115,8 @@ internal class DoomView(context:Context):View(context){
                 door!=null->art.doors[door.kind.coerceIn(0,3)]
                 else->art.walls[(ray.cell-1).coerceIn(0,5)]
             }
-            val light=(((when(e.level){4->.83f;5->.78f;else->1.08f})+muzzle)/(1f+d*.17f)*(if(ray.side==1).76f else 1f)).coerceIn(.15f,1.15f)
+            val emergency=if(e.level==5)(.90f+.10f*sin(e.elapsed*2.5f+(ray.mapX+ray.mapY)*.19f))else 1f
+            val light=(((when(e.level){4->.83f;5->.63f;else->1.08f})+muzzle)/(1f+d*.17f)*(if(ray.side==1).76f else 1f)*emergency).coerceIn(.12f,1.15f)
             for(y in top.toInt().coerceIn(0,h-1)..(top+lineHeight).toInt().coerceIn(0,h-1)){
                 val ty=((y-top)*64/lineHeight).toInt().coerceIn(0,63)
                 val color=tex[ty*64+tx]
@@ -147,21 +151,33 @@ internal class DoomView(context:Context):View(context){
                 DoomDecorKind.SIGN_STOP,DoomDecorKind.SIGN_YIELD,DoomDecorKind.SIGN_PEDESTRIAN->.71f
                 else->1f
             }
-            sprites+=Sprite(p.x,p.y,size,art.decor[p.kind.ordinal],false,p.lift,aspect)
+            val terrain=if(e.level==5&&p.kind!=DoomDecorKind.RAILING)e.stairTier(floor(p.x).toInt(),floor(p.y).toInt())*.22f else 0f
+            sprites+=Sprite(p.x,p.y,size,art.decor[p.kind.ordinal],false,p.lift+terrain,aspect)
+        }
+        for(n in e.notes)if(!n.read){
+            val lift=if(e.level==5)e.stairTier(floor(n.x).toInt(),floor(n.y).toInt())*.22f else 0f
+            sprites+=Sprite(n.x,n.y,.48f,art.decor[DoomDecorKind.DOCUMENT.ordinal],false,.05f+lift)
         }
         for(b in e.explosives)if(!b.exploded)sprites+=Sprite(b.x,b.y,if(b.crate).70f else .77f,art.explosive[if(b.crate)1 else 0])
         for(b in e.explosions){val frame=((.52f-b.time)/.52f*6).toInt().coerceIn(0,5);sprites+=Sprite(b.x,b.y,1.05f+frame*.13f,art.explosion[frame],true,.12f)}
-        for(l in e.loot)if(!l.taken)sprites+=Sprite(l.x,l.y,if(l.kind==DoomLootKind.BERSERK).68f else .46f,art.loot[l.kind.ordinal])
+        for(l in e.loot)if(!l.taken){
+            val lift=if(e.level==5)e.stairTier(floor(l.x).toInt(),floor(l.y).toInt())*.22f else 0f
+            sprites+=Sprite(l.x,l.y,if(l.kind==DoomLootKind.BERSERK).68f else .46f,art.loot[l.kind.ordinal],false,lift)
+        }
         for(a in e.enemies){
             if(a.hp>0){
                 val phase=if(a.alert)((e.elapsed*6+a.id*.4f).toInt() and 3)else 0
                 val size = enemySpriteSize(a.kind, e.level)
                 val pose=if(a.attackFlash>0f)art.enemyAttack[a.kind.ordinal] else art.enemyFrames[a.kind.ordinal][phase]
-                sprites+=Sprite(a.x,a.y,size,pose,a.flash>0f,if(a.kind==DoomKind.DRONE).25f+sin(e.elapsed*4+a.id)*.07f else 0f)
+                val platform=if(e.level==5)e.stairTier(floor(a.x).toInt(),floor(a.y).toInt())*.22f else 0f
+                val hover=if(a.kind==DoomKind.DRONE).25f+sin(e.elapsed*4+a.id)*.07f else 0f
+                sprites+=Sprite(a.x,a.y,size,pose,a.flash>0f,platform+hover)
             }else{
                 val frame=(a.deathAge/.12f).toInt().coerceIn(0,5)
                 val size = enemySpriteSize(a.kind, e.level)
-                sprites+=Sprite(a.x,a.y,size,art.enemyDeath[a.kind.ordinal][frame],frame==0,if(a.kind==DoomKind.DRONE)(.25f*(1f-a.deathAge/.55f)).coerceAtLeast(0f)else 0f)
+                val platform=if(e.level==5)e.stairTier(floor(a.x).toInt(),floor(a.y).toInt())*.22f else 0f
+                val hover=if(a.kind==DoomKind.DRONE)(.25f*(1f-a.deathAge/.55f)).coerceAtLeast(0f)else 0f
+                sprites+=Sprite(a.x,a.y,size,art.enemyDeath[a.kind.ordinal][frame],frame==0,platform+hover)
             }
         }
         for(b in e.bolts)sprites+=Sprite(b.x,b.y,if(b.chrome).34f else if(b.toxic).27f else .23f,when{b.chrome->art.chromeBolt;b.toxic->art.toxicBolt;else->art.bolt},false,.43f)
@@ -1022,6 +1038,22 @@ private class DoomArt{
                 oval(x-10,y-6,x+10,y+6,0x3D5154)}
             oval(27,26,38,38,0xB49C65)
             box(15,57,51,63,0x4D5553)
+        },
+        // Handrail for exposed maintenance catwalks, viewed as a low metal barrier.
+        sprite{
+            box(3,23,61,28,0x141a1f);box(4,19,60,23,0x7d8981)
+            box(7,23,12,62,0x30373b);box(50,23,55,62,0x30373b)
+            box(27,23,32,62,0x30373b);box(11,40,53,43,0x6b7770)
+            box(5,57,59,62,0x14191e)
+            box(7,19,12,22,0xc68e43);box(50,19,55,22,0xc68e43)
+        },
+        // Recoverable paper file, visibly distinct from a weapon or ammo pickup.
+        sprite{
+            box(13,17,51,61,0x151c22);box(16,7,47,54,0xa39a79)
+            box(19,10,44,51,0xd9d0ab);box(19,10,44,16,0x514c47)
+            for(k in 0..5)box(22,21+k*5,42-(k%3)*4,23+k*5,0x747365)
+            box(20,43,32,48,0x8d3530);box(33,43,41,48,0x815e3e)
+            box(13,55,51,61,0x293239)
         })
     val rocket=sprite{oval(10,10,54,54,0x963624);oval(16,16,48,48,0xff9440);oval(25,25,39,39,0xffedb0)}
     val bolt=sprite{oval(7,7,57,57,0x952b23);oval(15,15,49,49,0xff6728);oval(23,23,41,41,0xffeeac)}
