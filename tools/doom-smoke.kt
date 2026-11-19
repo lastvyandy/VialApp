@@ -9,6 +9,9 @@ private fun walk(e:DoomEngine,x:Float,y:Float){
         val f=(dx*cos(e.angle)+dy*sin(e.angle))/d
         val s=(-dx*sin(e.angle)+dy*cos(e.angle))/d
         e.step(.025f,DoomInput(f,s))
+        // Navigation fixtures test doors, keys and secrets without live reinforcements
+        // altering the player's health or occupying the next path tile.
+        if(e.level==5)e.enemies.forEach{it.hp=0}
     }
     error("Blocked walking to "+x+","+y+" at "+e.x+","+e.y)
 }
