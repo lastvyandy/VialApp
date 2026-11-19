@@ -13,14 +13,14 @@ import android.view.View
 import kotlin.math.*
 import kotlin.random.Random
 
-/** Original pixel sprites, perspective-correct textured walls, floor casting and column depth. */
+/** Acá dibujamos el escenario, las paredes y los enemigos con el estilo retro de Doom. */
 internal class DoomView(context:Context):View(context){
     var engine:DoomEngine?=null
         set(value) {
             if(field===value)return
             field=value
-            // A 320-wide Doom framebuffer is enough for crisp nearest-neighbor pixel
-            // art, and cuts the expensive E1M5 CPU raycaster workload by ~36%.
+            // En el nivel de servidores dibujamos menos píxeles internamente.
+            // Después los agrandamos sin suavizarlos: se ve retro y anda más liviano.
             val targetWidth=if(value?.level==5)320 else 400
             if(targetWidth!=w){
                 w=targetWidth
@@ -56,7 +56,7 @@ internal class DoomView(context:Context):View(context){
     private var profileFrameNanos=0L
     private var profileFrameCount=0
     private data class Sprite(val x:Float,val y:Float,val size:Float,val art:IntArray,val hit:Boolean=false,val lift:Float=0f,val widthScale:Float=1f)
-    // Keep enemy scaling consistent between living and dying sprites.
+    // Los enemigos mantienen su tamaño al caminar, atacar y morir. Si no, parecen saltar.
     private fun enemySpriteSize(kind: DoomKind, level: Int): Float = when (kind) {
         DoomKind.BOSS -> if (level == 3) 1.55f else 1.33f
         DoomKind.MINOXIDIL -> 1.83f
@@ -72,6 +72,7 @@ internal class DoomView(context:Context):View(context){
         else -> .91f
     }
     private val sprites=ArrayList<Sprite>()
+    // Todo se dibuja desde la posición del jugador; no cargamos modelos 3D reales.
     override fun onDraw(canvas:Canvas){
         super.onDraw(canvas)
         val e=engine?:return
