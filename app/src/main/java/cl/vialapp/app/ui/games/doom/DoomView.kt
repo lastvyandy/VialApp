@@ -19,6 +19,7 @@ internal class DoomView(context:Context):View(context){
     private var h=224
     private var pixels=IntArray(w*h)
     private val depth=FloatArray(w)
+    private var riserDepth=FloatArray(w*h) { Float.POSITIVE_INFINITY }
     private var bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
     private var lowCanvas=Canvas(bitmap)
     private val artFilter=Paint().apply{isAntiAlias=false;isFilterBitmap=false}
@@ -27,7 +28,7 @@ internal class DoomView(context:Context):View(context){
         if(width<=0||height<=0)return
         val next=(w*height.toFloat()/width).roundToInt().coerceIn(112,300)
         if(next==h)return
-        h=next;pixels=IntArray(w*h)
+        h=next;pixels=IntArray(w*h);riserDepth=FloatArray(w*h) { Float.POSITIVE_INFINITY }
         bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);lowCanvas=Canvas(bitmap)
     }
     private val brush=Paint().apply{isAntiAlias=false;isFilterBitmap=false}
@@ -40,7 +41,11 @@ internal class DoomView(context:Context):View(context){
     private fun enemySpriteSize(kind: DoomKind, level: Int): Float = when (kind) {
         DoomKind.BOSS -> if (level == 3) 1.55f else 1.33f
         DoomKind.MINOXIDIL -> 1.83f
-        DoomKind.ADMINISTRATOR -> 1.64f
+        DoomKind.ADMINISTRATOR -> .98f
+        DoomKind.SABOTEUR -> .82f
+        DoomKind.HACKER -> .81f
+        DoomKind.RIVAL_GUARD -> .88f
+        DoomKind.CORRUPT_TECH -> .86f
         DoomKind.FLESH_STALKER -> 1.02f
         DoomKind.RIVAL_GUARD -> 1.06f
         DoomKind.HACKER -> .88f
@@ -58,16 +63,28 @@ internal class DoomView(context:Context):View(context){
         val focal=w/(2f*.66f)
         val moving=hypot(e.x-previousX,e.y-previousY)>.001f
         previousX=e.x;previousY=e.y
-        val horizon=h*.5f+e.lookPitch*h*.30f+e.cameraElevation*17f+(if(moving)sin(e.walk*1.65f)*1.1f else 0f)+e.blastFlash*sin(e.elapsed*70f)*5f+e.recoil*1.6f
+        val horizon=h*.5f+e.lookPitch*h*.30f+(if(e.level==5)0f else e.cameraElevation*17f)+(if(moving)sin(e.walk*1.65f)*1.1f else 0f)+e.blastFlash*sin(e.elapsed*70f)*5f+e.recoil*1.6f
+        val eyeHeight=if(e.level==5).56f+e.cameraElevation else .5f
         val muzzle=(if(e.shotFlash>0f).21f else 0f)+e.blastFlash*1.1f
         for(y in 0 until h){
-            val rowDistance=(focal*.5f)/abs(y+.5f-horizon).coerceAtLeast(.5f)
+            val rowDistance=(focal*(if(e.level==5)eyeHeight else .5f))/abs(y+.5f-horizon).coerceAtLeast(.5f)
             val light=((when(e.level){4->.70f;5->.49f;else->.90f})/(1f+rowDistance*.12f)+muzzle/(1f+rowDistance*.4f)).coerceIn(.09f,when(e.level){4->.77f;5->.62f;else->.89f})
             var fx=e.x+rowDistance*(ca-planeX);var fy=e.y+rowDistance*(sa-planeY)
             val sx=rowDistance*planeX*2/w;val sy=rowDistance*planeY*2/w
             val isFloor=y>=horizon
             val tex=when{e.level==5&&isFloor->art.serverFloor;e.level==5->art.serverCeiling;e.level==4&&isFloor->art.roadFloor;isFloor->art.floor;else->art.ceiling}
             for(x in 0 until w){
+                if(e.level==5&&isFloor){
+                    val p=2f*x/w-1f
+                    val vx=ca+planeX*p;val vy=sa+planeY*p
+                    val denominator=(y+.5f-horizon).coerceAtLeast(.5f)
+                    var distance=rowDistance
+                    repeat(4){
+                        val sampleHeight=e.floorHeight(e.x+distance*vx,e.y+distance*vy)
+                        distance=(focal*(eyeHeight-sampleHeight).coerceAtLeast(.04f)/denominator).coerceAtMost(70f)
+                    }
+                    fx=e.x+distance*vx;fy=e.y+distance*vy
+                }
                 val tx=(fx*64).toInt() and 63;val ty=(fy*64).toInt() and 63
                 val cx=floor(fx).toInt();val cy=floor(fy).toInt()
                 val stripe=isFloor&&((cx in 1..7&&cy==3)||(cx in 9..14&&cy==11))&&ty in 29..32
@@ -101,8 +118,9 @@ internal class DoomView(context:Context):View(context){
             val p=2f*x/w-1f
             val ray=e.ray(e.x,e.y,ca+planeX*p,sa+planeY*p)
             val d=ray.distance;depth[x]=d
-            val lineHeight=(focal/d).coerceAtMost(5000f)
-            val top=horizon-lineHeight*.5f
+            val wallHeight=if(e.level==5)1.65f else 1f
+            val lineHeight=(focal*wallHeight/d).coerceAtMost(5000f)
+            val top=if(e.level==5)horizon+focal*(eyeHeight-wallHeight)/d else horizon-lineHeight*.5f
             val tx=(ray.u*64).toInt().coerceIn(0,63)
             val door=if(ray.cell==5)e.doors.firstOrNull{it.x==ray.mapX&&it.y==ray.mapY} else null
             val tex=when{
@@ -125,6 +143,7 @@ internal class DoomView(context:Context):View(context){
                 pixels[y*w+x]=shade(color,lit*edge)
             }
         }
+        if(e.level==5)drawServerStairRisers(e,ca,sa,planeX,planeY,focal,horizon,eyeHeight)
         sprites.clear()
         for(p in e.decor)if(hypot(p.x-e.x,p.y-e.y)>.31f){
             // World props are scenery, not upright enemies. Preserve their silhouette in perspective.
@@ -151,17 +170,17 @@ internal class DoomView(context:Context):View(context){
                 DoomDecorKind.SIGN_STOP,DoomDecorKind.SIGN_YIELD,DoomDecorKind.SIGN_PEDESTRIAN->.71f
                 else->1f
             }
-            val terrain=if(e.level==5&&p.kind!=DoomDecorKind.RAILING)e.stairTier(floor(p.x).toInt(),floor(p.y).toInt())*.22f else 0f
-            sprites+=Sprite(p.x,p.y,size,art.decor[p.kind.ordinal],false,p.lift+terrain,aspect)
+            val lift=if(e.level==5)e.floorHeight(p.x,p.y) else p.lift
+            sprites+=Sprite(p.x,p.y,size,art.decor[p.kind.ordinal],false,lift,aspect)
         }
         for(n in e.notes)if(!n.read){
-            val lift=if(e.level==5)e.stairTier(floor(n.x).toInt(),floor(n.y).toInt())*.22f else 0f
+            val lift=if(e.level==5)e.floorHeight(n.x,n.y) else 0f
             sprites+=Sprite(n.x,n.y,.48f,art.decor[DoomDecorKind.DOCUMENT.ordinal],false,.05f+lift)
         }
-        for(b in e.explosives)if(!b.exploded)sprites+=Sprite(b.x,b.y,if(b.crate).70f else .77f,art.explosive[if(b.crate)1 else 0])
+        for(b in e.explosives)if(!b.exploded)sprites+=Sprite(b.x,b.y,if(b.crate).70f else .77f,art.explosive[if(b.crate)1 else 0],false,if(e.level==5)e.floorHeight(b.x,b.y)else 0f)
         for(b in e.explosions){val frame=((.52f-b.time)/.52f*6).toInt().coerceIn(0,5);sprites+=Sprite(b.x,b.y,1.05f+frame*.13f,art.explosion[frame],true,.12f)}
         for(l in e.loot)if(!l.taken){
-            val lift=if(e.level==5)e.stairTier(floor(l.x).toInt(),floor(l.y).toInt())*.22f else 0f
+            val lift=if(e.level==5)e.floorHeight(l.x,l.y) else 0f
             sprites+=Sprite(l.x,l.y,if(l.kind==DoomLootKind.BERSERK).68f else .46f,art.loot[l.kind.ordinal],false,lift)
         }
         for(a in e.enemies){
@@ -169,13 +188,13 @@ internal class DoomView(context:Context):View(context){
                 val phase=if(a.alert)((e.elapsed*6+a.id*.4f).toInt() and 3)else 0
                 val size = enemySpriteSize(a.kind, e.level)
                 val pose=if(a.attackFlash>0f)art.enemyAttack[a.kind.ordinal] else art.enemyFrames[a.kind.ordinal][phase]
-                val platform=if(e.level==5)e.stairTier(floor(a.x).toInt(),floor(a.y).toInt())*.22f else 0f
+                val platform=if(e.level==5)e.floorHeight(a.x,a.y) else 0f
                 val hover=if(a.kind==DoomKind.DRONE).25f+sin(e.elapsed*4+a.id)*.07f else 0f
                 sprites+=Sprite(a.x,a.y,size,pose,a.flash>0f,platform+hover)
             }else{
                 val frame=(a.deathAge/.12f).toInt().coerceIn(0,5)
                 val size = enemySpriteSize(a.kind, e.level)
-                val platform=if(e.level==5)e.stairTier(floor(a.x).toInt(),floor(a.y).toInt())*.22f else 0f
+                val platform=if(e.level==5)e.floorHeight(a.x,a.y) else 0f
                 val hover=if(a.kind==DoomKind.DRONE)(.25f*(1f-a.deathAge/.55f)).coerceAtLeast(0f)else 0f
                 sprites+=Sprite(a.x,a.y,size,art.enemyDeath[a.kind.ordinal][frame],frame==0,platform+hover)
             }
@@ -187,8 +206,8 @@ internal class DoomView(context:Context):View(context){
             val dx=s.x-e.x;val dy=s.y-e.y;val z=dx*ca+dy*sa
             if(z<.11f)continue
             val px=w*.5f*(1f+(-dx*sa+dy*ca)/(z*.66f))
-            val size=(focal*s.size/z).coerceAtMost(2200f)
-            val bottom=horizon+focal*.5f/z-focal*s.lift/z;val top=bottom-size
+            val size=(focal*s.size/z).coerceAtMost(if(e.level==5)h*.96f else 2200f)
+            val bottom=horizon+focal*(eyeHeight-s.lift)/z;val top=bottom-size
             val spriteWidth=size*s.widthScale;val left=px-spriteWidth*.5f
             val light=((if(e.level==4||e.level==5).98f else 1.25f)/(1f+z*.14f)).coerceIn(.25f,1f)
             for(xx in left.toInt().coerceAtLeast(0)..(left+spriteWidth).toInt().coerceAtMost(w-1)){
@@ -197,7 +216,8 @@ internal class DoomView(context:Context):View(context){
                 for(yy in top.toInt().coerceAtLeast(0)..bottom.toInt().coerceAtMost(h-1)){
                     val ty=((yy-top)*64/size).toInt().coerceIn(0,63)
                     val color=s.art[ty*64+tx]
-                    if(color ushr 24!=0)pixels[yy*w+xx]=shade(color,if(s.hit)1.45f else light)
+                    if(color ushr 24!=0&&(e.level!=5||z<riserDepth[yy*w+xx]))
+                        pixels[yy*w+xx]=shade(color,if(s.hit)1.45f else light)
                 }
             }
         }
@@ -233,6 +253,35 @@ internal class DoomView(context:Context):View(context){
         if(e.pickupFlash>0f){brush.color=Color.argb((e.pickupFlash*125).toInt().coerceIn(0,22),220,200,85);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
         target.set(0,0,width,height);brush.color=Color.WHITE
         canvas.drawBitmap(bitmap,null,target,brush)
+    }
+    /** Depth-buffered vertical step faces; same world height as the floor and pickups. */
+    private fun drawServerStairRisers(e:DoomEngine,ca:Float,sa:Float,planeX:Float,planeY:Float,
+                                     focal:Float,horizon:Float,eyeHeight:Float){
+        riserDepth.fill(Float.POSITIVE_INFINITY)
+        for(screenX in 0 until w){
+            val p=2f*screenX/w-1f
+            val vx=ca+planeX*p;val vy=sa+planeY*p
+            val far=depth[screenX].coerceAtMost(20f)
+            var dist=.065f
+            var previous=e.stairTier(floor(e.x+dist*vx).toInt(),floor(e.y+dist*vy).toInt())
+            while(dist<far){
+                dist=(dist+.045f).coerceAtMost(far)
+                val tier=e.stairTier(floor(e.x+dist*vx).toInt(),floor(e.y+dist*vy).toInt())
+                if(tier>previous){
+                    val top=(horizon+focal*(eyeHeight-tier*.10f)/dist).toInt().coerceIn(0,h-1)
+                    val bottom=(horizon+focal*(eyeHeight-previous*.10f)/dist).toInt().coerceIn(0,h-1)
+                    if(top<=bottom)for(y in top..bottom){
+                        val index=y*w+screenX
+                        if(dist<riserDepth[index]){
+                            val color=if((screenX+y/3)%13<2)0x8a8e83 else if(y>bottom-2)0xa06a32 else 0x343a3d
+                            pixels[index]=shade(0xff000000.toInt() or color,.72f/(1f+dist*.025f))
+                            riserDepth[index]=dist
+                        }
+                    }
+                }
+                previous=tier
+            }
+        }
     }
     /** Cached original pixel-art fists, scaled with sharp edges like a classic FPS. */
     private fun drawBerserkFists(c:Canvas,e:DoomEngine){
