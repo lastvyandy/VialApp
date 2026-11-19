@@ -548,14 +548,13 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         foe(DoomKind.SABOTEUR,4.5f,7.5f);foe(DoomKind.HACKER,7.5f,9.5f)
         foe(DoomKind.CORRUPT_TECH,4.5f,9.5f)
         foe(DoomKind.SABOTEUR,33.5f,6.5f);foe(DoomKind.HACKER,40.5f,5.5f)
-        foe(DoomKind.RIVAL_GUARD,40.5f,10.5f);foe(DoomKind.CORRUPT_TECH,34.5f,10.5f)
+        foe(DoomKind.RIVAL_GUARD,41.5f,10.5f);foe(DoomKind.CORRUPT_TECH,34.5f,10.5f)
         foe(DoomKind.RIVAL_GUARD,32.5f,17.5f);foe(DoomKind.HACKER,35.5f,21.5f)
         foe(DoomKind.CORRUPT_TECH,41.5f,22.5f);foe(DoomKind.SABOTEUR,41.5f,16.5f)
         foe(DoomKind.SABOTEUR,6.5f,30.5f);foe(DoomKind.HACKER,13.5f,32.5f)
         foe(DoomKind.RIVAL_GUARD,19.5f,33.5f);foe(DoomKind.CORRUPT_TECH,23.5f,35.5f)
         foe(DoomKind.SABOTEUR,37.5f,27.5f);foe(DoomKind.RIVAL_GUARD,33.5f,32.5f)
         foe(DoomKind.CORRUPT_TECH,41.5f,35.5f)
-        foe(DoomKind.ADMINISTRATOR,40.0f,30.5f)
         // Deliberate pockets of resistance: quiet corridors alternate with multi-enemy crossfire.
         foe(DoomKind.SABOTEUR,16.5f,22.5f)
         foe(DoomKind.RIVAL_GUARD,20.5f,16.5f)
@@ -565,6 +564,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         foe(DoomKind.CORRUPT_TECH,36.5f,16.5f)
         foe(DoomKind.SABOTEUR,14.5f,29.5f)
         foe(DoomKind.RIVAL_GUARD,35.5f,35.5f)
+        foe(DoomKind.ADMINISTRATOR,40.0f,30.5f)
 
         fun item(kind:DoomLootKind,xx:Float,yy:Float){loot+=DoomLoot(kind,xx,yy)}
         item(DoomLootKind.AMMO,2.5f,16.5f)
