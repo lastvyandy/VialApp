@@ -79,3 +79,17 @@ data class ExtraExamRequest(
     @SerializedName("clase_licencia") val licenseClass: String,
     val categoria: String
 )
+
+
+/** Read-only metadata; availability is checked against separately assigned exams. */
+data class ExamCatalogEntry(
+    val id: Int,
+    val nombre: String,
+    val categoria: String?,
+    @SerializedName("clase_licencia") val licenseClass: String
+)
+
+data class ExamCatalogPage(
+    val tests: List<ExamCatalogEntry> = emptyList(),
+    @SerializedName("has_more") val hasMore: Boolean = false
+)
