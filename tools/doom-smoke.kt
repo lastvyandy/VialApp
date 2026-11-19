@@ -348,6 +348,7 @@ fun main(){
     administrator.x=6.5f;administrator.y=18.5f;administrator.cooldown=0f
     bossFive.step(.025f)
     check(bossFive.bolts.size==3&&bossFive.bossHealth==630)
+    check(bossFive.bolts.all{it.bullet&&it.life<2f&&it.damage<DoomKind.ADMINISTRATOR.damage&&it.altitude>0f})
     administrator.hp=250;administrator.cooldown=0f
     bossFive.bolts.clear();bossFive.step(.025f)
     check(bossFive.bolts.size==7)
