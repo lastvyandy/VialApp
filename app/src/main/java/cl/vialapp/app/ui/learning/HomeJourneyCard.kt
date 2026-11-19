@@ -58,10 +58,15 @@ internal fun HomeJourneyCard(
         .padding(18.dp),verticalArrangement=Arrangement.spacedBy(11.dp)){
         Text("TU CAMINO A LA LICENCIA",color=Color(0xFFBED6FF),fontSize=11.sp,fontWeight=FontWeight.Bold)
         Text(if(licenseText.startsWith("Licencia",ignoreCase=true))licenseText else "Licencia "+licenseText,color=Color.White,fontSize=27.sp,fontWeight=FontWeight.ExtraBold)
-        if(isMotorcycleLicense(licenseClass)) Text("Ruta común de Clase B · complementa con preparación de moto.",color=fg,fontSize=12.sp)
+        Text(
+            if(isMotorcycleLicense(licenseClass))
+                "Tu ruta de motociclista: conducción, protección y normas viales en un solo recorrido."
+            else "Tu ruta de conductor: aprende las normas y practica a tu ritmo.",
+            color=fg,fontSize=12.sp
+        )
         when {
             count>0 && chapters!=null -> {
-                if(count<=15) JourneyPreview(chapters,vehicle,Modifier.fillMaxWidth().height(114.dp))
+                if(count<=15) JourneyPreview(chapters,vehicle,isMotorcycleLicense(licenseClass),Modifier.fillMaxWidth().height(114.dp))
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
                     Text(done.toString()+" de "+count+" etapas completadas",color=fg,fontSize=13.sp,modifier=Modifier.weight(1f))
                     Text((done*100/count).toString()+"%",color=Color.White,fontWeight=FontWeight.Bold)
@@ -105,7 +110,7 @@ internal fun HomeJourneyCard(
 }
 
 @Composable
-private fun JourneyPreview(chapters:List<LearningChapterSummary>,vehicle:JourneyVehicle,modifier:Modifier){
+private fun JourneyPreview(chapters:List<LearningChapterSummary>,vehicle:JourneyVehicle,motorcycle:Boolean,modifier:Modifier){
     val next=nextChapterIndex(chapters)
     Canvas(modifier){
         val count=chapters.size+1
@@ -141,7 +146,8 @@ private fun JourneyPreview(chapters:List<LearningChapterSummary>,vehicle:Journey
                 drawLine(Color.White,p+Offset(-r*.10f,r*.38f),p+Offset(r*.53f,-r*.42f),2.dp.toPx(),StrokeCap.Round)
             }else if(i==next){
                 drawCircle(Color(0x557FB8FF),r*1.7f,p)
-                drawJourneyVehicle(vehicle,p,minOf(r*2.25f,23.dp.toPx()))
+                if(motorcycle) drawJourneyMotorcycle(p,minOf(r*2.25f,23.dp.toPx()),vehicle.paint)
+                else drawJourneyVehicle(vehicle,p,minOf(r*2.25f,23.dp.toPx()))
             }else{
                 drawCircle(Color(0xFF536E94),r*.77f,p)
                 drawCircle(Color(0xFFB1C6E4),r*.23f,p)
@@ -162,4 +168,33 @@ internal fun DrawScope.drawJourneyVehicle(vehicle:JourneyVehicle,center:Offset,w
     scale(factor,factor,pivot=center){
         drawGarageVehicle(center,vehicle.paint,vehicle.style)
     }
+}
+
+
+/** Side-view motorcycle marker for the Clase C route, drawn locally without image assets. */
+internal fun DrawScope.drawJourneyMotorcycle(center:Offset,width:Float,paint:Color){
+    val w=width.coerceAtLeast(4f)
+    val dark=Color(0xFF13223A)
+    val steel=Color(0xFFDDECF7)
+    val left=Offset(center.x-w*.32f,center.y+w*.16f)
+    val right=Offset(center.x+w*.32f,center.y+w*.16f)
+    val wheelR=w*.16f
+    drawCircle(dark,wheelR*1.20f,left)
+    drawCircle(dark,wheelR*1.20f,right)
+    drawCircle(steel,wheelR*.75f,left)
+    drawCircle(steel,wheelR*.75f,right)
+    drawCircle(dark,wheelR*.45f,left)
+    drawCircle(dark,wheelR*.45f,right)
+    val top=Offset(center.x-w*.07f,center.y-w*.13f)
+    drawLine(paint,left,top,strokeWidth=w*.11f,cap=StrokeCap.Round)
+    drawLine(paint,top,right,strokeWidth=w*.11f,cap=StrokeCap.Round)
+    drawLine(paint,left,Offset(center.x+w*.03f,center.y+w*.16f),
+        strokeWidth=w*.09f,cap=StrokeCap.Round)
+    drawLine(steel,Offset(center.x+w*.08f,center.y-w*.21f),right,
+        strokeWidth=w*.07f,cap=StrokeCap.Round)
+    drawLine(steel,Offset(center.x+w*.03f,center.y-w*.23f),
+        Offset(center.x+w*.22f,center.y-w*.23f),strokeWidth=w*.07f,cap=StrokeCap.Round)
+    drawLine(dark,Offset(center.x-w*.28f,center.y-w*.11f),
+        Offset(center.x-w*.01f,center.y-w*.11f),strokeWidth=w*.12f,cap=StrokeCap.Round)
+    drawCircle(paint,w*.115f,Offset(center.x-w*.10f,center.y-w*.32f))
 }
