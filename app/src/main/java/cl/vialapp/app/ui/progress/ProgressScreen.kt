@@ -48,7 +48,8 @@ fun ProgressScreen(
     licenseClass: String? = null,
     onPractice: () -> Unit = {},
     onOpenLeague: () -> Unit = {},
-    onOpenGame: ((String) -> Unit)? = null
+    onOpenGame: ((String) -> Unit)? = null,
+    onRepeatExam: (Int) -> Unit = {}
 ) {
 
     val context =
@@ -172,7 +173,8 @@ fun ProgressScreen(
                 licenseClass = licenseClass,
                 onPractice = onPractice,
                 onOpenLeague = onOpenLeague,
-                onOpenGame = onOpenGame
+                onOpenGame = onOpenGame,
+                onRepeatExam = onRepeatExam
             )
         }
     }
@@ -188,7 +190,8 @@ private fun ProgressContent(
     licenseClass: String?,
     onPractice: () -> Unit,
     onOpenLeague: () -> Unit,
-    onOpenGame: ((String) -> Unit)?
+    onOpenGame: ((String) -> Unit)?,
+    onRepeatExam: (Int) -> Unit
 ) {
 
     val summary =
@@ -730,10 +733,7 @@ private fun ProgressContent(
                 }
             ) { test ->
 
-                RecentTestCard(
-                    test =
-                        test
-                )
+                RecentTestCard(test=test,onRepeat={onRepeatExam(test.testId)})
             }
         }
 
@@ -1038,7 +1038,8 @@ private fun ProgressCategoryCard(
 
 @Composable
 private fun RecentTestCard(
-    test: RecentTestResponse
+    test: RecentTestResponse,
+    onRepeat: () -> Unit
 ) {
 
     val score =
@@ -1186,6 +1187,12 @@ private fun RecentTestCard(
                                 )
                         )
                     }
+
+                Spacer(Modifier.height(9.dp))
+                OutlinedButton(onClick=onRepeat,modifier=Modifier.fillMaxWidth(),
+                    shape=RoundedCornerShape(12.dp)){
+                    Text("Repetir examen",fontWeight=FontWeight.SemiBold)
+                }
             }
         }
     }
