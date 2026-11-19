@@ -28,7 +28,7 @@ internal enum class DoomDecorKind { BARREL, CRATE, TERMINAL, LAMP, WRECK,
 internal data class DoomDecor(val kind:DoomDecorKind,val x:Float,val y:Float,val scale:Float,val lift:Float=0f)
 internal data class DoomNote(val x:Float,val y:Float,val title:String,val body:String,var read:Boolean=false)
 internal data class DoomRocket(var x:Float,var y:Float,val vx:Float,val vy:Float,var life:Float=2.2f)
-internal data class DoomBolt(var x:Float,var y:Float,val vx:Float,val vy:Float,val damage:Int,var life:Float=3f,val chrome:Boolean=false,val toxic:Boolean=false)
+internal data class DoomBolt(var x:Float,var y:Float,val vx:Float,val vy:Float,val damage:Int,var life:Float=3f,val chrome:Boolean=false,val toxic:Boolean=false,val bullet:Boolean=false,val altitude:Float=.43f)
 internal data class DoomChallenge(val prompt:String,val answers:List<String>,val correct:Int,val explanation:String)
 internal data class DoomDoor(val x:Int,val y:Int,val kind:Int,val question:DoomChallenge?=null,var open:Boolean=false)
 internal data class DoomRay(val distance:Float,val cell:Int,val u:Float,val side:Int,val mapX:Int=-1,val mapY:Int=-1)
@@ -1102,7 +1102,19 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
                     else->floatArrayOf(0f)
                 }
                 val speed=when(e.kind){DoomKind.DRONE->4.4f;DoomKind.HEAVY->2.6f;DoomKind.BOSS->3.7f;DoomKind.MINOXIDIL->3.8f;DoomKind.ADMINISTRATOR->3.7f;else->3.3f}
-                for(o in offsets){val dir=a+o;bolts+=DoomBolt(e.x+cos(dir)*.25f,e.y+sin(dir)*.25f,cos(dir)*speed*difficulty,sin(dir)*speed*difficulty,(e.kind.damage*difficulty).roundToInt(),chrome=e.kind==DoomKind.MINOXIDIL,toxic=e.kind==DoomKind.FLESH_STALKER)}
+                for(o in offsets){
+                    val dir=a+o
+                    val ballistic=level==5
+                    val velocity=if(ballistic)10f else speed*difficulty
+                    val impact=if(ballistic)(e.kind.damage*difficulty*.62f).roundToInt().coerceAtLeast(3)else(e.kind.damage*difficulty).roundToInt()
+                    bolts+=DoomBolt(e.x+cos(dir)*.25f,e.y+sin(dir)*.25f,
+                        cos(dir)*velocity,sin(dir)*velocity,impact,
+                        life=if(ballistic)1.35f else 3f,
+                        chrome=e.kind==DoomKind.MINOXIDIL,
+                        toxic=e.kind==DoomKind.FLESH_STALKER,
+                        bullet=ballistic,
+                        altitude=if(ballistic)floorHeight(e.x,e.y)+.50f else .43f)
+                }
                 if(e.kind==DoomKind.MINOXIDIL&&e.hp<bossMaxHp*2/3&&e.pattern%4==0&&reinforcementsSpawned<8){
                     for((xx,yy) in listOf(e.x-1.6f to e.y,e.x+1.6f to e.y)){
                         if(reinforcementsSpawned>=8)break
