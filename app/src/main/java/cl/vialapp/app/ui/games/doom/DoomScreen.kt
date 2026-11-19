@@ -84,7 +84,7 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
             Text("OPERACIÓN CAOS VIAL",fontSize=23.sp,fontWeight=FontWeight.Black,color=Gold)
             DoomPreview(Modifier.fillMaxWidth().aspectRatio(16f/9f))
             Text("EPISODIO 01 · CINCO SECTORES",color=Gold,fontWeight=FontWeight.Bold)
-            Text("Carvier: Salvemos VialApp. Las autoescuelas rivales sabotean el servidor; Don Pelao debe infiltrarse, recuperar las credenciales y restaurar el backup.",color=White)
+            Text("Cinco sectores conectados por un sabotaje. Robots reprogramados, drones, experimentos capilares y autoescuelas rivales: Don Pelao tendrá que descubrir qué ocurre y recuperar VialApp.",color=White)
             Text("Pantalla: stick izquierdo para moverse, desliza para mirar, mantén pulsado para disparar y toca las puertas para usar.",color=White,fontSize=13.sp)
             Text("Mando Xbox Bluetooth: stick izquierdo mover · derecho mirar · RT disparar o golpear · LT puños berserk · A usar · X recargar · Y/RB cambiar arma · LB arma anterior · START pausar.",color=Gold,fontSize=12.sp)
             Text("Récord: "+store.getHighScore(GameProgressStore.PELAO_DOOM)+" · Prototipo jugable",color=Gold,fontSize=12.sp)
@@ -663,7 +663,7 @@ private val hudDigits=arrayOf(
         if(revision<0)Spacer(Modifier.size(0.dp))
     }
 }
-@Composable private fun DoomMap(e:DoomEngine,revision:Int,modifier:Modifier){
+@Composable private fun DoomMap(e:DoomEngine,revision:Int,modifier:Modifier,expanded:Boolean=false){
     Canvas(modifier.background(Dark.copy(alpha=.84f)).padding(3.dp)){
         if(revision<0)return@Canvas
         val sx=size.width/e.width;val sy=size.height/e.height
@@ -677,8 +677,17 @@ private val hudDigits=arrayOf(
                     Offset(x*sx,y*sy),Size(sx.coerceAtLeast(1f),sy.coerceAtLeast(1f)))
             }
         }
+        if(expanded){
+            // Only notes are highlighted; no hidden walls or secret weapons exposed.
+            for(n in e.notes)if(!n.read)
+                drawCircle(Color(0xFF5DA7C5),3.dp.toPx(),Offset(n.x*sx,n.y*sy))
+            for(d in e.doors)if(d.kind!=4&&!d.open)
+                drawRect(Color(0xFFD8B46B),
+                    Offset(d.x*sx,d.y*sy),
+                    Size(sx.coerceAtLeast(1f),sy.coerceAtLeast(1f)))
+        }
         val p=Offset(e.x*sx,e.y*sy)
-        drawCircle(Red,3.dp.toPx(),p);drawLine(White,p,p+Offset(cos(e.angle)*sx*1.7f,sin(e.angle)*sy*1.7f),1.5.dp.toPx())
+        drawCircle(Red,if(expanded)5.dp.toPx()else 3.dp.toPx(),p);drawLine(White,p,p+Offset(cos(e.angle)*sx*1.7f,sin(e.angle)*sy*1.7f),1.5.dp.toPx())
     }
 }
 @Composable private fun DoomFace(state:DoomFaceState,dead:Boolean,modifier:Modifier){
