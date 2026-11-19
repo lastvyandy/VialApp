@@ -5,8 +5,10 @@ import android.content.ComponentName
 import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -65,20 +67,23 @@ internal fun WidgetWelcomePrompt(mascotId:String?) {
             Column(verticalArrangement=Arrangement.spacedBy(14.dp)){
                 Text("¿Quieres añadir el widget de VialApp a tu pantalla de inicio? Consulta tu nivel y tu racha, y practica con un toque.",
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF203B61)).padding(14.dp),
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF183549)).padding(14.dp),
                     verticalArrangement=Arrangement.spacedBy(10.dp)){
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)){
-                            Text("VIALAPP / TU RUTA",fontSize=10.sp,fontWeight=FontWeight.Bold,color=Color(0xFF9DCCFF))
+                            Text("VIALAPP / TU RUTA",fontSize=10.sp,fontWeight=FontWeight.Bold,color=Color(0xFF87CDC4))
                             Text("Tu progreso",fontSize=21.sp,fontWeight=FontWeight.ExtraBold,color=Color.White)
-                            Text("Un poco más cada día",fontSize=12.sp,color=Color(0xFFD3E4F8))
+                            Text("Racha y progreso diario",fontSize=12.sp,color=Color(0xFFF0C888))
                         }
                         Image(painter=painterResource(if(mascotId=="mister_pelao") R.drawable.mascot_mister_pelao else R.drawable.mascot_carvier),
-                            contentDescription="Tu mascota",modifier=Modifier.size(58.dp),contentScale=ContentScale.Fit)
+                            contentDescription="Tu mascota",
+                            modifier=Modifier.size(58.dp).clip(CircleShape)
+                                .border(2.dp,Color(0xFF79CFBE),CircleShape),
+                            contentScale=ContentScale.Crop)
                     }
-                    Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF435A77)))
+                    Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF406270)))
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-                        Text("Nivel y XP",fontSize=11.sp,color=Color(0xFFD3E4F8),modifier=Modifier.weight(1f))
+                        Text("XP · Racha · Misión de hoy",fontSize=11.sp,color=Color(0xFFD3E4F8),modifier=Modifier.weight(1f))
                         Surface(shape=RoundedCornerShape(10.dp),color=Color(0xFFA5D5FF)){
                             Text("Practicar  ›",Modifier.padding(horizontal=12.dp,vertical=8.dp),fontSize=12.sp,
                                 fontWeight=FontWeight.Bold,color=Color(0xFF102846))
