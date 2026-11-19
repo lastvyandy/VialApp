@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
+import android.util.Log
 import android.view.View
 import kotlin.math.*
 import kotlin.random.Random
@@ -53,6 +54,9 @@ internal class DoomView(context:Context):View(context){
     private val art=DoomArt()
     private var previousX=0f
     private var previousY=0f
+    private var profileWindowStart=0L
+    private var profileFrameNanos=0L
+    private var profileFrameCount=0
     private data class Sprite(val x:Float,val y:Float,val size:Float,val art:IntArray,val hit:Boolean=false,val lift:Float=0f,val widthScale:Float=1f)
     // Keep enemy scaling consistent between living and dying sprites.
     private fun enemySpriteSize(kind: DoomKind, level: Int): Float = when (kind) {
@@ -73,6 +77,7 @@ internal class DoomView(context:Context):View(context){
     override fun onDraw(canvas:Canvas){
         super.onDraw(canvas)
         val e=engine?:return
+        val renderStarted=if(e.level==5)System.nanoTime()else 0L
         val ca=cos(e.angle);val sa=sin(e.angle)
         val planeX=-sa*.66f;val planeY=ca*.66f
         val focal=w/(2f*.66f)
@@ -115,16 +120,32 @@ internal class DoomView(context:Context):View(context){
                 val avenueLine=e.level==4&&isFloor&&(cy==5||cy==14||cy==22)&&ty in 29..33
                 val zebra=e.level==4&&isFloor&&(cy==8||cy==12||cy==20)&&cx%3!=0&&tx in 5..58&&ty in 5..55
                 val roadside=e.level==4&&isFloor&&(cx==1||cx==32||cy==1||cy==25)&&tx in 3..60
-                val stair=e.level>=4&&isFloor&&e.stairTier(cx,cy)>0
+                // Distinct horizontal metal treads make E1M5 stairs readable.
+                // Walkway plates are not striped like stair risers.
+                val stepTier=if(e.level==5&&isFloor)e.stairTier(cx,cy)else 0
+                val serverFlight=e.level==5&&isFloor&&stepTier>0&&(
+                    cx in 12..15&&cy in 6..10 ||
+                    cx in 24..27&&cy==6 ||
+                    cx in 31..34&&cy in 18..23 ||
+                    cx in 15..17&&cy in 30..35)
+                val flightCoord=if(cx in 24..27&&cy==6)tx else ty
+                val stair=e.level==4&&isFloor&&e.stairTier(cx,cy)>0
                 val riser=stair&&(ty in 0..9||ty in 30..38)
                 val tread=stair&&(ty in 10..13||ty in 39..42)
                 val worn=stair&&((tx+y/5)and 15)<3
-                val catwalk=e.level==5&&isFloor&&e.stairTier(cx,cy)>=4
+                val catwalk=e.level==5&&isFloor&&stepTier>=4&&!serverFlight
                 val color=if(e.level==4&&!isFloor){
                     val yy=(y*64/horizon.toInt().coerceAtLeast(1)).coerceIn(0,63)
                     val xx=((x*2+(e.angle*150f).toInt()) and 511)
                     art.sky[yy*512+xx]
-                }else if(riser)0xff202a30.toInt() else if(tread)0xffaa7332.toInt() else if(worn)0xff775b45.toInt()
+                }else if(serverFlight){
+                    when {
+                        flightCoord in 0..5 -> 0xff99764a.toInt() // worn safety lip
+                        flightCoord in 6..11 -> 0xff1d262a.toInt()
+                        flightCoord in 51..55 -> 0xff57635d.toInt()
+                        else -> 0xff3b4648.toInt()
+                    }
+                }else if(riser)0xff202a30.toInt() else if(tread)0xffa36d35.toInt() else if(worn)0xff775b45.toInt()
                 else if(catwalk&&(tx%12 in 0..1||ty%12 in 0..1))0xff606b66.toInt()
                 else if(catwalk)0xff292f31.toInt() else if(zebra)0xffa7a7a0.toInt() else if(avenueLine)0xffbc793a.toInt()
                 else if(roadside)0xffa9ada0.toInt() else if(fortressStripe)0xffbc8234.toInt() else if(e.level==3&&isFloor&&cx>=21&&cy>=16&&((tx in 1..4)||(ty in 1..4)))0xff8d3e24.toInt() else if(stripe)0xffad8d38.toInt() else if(isFloor&&cx>=16&&cy>=8&&((tx in 5..8)||(ty in 5..8)))0xff553630.toInt() else if(isFloor&&cx>=9&&cy<7&&cx<=14&&e.level!=5&&ty in 1..3)0xff627064.toInt()
@@ -277,6 +298,18 @@ internal class DoomView(context:Context):View(context){
         if(e.pickupFlash>0f){brush.color=Color.argb((e.pickupFlash*125).toInt().coerceIn(0,22),220,200,85);lowCanvas.drawRect(0f,0f,w.toFloat(),h.toFloat(),brush)}
         target.set(0,0,width,height);brush.color=Color.WHITE
         canvas.drawBitmap(bitmap,null,target,brush)
+        if(e.level==5){
+            val ended=System.nanoTime()
+            if(profileWindowStart==0L)profileWindowStart=ended
+            profileFrameNanos+=ended-renderStarted
+            profileFrameCount++
+            if(ended-profileWindowStart>=2_000_000_000L){
+                val avgMs=profileFrameNanos/(profileFrameCount.coerceAtLeast(1)*1_000_000f)
+                Log.d("PelaoDoomPerf","E1M5 rendering avg %.1f ms (%d frames, %dx%d)".format(
+                    java.util.Locale.US,avgMs,profileFrameCount,w,h))
+                profileWindowStart=ended;profileFrameNanos=0L;profileFrameCount=0
+            }
+        }
     }
     /**
      * Draw visible stair edges using grid-boundary DDA. Previous implementation
