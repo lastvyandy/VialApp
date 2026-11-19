@@ -105,6 +105,15 @@ interface VialApi {
     @GET("tests/datos_tests")
     suspend fun getExamCatalogCounts(): Response<List<ExamCategoryCount>>
 
+    @GET("tests/catalogo")
+    suspend fun getExamCatalogPage(
+        @Header("Authorization") authorization: String,
+        @Query("clase_licencia") licenseClass: String?,
+        @Query("categoria") category: String?,
+        @Query("offset") offset: Int = 0,
+        @Query("limit") limit: Int = 50
+    ): Response<ExamCatalogPage>
+
     @GET("users/me/tests")
     suspend fun getMyExamHistory(
         @Header("Authorization") authorization: String
