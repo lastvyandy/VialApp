@@ -255,7 +255,27 @@ fun main(){
     walk(steps,8.4f,5.5f);steps.interact();steps.answer(1)
     walk(steps,13.5f,5.5f);walk(steps,13.5f,7.5f)
     check(steps.stairTier(13,7)>0&&steps.cameraElevation>.15f)
-    // E1M5: nonlinear server infiltration, hard credential gates, five actual secrets.
+    // Every idle/attack PNG palette must decode correctly before the Android View loads.
+    for(kind in listOf(DoomKind.SABOTEUR,DoomKind.HACKER,DoomKind.RIVAL_GUARD,
+        DoomKind.CORRUPT_TECH,DoomKind.ADMINISTRATOR)){
+        val idle=DoomRivalSpriteArt.idle(kind)
+        val attacking=DoomRivalSpriteArt.get(kind)
+        check(idle.size==4096&&attacking.size==4096)
+        check(idle.count{it!=0}>100&&attacking.count{it!=0}>100)
+        check(!idle.contentEquals(attacking)){"Enemy idle still looks like an attack: $kind"}
+    }
+    // Each key checkpoint really asks a driving question; wrong answers keep it locked.
+    val quiz=DoomEngine(level=5)
+    quiz.enemies.forEach{it.hp=0}
+    route(quiz,9,18);quiz.interact()
+    check(quiz.pending?.question!=null)
+    val beforeWrong=quiz.hp
+    quiz.answer(1)
+    check(quiz.pending==null&&!quiz.doors.first{it.x==10&&it.y==18}.open)
+    check(quiz.hp==beforeWrong-3)
+    quiz.interact();quiz.answer(0)
+    check(quiz.doors.first{it.x==10&&it.y==18}.open&&quiz.questionsCorrect==1)
+    // E1M5: true stairs, credential gates, seven secrets and nine quizzes.
     val fifth=DoomEngine(level=5)
     check(fifth.levelTitle=="ASALTO AL SERVIDOR"&&fifth.width==46&&fifth.height==39)
     check(fifth.secretTotal==7&&fifth.doors.count{it.kind==4}==7)
