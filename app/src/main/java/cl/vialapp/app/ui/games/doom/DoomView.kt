@@ -185,7 +185,7 @@ internal class DoomView(context:Context):View(context){
         }
         for(a in e.enemies){
             if(a.hp>0){
-                val phase=if(a.alert)((e.elapsed*6+a.id*.4f).toInt() and 3)else 0
+                val phase=if(a.moving)(a.walkPhase.toInt() and 3)else 0
                 val size = enemySpriteSize(a.kind, e.level)
                 val pose=if(a.attackFlash>0f)art.enemyAttack[a.kind.ordinal] else art.enemyFrames[a.kind.ordinal][phase]
                 val platform=if(e.level==5)e.floorHeight(a.x,a.y) else 0f
@@ -717,8 +717,8 @@ private class DoomArt{
             val animated=IntArray(4096)
             for(y in 0..63)for(x in 0..63) {
                 val sx=when {
-                    y in 44..61 && x<32 -> x+(if(frame==1)2 else if(frame==3)-2 else 0)
-                    y in 44..61 -> x+(if(frame==1)-2 else if(frame==3)2 else 0)
+                    y in 44..61 && x<32 -> x+(if(frame==1)3 else if(frame==3)-3 else 0)
+                    y in 44..61 -> x+(if(frame==1)-3 else if(frame==3)3 else 0)
                     y in 15..43 -> x+(if(frame==1)-1 else if(frame==3)1 else 0)
                     else -> x
                 }
@@ -742,7 +742,12 @@ private class DoomArt{
         }
         return out
     }
-    val enemyFrames=Array(enemies.size){kind->Array(4){frame->detail(enemies[kind],frame,kind)}}
+    // Patrols carry guns lowered; only the actual attack frame raises the weapon.
+    val enemyIdle=Array(enemies.size){kind->
+        val type=DoomKind.entries[kind]
+        if(kind>=DoomKind.SABOTEUR.ordinal)DoomRivalSpriteArt.idle(type)else enemies[kind]
+    }
+    val enemyFrames=Array(enemies.size){kind->Array(4){frame->detail(enemyIdle[kind],frame,kind)}}
     val enemyAttack=Array(enemies.size){kind->detail(enemies[kind],0,kind).also{a->
         // The muzzle flash must come from the weapon, not from an enemy's face.
         val cx=when(DoomKind.entries[kind]){
