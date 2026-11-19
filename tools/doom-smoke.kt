@@ -263,6 +263,19 @@ fun main(){
         check(idle.size==4096&&attacking.size==4096)
         check(idle.count{it!=0}>100&&attacking.count{it!=0}>100)
         check(!idle.contentEquals(attacking)){"Enemy idle still looks like an attack: $kind"}
+        // White background halos were accidentally baked into the old cutouts.
+        // Reject pale neutral pixels touching transparency on all five characters.
+        for(sprite in listOf(idle,attacking)){
+            for(py in 1..62)for(px in 1..62){
+                val color=sprite[py*64+px]
+                if(color==0)continue
+                val r=(color ushr 16)and 255;val g=(color ushr 8)and 255;val b=color and 255
+                val pale=minOf(r,g,b)>210&&maxOf(r,g,b)-minOf(r,g,b)<45
+                if(pale)check((-1..1).all{dy->(-1..1).all{dx->
+                    dx==0&&dy==0||sprite[(py+dy)*64+px+dx]!=0
+                }}){"White halo still present on $kind"}
+            }
+        }
     }
     // Each key checkpoint really asks a driving question; wrong answers keep it locked.
     val quiz=DoomEngine(level=5)
@@ -292,18 +305,22 @@ fun main(){
     check(fifth.floorHeight(14.5f,6.5f)==.4f)
     check(fifth.floorHeight(16.5f,9.5f)==0f)
     check(fifth.stairTier(22,4)==4&&fifth.stairTier(37,16)==5)
+    check(fifth.notes.any{it.title.startsWith("03")&&fifth.floorHeight(it.x,it.y)>=.4f})
+    check(fifth.notes.any{it.title.startsWith("06")&&fifth.floorHeight(it.x,it.y)>=.5f})
     fifth.enemies.forEach{it.hp=0}
     route(fifth,8,18)
     check(fifth.owns(DoomWeapon.SHOTGUN)&&!fifth.owns(DoomWeapon.MINIGUN)&&!fifth.owns(DoomWeapon.PLASMA))
     openCheckpoint(fifth,10,18,9,18,0)
     openCheckpoint(fifth,17,11,17,12,1)
     route(fifth,25,3)
+    check(fifth.floorHeight(fifth.x,fifth.y)>.35f){"Blue key must require climbing the gallery stairs"}
     check(fifth.hasKey&&!fifth.hasRedKey&&fifth.missionObjective=="REACTIVA LOS RESPALDOS")
     openCheckpoint(fifth,29,6,28,6,2)
     route(fifth,40,8)
     check(fifth.hasRedKey&&!fifth.powerRestored)
     openCheckpoint(fifth,36,13,36,12,1)
     route(fifth,35,18)
+    check(fifth.floorHeight(fifth.x,fifth.y)>.45f){"Minigun must reward the backup mezzanine"}
     check(fifth.owns(DoomWeapon.MINIGUN)&&!fifth.owns(DoomWeapon.PLASMA))
     route(fifth,37,24);fifth.interact()
     check(!fifth.doors.first{it.x==37&&it.y==25}.open){"Backup switch must remain mandatory"}
@@ -323,6 +340,7 @@ fun main(){
     openCheckpoint(fifth,17,25,17,24,1)
     openCheckpoint(fifth,21,28,21,27)
     route(fifth,21,29)
+    check(fifth.floorHeight(fifth.x,fifth.y)>.45f){"Launcher must be hidden above the warehouse stairway"}
     check(fifth.owns(DoomWeapon.ROCKET)&&fifth.secrets==5)
     openCheckpoint(fifth,5,35,5,36)
     route(fifth,5,34)
