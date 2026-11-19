@@ -707,8 +707,11 @@ fun ExamScreen(
 
             } else {
 
-                error =
-                    "No se pudo iniciar el examen (${response.code()})"
+                error = when(response.code()){
+                    403 -> "Este examen no está disponible para repetirlo con tu acceso actual. Revisa los exámenes asignados o tu plan Premium."
+                    409 -> "Ya tienes otro examen en curso. Termínalo o cancélalo antes de repetir este."
+                    else -> "No se pudo iniciar el examen (${response.code()})"
+                }
             }
 
         } catch (e: Exception) {
