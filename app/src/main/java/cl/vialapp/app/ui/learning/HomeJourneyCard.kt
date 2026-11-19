@@ -59,9 +59,16 @@ internal fun HomeJourneyCard(
         Text("TU CAMINO A LA LICENCIA",color=Color(0xFFBED6FF),fontSize=11.sp,fontWeight=FontWeight.Bold)
         Text(if(licenseText.startsWith("Licencia",ignoreCase=true))licenseText else "Licencia "+licenseText,color=Color.White,fontSize=27.sp,fontWeight=FontWeight.ExtraBold)
         Text(
-            if(isMotorcycleLicense(licenseClass))
-                "Tu ruta de motociclista: conducción, protección y normas viales en un solo recorrido."
-            else "Tu ruta de conductor: aprende las normas y practica a tu ritmo.",
+            when {
+                isMotorcycleLicense(licenseClass) &&
+                    chapters?.any{it.id.startsWith("moto-")} == true ->
+                    "Tu ruta de motociclista: conducción, protección y normas viales en un solo recorrido."
+                isMotorcycleLicense(licenseClass) && loading ->
+                    "Preparando tu camino de motociclista…"
+                isMotorcycleLicense(licenseClass) ->
+                    "Las etapas de motocicleta estarán disponibles cuando se actualice el servicio de aprendizaje."
+                else -> "Tu ruta de conductor: aprende las normas y practica a tu ritmo."
+            },
             color=fg,fontSize=12.sp
         )
         when {
