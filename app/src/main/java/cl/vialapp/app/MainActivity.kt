@@ -73,8 +73,16 @@ class MainActivity : ComponentActivity() {
     override fun dispatchGenericMotionEvent(event:MotionEvent):Boolean =
         if(activeDoomGamepad?.onMotion(event)==true)true else super.dispatchGenericMotionEvent(event)
 
-    override fun dispatchKeyEvent(event:KeyEvent):Boolean =
-        if(activeDoomGamepad?.onKey(event)==true)true else super.dispatchKeyEvent(event)
+    override fun dispatchKeyEvent(event:KeyEvent):Boolean {
+        // Volume belongs to Android, never to the Xbox mapping. Developer-option
+        // key labels are drawn by the OS and cannot be disabled by this Activity.
+        if(event.keyCode==KeyEvent.KEYCODE_VOLUME_UP||
+            event.keyCode==KeyEvent.KEYCODE_VOLUME_DOWN||
+            event.keyCode==KeyEvent.KEYCODE_VOLUME_MUTE)
+            return super.dispatchKeyEvent(event)
+        return if(activeDoomGamepad?.onKey(event)==true)true
+            else super.dispatchKeyEvent(event)
+    }
 
     override fun onStop(){
         activeDoomGamepad?.reset()
