@@ -2,29 +2,28 @@ package cl.vialapp.app.ui.practice
 
 import cl.vialapp.app.data.api.CategoryStatResponse
 
-/** A category needs a usable sample before it can drive a study recommendation. */
+/** Necesitamos varias respuestas antes de decirle al alumno que este tema le cuesta. */
 internal const val MIN_PRIORITY_ANSWERS = 8
 
 /**
- * Rank evidence-supported weaknesses, not the API list order. A tiny sample
- * cannot put a category at the top of the student's training plan.
- *
- * This is a recommendation, not an exam-readiness or pass prediction.
+ * Acá ordenamos los temas por dificultad real, no por el orden en que llegaron del servidor.
+ * Con muy pocas respuestas podríamos recomendar cualquier cosa, así que las filtramos.
+ * Esto sirve para estudiar mejor, no para asegurar que el alumno aprobará el examen.
  */
 internal fun recommendedPriority(stats: List<CategoryStatResponse>): CategoryStatResponse? =
     stats.asSequence()
         .filter { it.totalAnswered >= MIN_PRIORITY_ANSWERS && it.incorrectas > 0 }
         .maxWithOrNull(
             compareBy<CategoryStatResponse> {
-                // Smoothed error rate: an extreme result from only a few
-                // answers carries less weight than sustained difficulty.
+                // Le bajamos el peso a los porcentajes extremos cuando hay pocas respuestas.
+                // No es lo mismo equivocarse una vez que llevar varios intentos fallando.
                 (it.incorrectas.coerceIn(0, it.totalAnswered) + 2.0) /
                     (it.totalAnswered + 10.0)
             }.thenBy { it.incorrectas.coerceAtLeast(0) }
                 .thenBy { it.totalAnswered.coerceAtLeast(0) }
         )
 
-/** Keep all categories visible, but put the strongest supported needs first. */
+/** Dejamos todos los temas visibles, pero los que más necesitan repaso van primero. */
 internal fun rankedPracticeCategories(stats: List<CategoryStatResponse>): List<CategoryStatResponse> =
     stats.sortedWith(
         compareByDescending<CategoryStatResponse> {
