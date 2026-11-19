@@ -946,7 +946,8 @@ fun VialAppNavigation(
                     onPractice = { navigateTopLevel("practice") },
                     onOpenCollection = { navController.navigate("collection") },
                     onOpenLeague = { navController.navigate("leaderboard/weekly") { launchSingleTop = true } },
-                    onOpenGame = { route -> openGameOrActivity(route) }
+                    onOpenGame = { route -> openGameOrActivity(route) },
+                    onRepeatExam = { testId -> navController.navigate("exam/$testId") }
                 )
             }
 
