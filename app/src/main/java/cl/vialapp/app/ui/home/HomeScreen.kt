@@ -203,7 +203,12 @@ fun HomeScreen(
     } ?: "Licencia"
 
     val summary = stats?.summary
-    val priorityCategory = stats?.categories?.firstOrNull()
+    val hasExamHistory = (summary?.totalTests ?: 0)>0
+    val priorityCategory = if(hasExamHistory)stats?.categories
+        ?.filter{it.totalAnswered>=8&&it.incorrectas>0}
+        ?.maxWithOrNull(compareBy<cl.vialapp.app.data.api.CategoryStatResponse>{
+            it.errorPercentage
+        }.thenBy{it.incorrectas}) else null
 
     val hasPremiumForLicense =
         user.isPremium ||
@@ -341,6 +346,60 @@ fun HomeScreen(
                 error=journeyError,onRetry={retrySync++})
         }
 
+        item(key="home_smart_practice") {
+            Card(
+                modifier=Modifier.fillMaxWidth(),
+                shape=RoundedCornerShape(22.dp),
+                border=HomeCardBorder,
+                colors=CardDefaults.cardColors(containerColor=vialColor(Color(0xFFEAF3FF)))
+            ){
+                Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
+                    Row(verticalAlignment=Alignment.CenterVertically,
+                        horizontalArrangement=Arrangement.spacedBy(11.dp)){
+                        Surface(shape=RoundedCornerShape(13.dp),
+                            color=vialColor(Color(0xFFD6E8FF))){
+                            Icon(painterResource(R.drawable.ic_award_target),
+                                contentDescription=null,tint=HomeBlue,
+                                modifier=Modifier.padding(12.dp).size(23.dp))
+                        }
+                        Column(Modifier.weight(1f)){
+                            Text("TU PRÁCTICA INTELIGENTE",color=HomeBlue,
+                                fontSize=11.sp,fontWeight=FontWeight.ExtraBold)
+                            Text(
+                                when {
+                                    !hasExamHistory -> "Descubramos tu punto de partida"
+                                    priorityCategory!=null -> "Hoy: "+priorityCategory.categoria
+                                    else -> "Sigue reforzando tus conocimientos"
+                                },
+                                color=HomeDark,fontWeight=FontWeight.Bold,fontSize=17.sp
+                            )
+                        }
+                    }
+                    Text(when {
+                        !hasExamHistory -> "Realiza tu primer examen para que podamos identificar qué temas necesitas practicar."
+                        priorityCategory!=null -> "Tienes "+priorityCategory.incorrectas+" errores registrados y "+
+                            priorityCategory.successPercentage+"% de aciertos en este tema. Puedes repasarlo con una práctica corta."
+                        else -> "Ya registramos tus exámenes. Sigue practicando y descubre nuevas recomendaciones."
+                    },color=HomeGray,fontSize=13.sp,lineHeight=19.sp)
+                    Button(
+                        onClick=if(!hasExamHistory)onExam else onPractice,
+                        modifier=Modifier.fillMaxWidth(),
+                        shape=RoundedCornerShape(13.dp),
+                        colors=ButtonDefaults.buttonColors(containerColor=VialActionBlue,
+                            contentColor=Color.White)
+                    ){
+                        Text(if(!hasExamHistory)"Hacer mi primer examen" else "Practicar ahora",
+                            fontWeight=FontWeight.Bold)
+                    }
+                    if(hasExamHistory&&hasPremiumForLicense){
+                        TextButton(onClick=onAdaptivePractice){
+                            Text("Entrenamiento personalizado Premium ›",color=HomeBlue)
+                        }
+                    }
+                }
+            }
+        }
+
         item {
             when {
                 xpLoaded -> {
@@ -404,102 +463,6 @@ fun HomeScreen(
             }
         }
 
-        // Recomendación de refuerzo
-        item {
-            Text(
-                text = "Refuerzo recomendado",
-                color = HomeDark,
-                fontSize = 21.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                border = HomeCardBorder,
-                colors = CardDefaults.cardColors(containerColor = vialColor(Color.White))
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    if (dashboardLoading) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
-                                strokeWidth = 2.dp,
-                                color = HomeBlue
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(text = "Preparando tu recomendación...", color = HomeGray)
-                        }
-                    } else if (priorityCategory != null) {
-                        Text(
-                            text = "Prioridad recomendada",
-                            color = HomeBlue,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = priorityCategory.categoria,
-                            color = HomeDark,
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(5.dp))
-                        Text(
-                            text = "${priorityCategory.successPercentage}% de acierto · " +
-                                    "${priorityCategory.incorrectas} errores registrados",
-                            color = HomeGray,
-                            fontSize = 13.sp
-                        )
-                        Spacer(modifier = Modifier.height(13.dp))
-                        LinearProgressIndicator(
-                            progress = {
-                                (priorityCategory.successPercentage / 100f).coerceIn(0f, 1f)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp),
-                            color = scoreColor(priorityCategory.successPercentage),
-                            trackColor = vialColor(Color(0xFFE8EDF5))
-                        )
-                        Spacer(modifier = Modifier.height(17.dp))
-                        Button(
-                            onClick = onPractice,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(15.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = VialActionBlue,
-                                    contentColor = Color.White)
-                        ) {
-                            Text(text = "Practicar ahora", fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        Text(
-                            text = "Descubre tus puntos débiles",
-                            color = HomeDark,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Completa un examen y VialApp podrá recomendarte qué temas reforzar.",
-                            color = HomeGray,
-                            fontSize = 14.sp
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = onExam,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(15.dp)
-                        ) {
-                            Text(text = "Hacer un examen", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        }
-
         item {
             Text("Herramientas de estudio",color=HomeDark,fontSize=21.sp,fontWeight=FontWeight.Bold)
         }
@@ -512,7 +475,7 @@ fun HomeScreen(
         item {
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_award_wheel,"Simulador vial","Situaciones de tránsito",onSimulator)
-                HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_award_target,"Práctica inteligente","Refuerza tus errores",onAdaptivePractice)
+                HomeActionCard(Modifier.weight(1f).fillMaxHeight(),R.drawable.ic_award_target,"Entrenamiento personalizado","Sesiones Premium de refuerzo",onAdaptivePractice)
             }
         }
         // Resumen de progreso
