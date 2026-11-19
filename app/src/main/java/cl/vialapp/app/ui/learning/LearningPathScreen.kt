@@ -65,13 +65,13 @@ fun LearningPathScreen(
     val session=remember(context){SessionManager(context)}
     val store=remember(context,userKey){GameProgressStore(context,userKey)}
     val vehicle=rememberJourneyVehicle(userKey)
-    var chapters by remember(userKey){mutableStateOf<List<LearningChapterSummary>>(emptyList())}
+    var chapters by remember(userKey,licenseClass){mutableStateOf<List<LearningChapterSummary>>(emptyList())}
     var streak by remember(userKey){mutableIntStateOf(0)}
     var loading by remember(userKey){mutableStateOf(true)}
     var error by remember(userKey){mutableStateOf("")}
     var refresh by remember(userKey){mutableIntStateOf(0)}
     val listState=rememberLazyListState()
-    LaunchedEffect(userKey,refresh){
+    LaunchedEffect(userKey,licenseClass,refresh){
         loading=true;error=""
         try{
             val token=session.getAccessToken()
@@ -90,6 +90,8 @@ fun LearningPathScreen(
         catch(e:Exception){error=readError(e)}
         finally{loading=false}
     }
+    val motorcycle=isMotorcycleLicense(licenseClass)
+    val motorcycleStages=chapters.count{it.id.startsWith("moto-")}
     val next=nextChapterIndex(chapters)
     val current=chapters.getOrNull(next)
     val completed=chapters.count{it.progress.completed}
@@ -109,7 +111,8 @@ fun LearningPathScreen(
                 .padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 Row(verticalAlignment=Alignment.CenterVertically){
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){
-                        Text("ACADEMIA VIAL · CLASE B",color=Color(0xFFBED6FF),fontWeight=FontWeight.Bold,fontSize=11.sp)
+                        Text(if(motorcycle)"ACADEMIA VIAL · CLASE C" else "ACADEMIA VIAL · CLASE B",
+                            color=Color(0xFFBED6FF),fontWeight=FontWeight.Bold,fontSize=11.sp)
                         Text("Cada paso te acerca a la meta",color=Color.White,fontSize=24.sp,fontWeight=FontWeight.ExtraBold)
                         if(chapters.isNotEmpty())Text(completed.toString()+" de "+chapters.size+" etapas completadas",color=Color(0xFFDBEAFE),fontSize=13.sp)
                     }
@@ -133,7 +136,7 @@ fun LearningPathScreen(
                                 val index=listState.layoutInfo.visibleItemsInfo.firstOrNull{it.key==current.id}?.index
                                 if(index!=null)listState.animateScrollToItem(index)
                                 else{
-                                    val before=1+(if(isMotorcycleLicense(licenseClass))1 else 0)+(if(error.isNotBlank())1 else 0)+1
+                                    val before=1+(if(motorcycle)1 else 0)+(if(error.isNotBlank())1 else 0)+1
                                     listState.animateScrollToItem(before+next)
                                 }
                             }
@@ -145,12 +148,20 @@ fun LearningPathScreen(
             }
             Spacer(Modifier.height(14.dp))
         }
-        if(isMotorcycleLicense(licenseClass))item(key="class_c_notice"){
-            Surface(color=c.surfaceVariant,shape=RoundedCornerShape(16.dp)){
+        if(motorcycle)item(key="class_c_notice"){
+            Surface(color=c.primaryContainer,shape=RoundedCornerShape(16.dp)){
                 Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-                    Text("Tu licencia Clase C",color=c.onSurface,fontWeight=FontWeight.Bold)
-                    Text("Esta ruta contiene la base común de Clase B. Complementa tu estudio con las fichas específicas para motociclistas.",color=c.onSurfaceVariant,fontSize=13.sp)
-                    TextButton(onClick=onLibrary,modifier=Modifier.fillMaxWidth()){Text("Biblioteca de motocicletas")}
+                    Text("TU CAMINO COMO MOTOCICLISTA",color=c.onPrimaryContainer,
+                        fontWeight=FontWeight.ExtraBold,fontSize=13.sp)
+                    Text(
+                        if(motorcycleStages>0)
+                            "$motorcycleStages etapas específicas de motocicleta, integradas con circulación, prevención y convivencia vial."
+                        else "Estamos mostrando las etapas disponibles. Las etapas de motocicleta aparecerán al actualizar el servicio de aprendizaje.",
+                        color=c.onPrimaryContainer,fontSize=13.sp,lineHeight=19.sp
+                    )
+                    TextButton(onClick=onLibrary,modifier=Modifier.fillMaxWidth()){
+                        Text("Consultar biblioteca de motocicletas")
+                    }
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -171,7 +182,7 @@ fun LearningPathScreen(
                 }
             }
             itemsIndexed(chapters,key={_,item->item.id}){index,chapter->
-                RoadStageNode(chapter,index,chapterAvailable(chapters,index),index==next,vehicle){onChapter(chapter.id)}
+                RoadStageNode(chapter,index,chapterAvailable(chapters,index),index==next,vehicle,motorcycle){onChapter(chapter.id)}
             }
             item(key="route_goal"){
                 val finished=completed==chapters.size
@@ -206,7 +217,7 @@ fun LearningPathScreen(
 }
 
 @Composable
-private fun RoadStageNode(chapter:LearningChapterSummary,index:Int,available:Boolean,current:Boolean,vehicle:JourneyVehicle,onClick:()->Unit){
+private fun RoadStageNode(chapter:LearningChapterSummary,index:Int,available:Boolean,current:Boolean,vehicle:JourneyVehicle,motorcycle:Boolean,onClick:()->Unit){
     val c=MaterialTheme.colorScheme
     val done=chapter.progress.completed
     val left=index%2==0
@@ -250,7 +261,8 @@ private fun RoadStageNode(chapter:LearningChapterSummary,index:Int,available:Boo
                 Canvas(Modifier.size(64.dp)){
                     drawCircle(Color(0xFF8EBBFA).copy(alpha=.38f),size.minDimension*.48f,center)
                     drawCircle(Color(0xFF2563EB),size.minDimension*.40f,center)
-                    drawJourneyVehicle(vehicle,center,32.dp.toPx())
+                    if(motorcycle)drawJourneyMotorcycle(center,32.dp.toPx(),vehicle.paint)
+                    else drawJourneyVehicle(vehicle,center,32.dp.toPx())
                 }
             }else{
                 Surface(modifier=Modifier.size(50.dp),shape=RoundedCornerShape(25.dp),color=accent,
