@@ -24,6 +24,7 @@ import cl.vialapp.app.data.api.ApiClient
 import cl.vialapp.app.data.api.AssignedTest
 import cl.vialapp.app.data.api.ExamAttemptResponse
 import cl.vialapp.app.data.api.ExamCategoryCount
+import cl.vialapp.app.data.api.ExamCatalogEntry
 import cl.vialapp.app.data.api.ExamHistoryResult
 import cl.vialapp.app.data.api.ExtraExamRequest
 import cl.vialapp.app.data.session.SessionManager
@@ -67,6 +68,11 @@ fun ExamsScreen(
     var testsLoading by remember{mutableStateOf(true)}
     var nextLoading by remember{mutableStateOf(false)}
     var catalogue by remember{mutableStateOf<List<ExamCategoryCount>>(emptyList())}
+    var catalogPage by remember(selected){mutableIntStateOf(0)}
+    var catalogEntries by remember(selected){mutableStateOf<List<ExamCatalogEntry>>(emptyList())}
+    var catalogMore by remember(selected){mutableStateOf(false)}
+    var catalogLoading by remember(selected){mutableStateOf(false)}
+    var catalogSupported by remember(selected){mutableStateOf(true)}
     var history by remember{mutableStateOf<List<ExamHistoryResult>>(emptyList())}
     var historyLoaded by remember{mutableStateOf(false)}
     var historyLoading by remember{mutableStateOf(false)}
@@ -136,6 +142,38 @@ fun ExamsScreen(
         finally{testsLoading=false;nextLoading=false}
     }
 
+    // Read-only full catalog. Older deployed backends may not yet have this
+    // endpoint; keep the assigned-exams list functional as a fallback.
+    LaunchedEffect(license,selected,catalogPage,reload){
+        if(selected==null)return@LaunchedEffect
+        catalogLoading=true
+        try{
+            val token=session.getAccessToken()
+            if(token!=null){
+                val result=ApiClient.api.getExamCatalogPage(
+                    authorization="Bearer $token",
+                    licenseClass=licenseClass,
+                    category=selected,
+                    offset=catalogPage*PAGE_SIZE,
+                    limit=PAGE_SIZE
+                )
+                if(result.isSuccessful){
+                    val batch=result.body()
+                    val added=batch?.tests.orEmpty()
+                    catalogEntries=(if(catalogPage==0)added else catalogEntries+added)
+                        .distinctBy{it.id}
+                    catalogMore=batch?.hasMore==true
+                    catalogSupported=true
+                }else{
+                    catalogSupported=false
+                    catalogMore=false
+                }
+            }
+        }catch(e:CancellationException){throw e}
+        catch(_:Exception){catalogSupported=false}
+        finally{catalogLoading=false}
+    }
+
     LaunchedEffect(tab,reload){
         if(tab!="history")return@LaunchedEffect
         historyLoading=true
@@ -163,6 +201,18 @@ fun ExamsScreen(
     val selectedItems=remember(tests,selected){
         if(selected==null)tests else tests.filter{groupName(it.categoria).equals(selected,true)}
     }
+    val allVisible=remember(catalogEntries,tests,selected){
+        val entries=if(catalogEntries.isNotEmpty())catalogEntries else
+            tests.filter{selected==null||groupName(it.categoria).equals(selected,true)}
+                .map{ExamCatalogEntry(it.id,it.nombre,it.categoria,it.licenseClass)}
+        val assigned=tests.filter{selected==null||groupName(it.categoria).equals(selected,true)}
+            .associateBy{it.id}
+        entries.sortedWith(compareByDescending<ExamCatalogEntry>{
+            val exam=assigned[it.id]
+            exam?.canStart==true
+        }.thenBy{it.id})
+    }
+
     val assignedCounts=remember(tests){
         tests.groupingBy{groupName(it.categoria)}.eachCount()
     }
@@ -295,7 +345,7 @@ fun ExamsScreen(
             ){
                 item{
                     Text("Exámenes de "+selected,fontSize=18.sp,fontWeight=FontWeight.Bold)
-                    Text("Se muestran las asignaciones disponibles para tu cuenta; el catálogo puede contener más exámenes.",
+                    Text("Explora los exámenes del catálogo. Los que aún no tienes asignados aparecen bloqueados; la disponibilidad se gestiona desde tu cuenta.",
                         fontSize=12.sp,color=c.onSurfaceVariant,lineHeight=18.sp)
                 }
                 activeAttempt?.let{attempt->
@@ -317,36 +367,56 @@ fun ExamsScreen(
                         CircularProgressIndicator()
                     }
                 }
-                if(selectedItems.isEmpty()&&!testsLoading)item{
+                if(allVisible.isEmpty()&&!testsLoading&&!catalogLoading)item{
                     Text("No hay exámenes asignados todavía en esta categoría. Consulta otras categorías o solicita otro examen si tu plan lo permite.",
                         color=c.onSurfaceVariant,fontSize=13.sp)
                 }
-                items(selectedItems,key={it.id.toString()+"-"+it.assignedDate}){exam->
-                    val active=activeAttempt?.testId==exam.id
-                    val allowed=active||exam.canStart
+                items(allVisible,key={it.id}){entry->
+                    val exam=selectedItems.firstOrNull{it.id==entry.id}
+                    val active=activeAttempt?.testId==entry.id
+                    val allowed=active||exam?.canStart==true
                     Card(shape=RoundedCornerShape(18.dp),
                         border=BorderStroke(1.dp,c.outlineVariant),
                         colors=CardDefaults.cardColors(containerColor=c.surface)){
                         Column(Modifier.fillMaxWidth().padding(15.dp),
                             verticalArrangement=Arrangement.spacedBy(7.dp)){
-                            Text(displayExamName(exam.nombre),fontSize=16.sp,
+                            Text(displayExamName(entry.nombre),fontSize=16.sp,
                                 fontWeight=FontWeight.Bold,color=c.onSurface)
                             Text(when{
-                                active->"En curso"
-                                exam.isLocked->exam.lockedReason?:"Requiere Premium"
-                                exam.hasResult->"Realizado anteriormente"
-                                allowed->"Disponible"
-                                else->"No disponible por ahora"
+                                active -> "En curso"
+                                exam==null -> "No asignado todavía"
+                                exam.isLocked -> exam.lockedReason?:"Requiere Premium"
+                                exam.hasResult -> "Realizado anteriormente"
+                                allowed -> "Disponible"
+                                else -> "No disponible por ahora"
                             },color=if(allowed)c.primary else c.onSurfaceVariant,fontSize=12.sp)
-                            if(exam.assignedDate!=null)Text(
+                            if(exam?.assignedDate!=null)Text(
                                 "Asignado: "+exam.assignedDate.take(10),
                                 color=c.onSurfaceVariant,fontSize=11.sp)
-                            Button(onClick={openExam(exam.id)},enabled=allowed,
+                            Button(
+                                onClick={openExam(entry.id)},
+                                enabled=allowed,
                                 modifier=Modifier.fillMaxWidth(),
                                 colors=ButtonDefaults.buttonColors(containerColor=c.primary)){
-                                Text(if(active)"Continuar examen"else if(exam.hasResult)"Volver a realizar"else"Comenzar examen")
+                                Text(when{
+                                    active->"Continuar examen"
+                                    !allowed->"Pendiente de asignación"
+                                    exam?.hasResult==true->"Volver a realizar"
+                                    else->"Comenzar examen"
+                                })
                             }
                         }
+                    }
+                }
+                if(catalogLoading&&catalogEntries.isEmpty())item{
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center){
+                        CircularProgressIndicator(Modifier.size(20.dp),strokeWidth=2.dp)
+                    }
+                }
+                if(catalogMore)item{
+                    OutlinedButton(onClick={catalogPage++},enabled=!catalogLoading,
+                        modifier=Modifier.fillMaxWidth()){
+                        Text(if(catalogLoading)"Cargando catálogo..." else "Mostrar más del catálogo")
                     }
                 }
                 if(more)item{
