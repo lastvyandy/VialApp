@@ -50,6 +50,26 @@ private fun openCheckpoint(e:DoomEngine,x:Int,y:Int,nearX:Int,nearY:Int,answer:I
     check(e.doors.first{it.x==x&&it.y==y}.open){"Checkpoint did not open "+x+","+y}
 }
 fun main(){
+    // All five acts must have connected, level-specific opening cinematics.
+    for(level in 1..5){
+        val cards=DoomStory.intro(level)
+        val storyEngine=DoomEngine(level=level)
+        check(DoomStory.title(level)==storyEngine.levelTitle)
+        check(cards.size==3)
+        check(cards.all{it.heading.isNotBlank()&&it.text.length in 80..310})
+        val expected=if(level==5)9 else 3
+        check(storyEngine.notes.size==expected){"Wrong document count in sector $level"}
+        check(storyEngine.notes.all{it.title.isNotBlank()&&it.body.length>=90})
+        check(storyEngine.notes.all{!storyEngine.solid(it.x,it.y,.05f)}){"Notes inside walls in E1M$level"}
+    }
+    // A field report is a real usable item; closing it resumes the level.
+    val evidence=DoomEngine(level=1)
+    evidence.enemies.forEach{it.hp=0}
+    route(evidence,4,2)
+    evidence.interact()
+    check(evidence.activeNote!=null&&evidence.notesRead==1)
+    evidence.closeNote()
+    check(evidence.activeNote==null)
     val combat=DoomEngine(19)
     check(combat.enemies.size==13&&combat.enemies.map{it.kind}.toSet().size==6)
     check(combat.solid(.2f,3.5f))
