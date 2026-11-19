@@ -97,7 +97,7 @@ internal fun DoomStoryScreen(level:Int,onStart:()->Unit,onBack:()->Unit){
 
 /** Lightweight original pixel-art stage paintings; shapes scale to landscape phones. */
 @Composable
-private fun DoomStoryboardArt(level:Int,page:Int,modifier:Modifier=Modifier){
+internal fun DoomStoryboardArt(level:Int,page:Int,modifier:Modifier=Modifier){
     Canvas(modifier){
         val w=size.width;val h=size.height
         fun block(x:Float,y:Float,bw:Float,bh:Float,color:Color){
