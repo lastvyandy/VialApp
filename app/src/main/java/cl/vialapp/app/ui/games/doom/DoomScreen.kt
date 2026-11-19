@@ -62,6 +62,7 @@ private val Red=Color(0xFFC84F3C)
 private val White=Color(0xFFE7E2D4)
 
 @Composable
+// Esta pantalla maneja el menú, la cinemática y la partida sin mezclarlos.
 fun DoomScreen(userKey:String,onBack:()->Unit){
     val context=LocalContext.current
     val store=remember(context,userKey){GameProgressStore(context,userKey)}
@@ -75,6 +76,7 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
     val engine=run
     cl.vialapp.app.ui.GameLandscape(active=engine!=null||introLevel!=0)
     val audio=LocalGameAudio.current
+    // Si todavía no elegimos jugar, mostramos las misiones y sus descripciones.
     if(engine==null&&introLevel==0){
         BackHandler{onBack()}
         DoomMissionMenu(
@@ -234,6 +236,8 @@ private fun DoomRun(e:DoomEngine,store:GameProgressStore,session:SessionManager,
             }
         }
     }
+    // La partida se detiene cuando leemos una nota, vemos el mapa o respondemos preguntas.
+    // Así no nos mata un enemigo mientras estamos ocupados con una pantalla encima.
     LaunchedEffect(e,ready,paused,challenge,note,mapOpen,finished){
         if(!ready||paused||challenge!=null||note!=null||mapOpen||finished)return@LaunchedEffect
         var last=withFrameNanos{it}
