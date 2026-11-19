@@ -54,6 +54,7 @@ data class GameRunResult(
 )
 
 
+// Guardamos el progreso por usuario, para que las partidas y recompensas no se mezclen entre cuentas.
 class GameProgressStore(
     context: Context,
     userKey: String? = null
@@ -71,6 +72,7 @@ class GameProgressStore(
         )
 
 
+    // Rally se desbloquea con exámenes reales, no solo por entrar varias veces al juego.
     fun rallyExamCount():Int = preferences.getInt("rally_confirmed_exams",0).coerceIn(0,3)
 
     private fun confirmRallyExams(count:Int?){
@@ -98,6 +100,7 @@ class GameProgressStore(
     /**
      * Sincroniza el progreso de XP, puntos y partidas jugadas desde el backend.
      */
+    // Si hay conexión traemos lo del servidor, pero el menú puede seguir usando el progreso local.
     suspend fun syncFromBackend(
         api: VialApi,
         token: String
@@ -456,6 +459,7 @@ class GameProgressStore(
         )
     }
 
+    // La misión diaria sale del progreso que ya guardamos, no hace falta pedirla cada vez.
     fun dailyMissionSnapshot(): DailyMissionSnapshot {
         val today = LocalDate.now()
         val examsToday = preferences.getInt(dailyExamsKey(today), 0)
