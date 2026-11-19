@@ -15,10 +15,27 @@ import kotlin.random.Random
 /** Original pixel sprites, perspective-correct textured walls, floor casting and column depth. */
 internal class DoomView(context:Context):View(context){
     var engine:DoomEngine?=null
-    private val w=400
+        set(value) {
+            if(field===value)return
+            field=value
+            // A 320-wide Doom framebuffer is enough for crisp nearest-neighbor pixel
+            // art, and cuts the expensive E1M5 CPU raycaster workload by ~36%.
+            val targetWidth=if(value?.level==5)320 else 400
+            if(targetWidth!=w){
+                w=targetWidth
+                val ratio=if(width>0&&height>0)height.toFloat()/width else 224f/400f
+                h=(w*ratio).roundToInt().coerceIn(112,300)
+                pixels=IntArray(w*h);depth=FloatArray(w)
+                riserDepth=FloatArray(w*h){Float.POSITIVE_INFINITY}
+                bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
+                lowCanvas=Canvas(bitmap)
+            }
+            invalidate()
+        }
+    private var w=400
     private var h=224
     private var pixels=IntArray(w*h)
-    private val depth=FloatArray(w)
+    private var depth=FloatArray(w)
     private var riserDepth=FloatArray(w*h) { Float.POSITIVE_INFINITY }
     private var bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
     private var lowCanvas=Canvas(bitmap)
@@ -47,8 +64,6 @@ internal class DoomView(context:Context):View(context){
         DoomKind.RIVAL_GUARD -> .88f
         DoomKind.CORRUPT_TECH -> .86f
         DoomKind.FLESH_STALKER -> 1.02f
-        DoomKind.RIVAL_GUARD -> 1.06f
-        DoomKind.HACKER -> .88f
         DoomKind.DRONE -> .73f
         DoomKind.HEAVY -> 1.12f
         DoomKind.RUNNER -> .66f
@@ -75,15 +90,23 @@ internal class DoomView(context:Context):View(context){
             val tex=when{e.level==5&&isFloor->art.serverFloor;e.level==5->art.serverCeiling;e.level==4&&isFloor->art.roadFloor;isFloor->art.floor;else->art.ceiling}
             for(x in 0 until w){
                 if(e.level==5&&isFloor){
-                    val p=2f*x/w-1f
-                    val vx=ca+planeX*p;val vy=sa+planeY*p
-                    val denominator=(y+.5f-horizon).coerceAtLeast(.5f)
-                    var distance=rowDistance
-                    repeat(4){
-                        val sampleHeight=e.floorHeight(e.x+distance*vx,e.y+distance*vy)
-                        distance=(focal*(eyeHeight-sampleHeight).coerceAtLeast(.04f)/denominator).coerceAtMost(70f)
+                    // Predict the floor tile using ordinary row-casting, then correct
+                    // only when it is raised. No 4x-per-pixel ray iterations.
+                    val rayX=ca+planeX*(2f*x/w-1f)
+                    val rayY=sa+planeY*(2f*x/w-1f)
+                    val baseX=e.x+rowDistance*rayX
+                    val baseY=e.y+rowDistance*rayY
+                    val firstHeight=e.floorHeight(baseX,baseY)
+                    val fraction=(eyeHeight-firstHeight).coerceAtLeast(.06f)/eyeHeight
+                    var fx2=e.x+(baseX-e.x)*fraction
+                    var fy2=e.y+(baseY-e.y)*fraction
+                    val correctedHeight=e.floorHeight(fx2,fy2)
+                    if(correctedHeight!=firstHeight){
+                        val correction=(eyeHeight-correctedHeight).coerceAtLeast(.06f)/eyeHeight
+                        fx2=e.x+(baseX-e.x)*correction
+                        fy2=e.y+(baseY-e.y)*correction
                     }
-                    fx=e.x+distance*vx;fy=e.y+distance*vy
+                    fx=fx2;fy=fy2
                 }
                 val tx=(fx*64).toInt() and 63;val ty=(fy*64).toInt() and 63
                 val cx=floor(fx).toInt();val cy=floor(fy).toInt()
@@ -255,28 +278,59 @@ internal class DoomView(context:Context):View(context){
         target.set(0,0,width,height);brush.color=Color.WHITE
         canvas.drawBitmap(bitmap,null,target,brush)
     }
-    /** Depth-buffered vertical step faces; same world height as the floor and pickups. */
+    /**
+     * Draw visible stair edges using grid-boundary DDA. Previous implementation
+     * ray-marched every 0.045 world units in every column (very expensive on
+     * phones) and drew bright striped 'barricades' over the hallway.
+     *
+     * This version checks at most one tile edge per grid crossing, draws only
+     * faces rising away from the player and keeps a small pixel depth buffer.
+     */
     private fun drawServerStairRisers(e:DoomEngine,ca:Float,sa:Float,planeX:Float,planeY:Float,
                                      focal:Float,horizon:Float,eyeHeight:Float){
         riserDepth.fill(Float.POSITIVE_INFINITY)
         for(screenX in 0 until w){
-            val p=2f*screenX/w-1f
-            val vx=ca+planeX*p;val vy=sa+planeY*p
-            val far=depth[screenX].coerceAtMost(20f)
-            var dist=.065f
-            var previous=e.stairTier(floor(e.x+dist*vx).toInt(),floor(e.y+dist*vy).toInt())
-            while(dist<far){
-                dist=(dist+.045f).coerceAtMost(far)
-                val tier=e.stairTier(floor(e.x+dist*vx).toInt(),floor(e.y+dist*vy).toInt())
-                if(tier>previous){
-                    val top=(horizon+focal*(eyeHeight-tier*.10f)/dist).toInt().coerceIn(0,h-1)
-                    val bottom=(horizon+focal*(eyeHeight-previous*.10f)/dist).toInt().coerceIn(0,h-1)
-                    if(top<=bottom)for(y in top..bottom){
-                        val index=y*w+screenX
-                        if(dist<riserDepth[index]){
-                            val color=if((screenX+y/3)%13<2)0x8a8e83 else if(y>bottom-2)0xa06a32 else 0x343a3d
-                            pixels[index]=shade(0xff000000.toInt() or color,.72f/(1f+dist*.025f))
-                            riserDepth[index]=dist
+            val rayX=ca+planeX*(2f*screenX/w-1f)
+            val rayY=sa+planeY*(2f*screenX/w-1f)
+            val deltaX=if(abs(rayX)<.00001f)1e8f else abs(1f/rayX)
+            val deltaY=if(abs(rayY)<.00001f)1e8f else abs(1f/rayY)
+            val stepX=if(rayX<0f)-1 else 1
+            val stepY=if(rayY<0f)-1 else 1
+            var mapX=floor(e.x).toInt()
+            var mapY=floor(e.y).toInt()
+            var distX=(if(stepX<0)e.x-mapX else mapX+1-e.x)*deltaX
+            var distY=(if(stepY<0)e.y-mapY else mapY+1-e.y)*deltaY
+            var previous=e.stairTier(mapX,mapY)
+            val far=depth[screenX].coerceAtMost(17f)
+            var steps=0
+            while(steps++<40){
+                val distance:Float
+                if(distX<distY){
+                    distance=distX;distX+=deltaX;mapX+=stepX
+                }else{
+                    distance=distY;distY+=deltaY;mapY+=stepY
+                }
+                if(distance>=far||mapX !in 0 until e.width||mapY !in 0 until e.height)break
+                val tier=e.stairTier(mapX,mapY)
+                if(tier>previous&&distance>.23f){
+                    val top=(horizon+focal*(eyeHeight-tier*.10f)/distance).toInt()
+                    val bottom=(horizon+focal*(eyeHeight-previous*.10f)/distance).toInt()
+                    if(top<=bottom&&bottom>=0&&top<h){
+                        val first=top.coerceAtLeast(0)
+                        val last=bottom.coerceAtMost(h-1)
+                        // Industrial steel: muted riser and a thin worn copper lip.
+                        val light=(.71f/(1f+distance*.035f)).coerceAtLeast(.24f)
+                        for(py in first..last){
+                            val idx=py*w+screenX
+                            if(distance<riserDepth[idx]){
+                                val color=when{
+                                    py>=bottom-2 -> 0xff76583c.toInt()
+                                    screenX%11==0 -> 0xff454d4b.toInt()
+                                    else -> 0xff313a3e.toInt()
+                                }
+                                pixels[idx]=shade(color,light)
+                                riserDepth[idx]=distance
+                            }
                         }
                     }
                 }
