@@ -633,6 +633,12 @@ private val hudDigits=arrayOf(
         for(y in 0 until e.height)for(x in 0 until e.width){
             val c=e.cell(x,y)
             if(c!=0)drawRect(if(c==5)Gold.copy(alpha=.7f)else if(c==6)Color(0xFF64D5A1)else Color(0xFF77736B),Offset(x*sx,y*sy),Size(sx,sy))
+            else if(e.level==5){
+                val step=e.stairTier(x,y)
+                if(step>0)drawRect(
+                    if(step>=4)Color(0xFF4D9E97)else Color(0xFFCF9650),
+                    Offset(x*sx,y*sy),Size(sx.coerceAtLeast(1f),sy.coerceAtLeast(1f)))
+            }
         }
         val p=Offset(e.x*sx,e.y*sy)
         drawCircle(Red,3.dp.toPx(),p);drawLine(White,p,p+Offset(cos(e.angle)*sx*1.7f,sin(e.angle)*sy*1.7f),1.5.dp.toPx())
