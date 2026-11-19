@@ -1,6 +1,7 @@
 package cl.vialapp.app.ui.exams
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,1086 +17,375 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import cl.vialapp.app.data.api.ApiClient
 import cl.vialapp.app.data.api.AssignedTest
 import cl.vialapp.app.data.api.ExamAttemptResponse
+import cl.vialapp.app.data.api.ExamCategoryCount
+import cl.vialapp.app.data.api.ExamHistoryResult
+import cl.vialapp.app.data.api.ExtraExamRequest
 import cl.vialapp.app.data.session.SessionManager
-import cl.vialapp.app.ui.theme.vialColor
-import cl.vialapp.app.ui.theme.VialActionBlue
+import kotlinx.coroutines.CancellationException
+import java.util.Locale
 
+private const val PAGE_SIZE=50
 
-private val VialBlue: Color
-    @Composable get() = vialColor(Color(0xFF2563EB))
-private val VialDark: Color
-    @Composable get() = vialColor(Color(0xFF172033))
-private val VialGray: Color
-    @Composable get() = vialColor(Color(0xFF64748B))
+private fun classCode(value:String?):String =
+    (value?:"B").trim().uppercase(Locale.ROOT).removePrefix("CLASE ").trim()
 
+private fun groupName(value:String?):String =
+    value?.trim()?.takeIf{it.isNotBlank()}?:"Mixto"
 
+private fun displayExamName(name:String):String =
+    name.replace(Regex("\\s\\d{8}-\\d{4}$"),"").trim()
+
+/**
+ * Full exam catalogue navigation; actual exam access and daily limits continue
+ * to be enforced by the backend. Catalog statistics never grant exam access.
+ */
 @Composable
 fun ExamsScreen(
-    licenseClass: String?,
-    category: String? = null,
-    onExamClick: (Int) -> Unit,
-    onBack: () -> Unit
-) {
+    licenseClass:String?,
+    category:String?=null,
+    onExamClick:(Int)->Unit,
+    onBack:()->Unit
+){
+    val c=MaterialTheme.colorScheme
+    val context=LocalContext.current
+    val session=remember(context){SessionManager(context)}
+    val license=remember(licenseClass){classCode(licenseClass)}
+    var selected by rememberSaveable(category){mutableStateOf(category)}
+    var tab by rememberSaveable{mutableStateOf("categories")}
+    var reload by remember{mutableIntStateOf(0)}
+    var page by remember(selected){mutableIntStateOf(0)}
+    var tests by remember(selected,license){mutableStateOf<List<AssignedTest>>(emptyList())}
+    var more by remember(selected){mutableStateOf(false)}
+    var testsLoading by remember{mutableStateOf(true)}
+    var nextLoading by remember{mutableStateOf(false)}
+    var catalogue by remember{mutableStateOf<List<ExamCategoryCount>>(emptyList())}
+    var history by remember{mutableStateOf<List<ExamHistoryResult>>(emptyList())}
+    var historyLoaded by remember{mutableStateOf(false)}
+    var historyLoading by remember{mutableStateOf(false)}
+    var activeAttempt by remember{mutableStateOf<ExamAttemptResponse?>(null)}
+    var warning by remember{mutableStateOf("")}
+    var unlockBusy by remember{mutableStateOf(false)}
+    var pendingTest by remember{mutableStateOf<Int?>(null)}
 
-    BackHandler {
-        onBack()
-    }
-
-
-    val context =
-        LocalContext.current
-
-
-    val sessionManager =
-        remember {
-            SessionManager(context)
+    fun back(){
+        when{
+            category==null&&selected!=null->{selected=null;warning=""}
+            category==null&&tab=="history"->tab="categories"
+            else->onBack()
         }
-
-
-    var tests by remember {
-        mutableStateOf<List<AssignedTest>>(
-            emptyList()
-        )
+    }
+    BackHandler(onBack=::back)
+    val owner=LocalLifecycleOwner.current
+    DisposableEffect(owner){
+        val observer=LifecycleEventObserver{_,event->
+            if(event==Lifecycle.Event.ON_RESUME)reload++
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose{owner.lifecycle.removeObserver(observer)}
     }
 
-
-    var loading by remember {
-        mutableStateOf(true)
-    }
-
-
-    var error by remember {
-        mutableStateOf("")
-    }
-
-
-    var activeAttempt by remember {
-        mutableStateOf<ExamAttemptResponse?>(
-            null
-        )
-    }
-
-
-    var showActiveExamDialog by remember {
-        mutableStateOf(false)
-    }
-
-
-    /*
-     * Carga los exámenes.
-     *
-     * Si category es null:
-     * carga los exámenes normales.
-     *
-     * Si category tiene un valor:
-     * filtra por esa categoría.
-     */
-    LaunchedEffect(
-        licenseClass,
-        category
-    ) {
-
-        loading = true
-        error = ""
-
-
-        try {
-
-            val token =
-                sessionManager.getAccessToken()
-
-
-            if (token == null) {
-
-                error =
-                    "No se encontró una sesión válida"
-
-                return@LaunchedEffect
+    LaunchedEffect(license,reload){
+        try{
+            val counts=ApiClient.api.getExamCatalogCounts()
+            if(counts.isSuccessful)catalogue=counts.body().orEmpty()
+            val token=session.getAccessToken()
+            if(token!=null){
+                val active=ApiClient.api.getActiveAttempt("Bearer $token")
+                if(active.isSuccessful)activeAttempt=active.body()?.takeIf{it.status=="active"}
             }
-
-
-            /*
-             * CARGAR EXÁMENES
-             */
-            val testsResponse =
-                ApiClient.api.getTests(
-                    authorization =
-                        "Bearer $token",
-
-                    licenseClass =
-                        licenseClass,
-
-                    category =
-                        category
+        }catch(e:CancellationException){throw e}
+        catch(_:Exception){ /* The assigned list still works without catalog counts. */ }
+    }
+    LaunchedEffect(license,selected,reload,page){
+        val initial=page==0
+        if(initial){testsLoading=true;tests=emptyList()}else nextLoading=true
+        try{
+            val token=session.getAccessToken()
+            if(token==null){
+                warning="Inicia sesión para consultar tus exámenes."
+            }else{
+                val result=ApiClient.api.getTests(
+                    authorization="Bearer $token",
+                    licenseClass=licenseClass,
+                    category=selected,
+                    historyLimit=PAGE_SIZE,
+                    historyOffset=page*PAGE_SIZE
                 )
-
-
-            if (testsResponse.isSuccessful) {
-
-                tests =
-                    testsResponse.body()
-                        ?.tests
-                        ?: emptyList()
-
-            } else {
-
-                error =
-                    "No se pudieron cargar los exámenes"
-
-                return@LaunchedEffect
+                if(result.isSuccessful){
+                    val batch=result.body()
+                    val all=if(initial)batch?.tests.orEmpty()else tests+batch?.tests.orEmpty()
+                    tests=all.distinctBy{it.id to it.assignedDate}
+                    more=batch?.historyHasMore==true
+                    warning=""
+                }else if(initial){
+                    warning="No pudimos cargar los exámenes. Pulsa Reintentar."
+                }else{
+                    warning="No se pudo cargar la página siguiente. Intenta nuevamente."
+                }
             }
+        }catch(e:CancellationException){throw e}
+        catch(_:Exception){warning="No se pudo conectar con VialApp. Pulsa Reintentar."}
+        finally{testsLoading=false;nextLoading=false}
+    }
 
+    LaunchedEffect(tab,reload){
+        if(tab!="history")return@LaunchedEffect
+        historyLoading=true
+        try{
+            val token=session.getAccessToken()
+            if(token==null){warning="Inicia sesión para consultar el historial."}
+            else{
+                val result=ApiClient.api.getMyExamHistory("Bearer $token")
+                if(result.isSuccessful){
+                    history=result.body().orEmpty().sortedByDescending{it.fecha.orEmpty()}
+                    historyLoaded=true
+                    warning=""
+                }else warning="No se pudo cargar el historial."
+            }
+        }catch(e:CancellationException){throw e}
+        catch(_:Exception){warning="No se pudo conectar con VialApp."}
+        finally{historyLoading=false}
+    }
 
-            /*
-             * COMPROBAR SI HAY
-             * UN EXAMEN ACTIVO
-             */
-            val activeResponse =
-                ApiClient.api.getActiveAttempt(
-                    authorization =
-                        "Bearer $token"
-                )
+    fun openExam(id:Int){
+        if(activeAttempt!=null&&activeAttempt?.testId!=id)pendingTest=id
+        else onExamClick(id)
+    }
 
+    val selectedItems=remember(tests,selected){
+        if(selected==null)tests else tests.filter{groupName(it.categoria).equals(selected,true)}
+    }
+    val assignedCounts=remember(tests){
+        tests.groupingBy{groupName(it.categoria)}.eachCount()
+    }
+    val categoryList=remember(catalogue,tests,license){
+        val fromCatalog=catalogue.filter{classCode(it.licenseClass)==license}
+            .groupBy{groupName(it.categoria)}
+            .mapValues{(_,v)->v.sumOf{it.cantidad}}
+        (fromCatalog.keys+tests.map{groupName(it.categoria)}).distinct()
+            .sortedWith(compareBy<String>{it!="Mixto"}.thenBy{it})
+            .map{it to (fromCatalog[it]?:0)}
+    }
 
-            if (activeResponse.isSuccessful) {
-
-                val currentAttempt =
-                    activeResponse.body()
-
-
-                activeAttempt =
-                    if (
-                        currentAttempt?.status ==
-                        "active"
-                    ) {
-
-                        currentAttempt
-
-                    } else {
-
-                        null
+    Column(Modifier.fillMaxSize().background(c.background)){
+        Row(Modifier.fillMaxWidth().padding(horizontal=18.dp,vertical=12.dp),
+            horizontalArrangement=Arrangement.spacedBy(8.dp),
+            verticalAlignment=Alignment.CenterVertically){
+            TextButton(onClick=::back){Text("‹",fontSize=25.sp)}
+            Column(Modifier.weight(1f)){
+                Text(if(selected==null)"Tus exámenes" else selected?:"Tus exámenes",
+                    fontSize=24.sp,fontWeight=FontWeight.ExtraBold,color=c.onBackground)
+                Text("Licencia $license · Aprende, evalúate y repasa",
+                    fontSize=12.sp,color=c.onSurfaceVariant)
+            }
+        }
+        if(category==null){
+            Row(Modifier.fillMaxWidth().padding(horizontal=18.dp),
+                horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                FilterChip(selected=tab=="categories",
+                    onClick={tab="categories";selected=null},
+                    label={Text("Por categoría")})
+                FilterChip(selected=tab=="history",
+                    onClick={tab="history";selected=null},
+                    label={Text("Mi historial")})
+            }
+        }
+        if(warning.isNotBlank()){
+            Surface(Modifier.fillMaxWidth().padding(horizontal=18.dp,vertical=7.dp),
+                shape=RoundedCornerShape(12.dp),color=c.errorContainer){
+                Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){
+                    Text(warning,Modifier.weight(1f),fontSize=12.sp,color=c.onErrorContainer)
+                    TextButton(onClick={warning="";reload++}){Text("Reintentar")}
+                }
+            }
+        }
+        if(tab=="history"&&category==null){
+            if(historyLoading&&!historyLoaded){
+                Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){
+                    CircularProgressIndicator()
+                }
+            }else{
+                val visible=if(selected!=null)history.filter{
+                    groupName(it.categoria).equals(selected,true)
+                }else history
+                LazyColumn(
+                    modifier=Modifier.fillMaxSize(),
+                    contentPadding=PaddingValues(start=18.dp,end=18.dp,top=10.dp,bottom=115.dp),
+                    verticalArrangement=Arrangement.spacedBy(10.dp)
+                ){
+                    item{
+                        Text("Exámenes realizados",fontWeight=FontWeight.Bold,fontSize=18.sp)
+                        Text("Cada intento conserva su resultado. Para repetir, se aplican las reglas de acceso de tu plan.",
+                            color=c.onSurfaceVariant,fontSize=12.sp,lineHeight=17.sp)
                     }
+                    if(visible.isEmpty())item{
+                        Text("Aún no tienes exámenes realizados.",color=c.onSurfaceVariant)
+                    }
+                    items(visible,key={it.id}){item->
+                        Card(shape=RoundedCornerShape(17.dp),
+                            colors=CardDefaults.cardColors(containerColor=c.surface)){
+                            Column(Modifier.fillMaxWidth().padding(15.dp),
+                                verticalArrangement=Arrangement.spacedBy(7.dp)){
+                                Text("Examen #"+item.testId,fontWeight=FontWeight.Bold,
+                                    color=c.onSurface)
+                                Text(groupName(item.categoria)+" · "+
+                                    (item.correctas?:0)+"/"+(item.totalQuestions?:0)+" correctas"+
+                                    (item.puntaje?.let{" · $it puntos"}?:""),
+                                    color=c.onSurfaceVariant,fontSize=12.sp)
+                                Text(item.fecha?.take(10)?:"Fecha no disponible",
+                                    color=c.onSurfaceVariant,fontSize=11.sp)
+                                OutlinedButton(onClick={openExam(item.testId)},
+                                    modifier=Modifier.fillMaxWidth()){
+                                    Text("Repetir examen")
+                                }
+                            }
+                        }
+                    }
+                }
             }
-
-
-        } catch (e: Exception) {
-
-            error =
-                "No se pudo conectar con VialApp"
-
-            e.printStackTrace()
-
-
-        } finally {
-
-            loading = false
-        }
-    }
-
-
-    /*
-     * Intentamos encontrar el examen activo
-     * dentro de la lista actual.
-     *
-     * Si estamos filtrando por una categoría
-     * diferente, puede que no esté en esta lista.
-     */
-    val activeTest =
-        tests.firstOrNull {
-
-            it.id ==
-                    activeAttempt?.testId
-        }
-
-
-    when {
-
-        loading -> {
-
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            vialColor(Color(0xFFF7F9FC))
-                        ),
-
-                contentAlignment =
-                    Alignment.Center
-            ) {
-
-                CircularProgressIndicator(
-                    color =
-                        VialBlue
-                )
-            }
-        }
-
-
-        error.isNotEmpty() -> {
-
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            vialColor(Color(0xFFF7F9FC))
-                        )
-                        .padding(
-                            24.dp
-                        ),
-
-                contentAlignment =
-                    Alignment.Center
-            ) {
-
-                Text(
-                    text =
-                        error,
-
-                    color =
-                        vialColor(Color(0xFFDC2626))
-                )
-            }
-        }
-
-
-        else -> {
-
+        }else if(selected==null){
             LazyColumn(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            vialColor(Color(0xFFF7F9FC))
-                        )
-                        .padding(
-                            horizontal = 20.dp
-                        ),
-
-                verticalArrangement =
-                    Arrangement.spacedBy(
-                        14.dp
-                    ),
-
-                contentPadding =
-                    PaddingValues(
-                        top = 24.dp,
-                        bottom = 24.dp
-                    )
-            ) {
-
-
-                /*
-                 * CABECERA
-                 */
-                item {
-
-                    Text(
-                        text =
-                            if (
-                                category.isNullOrBlank()
-                            ) {
-
-                                "Tus exámenes"
-
-                            } else {
-
-                                category
-                            },
-
-                        color =
-                            VialDark,
-
-                        fontSize =
-                            30.sp,
-
-                        fontWeight =
-                            FontWeight.Bold
-                    )
-
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(
-                                6.dp
-                            )
-                    )
-
-
-                    Text(
-                        text =
-                            if (
-                                category.isNullOrBlank()
-                            ) {
-
-                                "Practica con exámenes asignados para tu licencia."
-
-                            } else {
-
-                                "Exámenes para reforzar esta categoría."
-                            },
-
-                        color =
-                            VialGray,
-
-                        fontSize =
-                            15.sp
-                    )
-
-
-                    /*
-                     * AVISO DE EXAMEN ACTIVO
-                     */
-                    if (
-                        activeAttempt != null
-                    ) {
-
-                        Spacer(
-                            modifier =
-                                Modifier.height(
-                                    18.dp
-                                )
-                        )
-
-
-                        Card(
-                            modifier =
-                                Modifier.fillMaxWidth(),
-
-                            shape =
-                                RoundedCornerShape(
-                                    20.dp
-                                ),
-
-                            colors =
-                                CardDefaults.cardColors(
-                                    containerColor =
-                                        vialColor(Color(
-                                            0xFFEAF1FF
-                                        ))
-                                )
-                        ) {
-
-                            Column(
-                                modifier =
-                                    Modifier.padding(
-                                        18.dp
-                                    )
-                            ) {
-
-
-                                Text(
-                                    text =
-                                        "⏱ Examen en curso",
-
-                                    color =
-                                        VialBlue,
-
-                                    fontWeight =
-                                        FontWeight.Bold,
-
-                                    fontSize =
-                                        16.sp
-                                )
-
-
-                                Spacer(
-                                    modifier =
-                                        Modifier.height(
-                                            5.dp
-                                        )
-                                )
-
-
-                                Text(
-                                    text =
-                                        activeTest
-                                            ?.nombre
-                                            ?.let {
-                                                cleanExamTitle(
-                                                    it
-                                                )
-                                            }
-                                            ?: "Tienes un examen sin finalizar.",
-
-                                    color =
-                                        VialDark,
-
-                                    fontSize =
-                                        14.sp
-                                )
-
-
-                                Spacer(
-                                    modifier =
-                                        Modifier.height(
-                                            12.dp
-                                        )
-                                )
-
-
-                                Button(
-                                    onClick = {
-
-                                        activeAttempt
-                                            ?.testId
-                                            ?.let { testId ->
-
-                                                onExamClick(
-                                                    testId
-                                                )
-                                            }
-                                    },
-
-                                    colors =
-                                        ButtonDefaults.buttonColors(
-                                            containerColor =
-                                                VialActionBlue,
-                                    contentColor = Color.White
-                                        )
-                                ) {
-
-                                    Text(
-                                        "Continuar examen"
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(
-                                12.dp
-                            )
-                    )
+                modifier=Modifier.fillMaxSize(),
+                contentPadding=PaddingValues(start=18.dp,end=18.dp,top=10.dp,bottom=115.dp),
+                verticalArrangement=Arrangement.spacedBy(11.dp)
+            ){
+                item{
+                    Text("Elige una categoría",fontSize=18.sp,fontWeight=FontWeight.Bold)
+                    Text("Consulta el catálogo completo y los exámenes que tienes asignados. Los exámenes por tema y los adicionales pueden requerir Premium.",
+                        color=c.onSurfaceVariant,fontSize=12.sp,lineHeight=17.sp)
                 }
-
-
-                /*
-                 * SIN EXÁMENES
-                 */
-                if (
-                    tests.isEmpty()
-                ) {
-
-                    item {
-
-                        Card(
-                            modifier =
-                                Modifier.fillMaxWidth(),
-
-                            shape =
-                                RoundedCornerShape(
-                                    24.dp
-                                ),
-
-                            colors =
-                                CardDefaults.cardColors(
-                                    containerColor =
-                                        vialColor(Color.White)
-                                )
-                        ) {
-
-                            Column(
-                                modifier =
-                                    Modifier.padding(
-                                        24.dp
-                                    )
-                            ) {
-
-
+                if(testsLoading&&categoryList.isEmpty())item{
+                    CircularProgressIndicator()
+                }
+                if(categoryList.isEmpty()&&!testsLoading)item{
+                    Text("No hay categorías disponibles para esta licencia.",
+                        color=c.onSurfaceVariant)
+                }
+                items(categoryList,key={it.first}){(name,count)->
+                    Card(onClick={selected=name;page=0},shape=RoundedCornerShape(18.dp),
+                        colors=CardDefaults.cardColors(containerColor=c.surface),
+                        border=BorderStroke(1.dp,c.outlineVariant)){
+                        Row(Modifier.fillMaxWidth().padding(16.dp),
+                            verticalAlignment=Alignment.CenterVertically){
+                            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)){
+                                Text(name,fontWeight=FontWeight.Bold,fontSize=17.sp,
+                                    color=c.onSurface)
                                 Text(
-                                    text =
-                                        "🚗",
-
-                                    fontSize =
-                                        36.sp
-                                )
-
-
-                                Spacer(
-                                    modifier =
-                                        Modifier.height(
-                                            12.dp
-                                        )
-                                )
-
-
-                                Text(
-                                    text =
-                                        if (
-                                            category.isNullOrBlank()
-                                        ) {
-
-                                            "No hay exámenes disponibles"
-
-                                        } else {
-
-                                            "No hay exámenes para esta categoría"
-                                        },
-
-                                    color =
-                                        VialDark,
-
-                                    fontWeight =
-                                        FontWeight.Bold,
-
-                                    fontSize =
-                                        18.sp
-                                )
-
-
-                                Text(
-                                    text =
-                                        if (
-                                            category.isNullOrBlank()
-                                        ) {
-
-                                            "Cuando tengas nuevos exámenes asignados aparecerán aquí."
-
-                                        } else {
-
-                                            "Por ahora no tienes un examen disponible para reforzar $category."
-                                        },
-
-                                    color =
-                                        VialGray,
-
-                                    modifier =
-                                        Modifier.padding(
-                                            top = 6.dp
-                                        )
-                                )
+                                    (if(count>0)"$count exámenes en el catálogo"else "Exámenes de esta categoría"),
+                                    color=c.onSurfaceVariant,fontSize=12.sp)
+                            }
+                            Text("Ver ›",color=c.primary,fontWeight=FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }else{
+            LazyColumn(
+                modifier=Modifier.fillMaxSize(),
+                contentPadding=PaddingValues(start=18.dp,end=18.dp,top=8.dp,bottom=115.dp),
+                verticalArrangement=Arrangement.spacedBy(10.dp)
+            ){
+                item{
+                    Text("Exámenes de "+selected,fontSize=18.sp,fontWeight=FontWeight.Bold)
+                    Text("Se muestran las asignaciones disponibles para tu cuenta; el catálogo puede contener más exámenes.",
+                        fontSize=12.sp,color=c.onSurfaceVariant,lineHeight=18.sp)
+                }
+                activeAttempt?.let{attempt->
+                    item{
+                        Card(colors=CardDefaults.cardColors(containerColor=c.primaryContainer)){
+                            Column(Modifier.fillMaxWidth().padding(14.dp)){
+                                Text("Tienes un examen en curso",fontWeight=FontWeight.Bold,
+                                    color=c.onPrimaryContainer)
+                                Button(onClick={onExamClick(attempt.testId)},
+                                    modifier=Modifier.fillMaxWidth()){
+                                    Text("Continuar examen")
+                                }
                             }
                         }
                     }
-
-
-                } else {
-
-
-                    /*
-                     * LISTA
-                     */
-                    items(
-                        items =
-                            tests,
-
-                        key = {
-                            "${it.id}-${it.assignedDate}"
-                        }
-                    ) { test ->
-
-
-                        val isActive =
-                            activeAttempt?.status ==
-                                    "active" &&
-                                    activeAttempt?.testId ==
-                                    test.id
-
-
-                        ExamCard(
-                            test =
-                                test,
-
-                            isActive =
-                                isActive,
-
-                            onClick = {
-
-
-                                /*
-                                 * ESTE MISMO EXAMEN
-                                 * YA ESTÁ ACTIVO.
-                                 */
-                                if (isActive) {
-
-                                    onExamClick(
-                                        test.id
-                                    )
-
-                                    return@ExamCard
-                                }
-
-
-                                /*
-                                 * HAY OTRO EXAMEN
-                                 * ACTIVO.
-                                 */
-                                if (
-                                    activeAttempt != null
-                                ) {
-
-                                    showActiveExamDialog =
-                                        true
-
-                                    return@ExamCard
-                                }
-
-
-                                /*
-                                 * NO HAY NINGÚN
-                                 * INTENTO ACTIVO.
-                                 */
-                                if (
-                                    test.canStart
-                                ) {
-
-                                    onExamClick(
-                                        test.id
-                                    )
-                                }
-                            }
-                        )
+                }
+                if(testsLoading)item{
+                    Box(Modifier.fillMaxWidth().height(65.dp),contentAlignment=Alignment.Center){
+                        CircularProgressIndicator()
                     }
+                }
+                if(selectedItems.isEmpty()&&!testsLoading)item{
+                    Text("No hay exámenes asignados todavía en esta categoría. Consulta otras categorías o solicita otro examen si tu plan lo permite.",
+                        color=c.onSurfaceVariant,fontSize=13.sp)
+                }
+                items(selectedItems,key={it.id.toString()+"-"+it.assignedDate}){exam->
+                    val active=activeAttempt?.testId==exam.id
+                    val allowed=active||exam.canStart
+                    Card(shape=RoundedCornerShape(18.dp),
+                        border=BorderStroke(1.dp,c.outlineVariant),
+                        colors=CardDefaults.cardColors(containerColor=c.surface)){
+                        Column(Modifier.fillMaxWidth().padding(15.dp),
+                            verticalArrangement=Arrangement.spacedBy(7.dp)){
+                            Text(displayExamName(exam.nombre),fontSize=16.sp,
+                                fontWeight=FontWeight.Bold,color=c.onSurface)
+                            Text(when{
+                                active->"En curso"
+                                exam.isLocked->exam.lockedReason?:"Requiere Premium"
+                                exam.hasResult->"Realizado anteriormente"
+                                allowed->"Disponible"
+                                else->"No disponible por ahora"
+                            },color=if(allowed)c.primary else c.onSurfaceVariant,fontSize=12.sp)
+                            if(exam.assignedDate!=null)Text(
+                                "Asignado: "+exam.assignedDate.take(10),
+                                color=c.onSurfaceVariant,fontSize=11.sp)
+                            Button(onClick={openExam(exam.id)},enabled=allowed,
+                                modifier=Modifier.fillMaxWidth(),
+                                colors=ButtonDefaults.buttonColors(containerColor=c.primary)){
+                                Text(if(active)"Continuar examen"else if(exam.hasResult)"Volver a realizar"else"Comenzar examen")
+                            }
+                        }
+                    }
+                }
+                if(more)item{
+                    OutlinedButton(onClick={page++},enabled=!nextLoading,
+                        modifier=Modifier.fillMaxWidth()){
+                        if(nextLoading)CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp)
+                        else Text("Cargar más exámenes")
+                    }
+                }
+                item{
+                    OutlinedButton(onClick={
+                        if(!unlockBusy){
+                            unlockBusy=true
+                            // The server checks Premium entitlement and that existing
+                            // assignments in the category have been completed.
+                            val ignored=unlockBusy
+                        }
+                    },enabled=false,modifier=Modifier.fillMaxWidth()){
+                        Text("Más exámenes con Premium")
+                    }
+                }
+                item{
+                    Text("Puedes repetir exámenes asignados cuando tu plan lo permita. Nunca se muestran preguntas de exámenes bloqueados.",
+                        color=c.onSurfaceVariant,fontSize=11.sp)
                 }
             }
         }
     }
 
-
-    /*
-     * AVISO SI EL USUARIO INTENTA
-     * ABRIR OTRO EXAMEN.
-     */
-    if (
-        showActiveExamDialog &&
-        activeAttempt != null
-    ) {
-
+    pendingTest?.let{
         AlertDialog(
-
-            onDismissRequest = {
-
-                showActiveExamDialog =
-                    false
+            onDismissRequest={pendingTest=null},
+            title={Text("Ya tienes un examen en curso")},
+            text={Text("Termina o cancela tu examen actual antes de empezar otro. Puedes continuar el examen pendiente ahora.")},
+            confirmButton={
+                TextButton(onClick={
+                    pendingTest=null
+                    activeAttempt?.testId?.let(onExamClick)
+                }){Text("Continuar examen")}
             },
-
-            title = {
-
-                Text(
-                    text =
-                        "Tienes un examen en curso"
-                )
-            },
-
-            text = {
-
-                Column {
-
-                    Text(
-                        text =
-                            "Solo puedes tener un examen cronometrado activo a la vez."
-                    )
-
-
-                    if (
-                        activeTest != null
-                    ) {
-
-                        Spacer(
-                            modifier =
-                                Modifier.height(
-                                    12.dp
-                                )
-                        )
-
-
-                        Text(
-                            text =
-                                cleanExamTitle(
-                                    activeTest.nombre
-                                ),
-
-                            color =
-                                VialDark,
-
-                            fontWeight =
-                                FontWeight.Bold
-                        )
-                    }
-
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(
-                                12.dp
-                            )
-                    )
-
-
-                    Text(
-                        text =
-                            "Continúa ese examen o finalízalo antes de comenzar otro."
-                    )
-                }
-            },
-
-            confirmButton = {
-
-                Button(
-                    onClick = {
-
-                        val activeTestId =
-                            activeAttempt?.testId
-
-
-                        showActiveExamDialog =
-                            false
-
-
-                        if (
-                            activeTestId != null
-                        ) {
-
-                            onExamClick(
-                                activeTestId
-                            )
-                        }
-                    }
-                ) {
-
-                    Text(
-                        "Continuar examen"
-                    )
-                }
-            },
-
-            dismissButton = {
-
-                TextButton(
-                    onClick = {
-
-                        showActiveExamDialog =
-                            false
-                    }
-                ) {
-
-                    Text(
-                        "Cancelar"
-                    )
-                }
-            }
+            dismissButton={TextButton(onClick={pendingTest=null}){Text("Volver")}}
         )
     }
-}
-
-
-@Composable
-private fun ExamCard(
-    test: AssignedTest,
-    isActive: Boolean,
-    onClick: () -> Unit
-) {
-
-    val statusText =
-        when {
-
-            isActive ->
-                "En curso"
-
-            test.isLocked ->
-                "Premium"
-
-            test.hasResult ->
-                "Completado"
-
-            test.canStart ->
-                "Disponible"
-
-            else ->
-                "No disponible"
-        }
-
-
-    val statusColor =
-        when {
-
-            isActive ->
-                VialBlue
-
-            test.isLocked ->
-                vialColor(Color(0xFFF59E0B))
-
-            test.hasResult ->
-                vialColor(Color(0xFF16A34A))
-
-            else ->
-                VialBlue
-        }
-
-
-    /*
-     * Un examen activo siempre
-     * debe poder abrirse.
-     */
-    val cardEnabled =
-        test.canStart ||
-                isActive
-
-
-    Card(
-        onClick =
-            onClick,
-
-        enabled =
-            cardEnabled,
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        shape =
-            RoundedCornerShape(
-                24.dp
-            ),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    if (isActive) {
-
-                        vialColor(Color(
-                            0xFFF5F9FF
-                        ))
-
-                    } else {
-
-                        vialColor(Color.White)
-                    }
-            )
-    ) {
-
-        Column(
-            modifier =
-                Modifier.padding(
-                    20.dp
-                )
-        ) {
-
-
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
-
-
-                Box(
-                    modifier =
-                        Modifier
-                            .size(
-                                48.dp
-                            )
-                            .background(
-                                color =
-                                    if (isActive) {
-
-                                        vialColor(Color(
-                                            0xFFDCE9FF
-                                        ))
-
-                                    } else {
-
-                                        vialColor(Color(
-                                            0xFFE8F0FF
-                                        ))
-                                    },
-
-                                shape =
-                                    RoundedCornerShape(
-                                        15.dp
-                                    )
-                            ),
-
-                    contentAlignment =
-                        Alignment.Center
-                ) {
-
-                    Text(
-                        text =
-                            if (isActive) {
-                                "⏱"
-                            } else {
-                                "🚘"
-                            },
-
-                        fontSize =
-                            24.sp
-                    )
-                }
-
-
-                Column(
-                    modifier =
-                        Modifier
-                            .weight(
-                                1f
-                            )
-                            .padding(
-                                start = 14.dp
-                            )
-                ) {
-
-                    Text(
-                        text =
-                            cleanExamTitle(
-                                test.nombre
-                            ),
-
-                        color =
-                            VialDark,
-
-                        fontWeight =
-                            FontWeight.Bold,
-
-                        fontSize =
-                            17.sp
-                    )
-
-
-                    Text(
-                        text =
-                            test.categoria
-                                ?: "Examen general",
-
-                        color =
-                            VialGray,
-
-                        fontSize =
-                            14.sp,
-
-                        modifier =
-                            Modifier.padding(
-                                top = 3.dp
-                            )
-                    )
-                }
-
-
-                Text(
-                    text =
-                        statusText,
-
-                    color =
-                        statusColor,
-
-                    fontSize =
-                        12.sp,
-
-                    fontWeight =
-                        FontWeight.Bold
-                )
-            }
-
-
-            /*
-             * RAZÓN DEL BLOQUEO
-             */
-            if (
-                test.isLocked &&
-                test.lockedReason != null
-            ) {
-
-                Spacer(
-                    modifier =
-                        Modifier.height(
-                            14.dp
-                        )
-                )
-
-
-                Text(
-                    text =
-                        "🔒 ${test.lockedReason}",
-
-                    color =
-                        vialColor(Color(
-                            0xFF92400E
-                        )),
-
-                    fontSize =
-                        13.sp
-                )
-            }
-
-
-            /*
-             * BOTÓN
-             */
-            if (
-                cardEnabled
-            ) {
-
-                Spacer(
-                    modifier =
-                        Modifier.height(
-                            16.dp
-                        )
-                )
-
-
-                Button(
-                    onClick =
-                        onClick,
-
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
-                    shape =
-                        RoundedCornerShape(
-                            14.dp
-                        ),
-
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor =
-                                VialActionBlue,
-                                    contentColor = Color.White
-                        )
-                ) {
-
-                    Text(
-                        text =
-                            when {
-
-                                isActive ->
-                                    "Continuar examen"
-
-                                test.hasResult ->
-                                    "Volver a realizar"
-
-                                else ->
-                                    "Comenzar examen"
-                            },
-
-                        fontWeight =
-                            FontWeight.Bold
-                    )
-                }
-            }
-        }
-    }
-}
-
-
-private fun cleanExamTitle(
-    name: String
-): String {
-
-    return name
-        .replace(
-            Regex(
-                "\\s\\d{8}-\\d{4}$"
-            ),
-            ""
-        )
-        .trim()
 }
