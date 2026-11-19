@@ -32,7 +32,6 @@ private fun route(e:DoomEngine,cx:Int,cy:Int){
             if(nx !in 0 until w||ny !in 0 until h)continue
             val ni=ny*w+nx
             if(prev[ni]>=0||e.cell(nx,ny)!=0)continue
-            if(e.level==5&&abs(e.floorHeight(nx+.5f,ny+.5f)-e.floorHeight(x+.5f,y+.5f))>.115f)continue
             prev[ni]=i;queue.addLast(ni)
         }
     }
@@ -288,7 +287,7 @@ fun main(){
     check(quiz.hp==beforeWrong-3)
     quiz.interact();quiz.answer(0)
     check(quiz.doors.first{it.x==10&&it.y==18}.open&&quiz.questionsCorrect==1)
-    // E1M5: true stairs, credential gates, seven secrets and nine quizzes.
+    // E1M5: flat, connected corridors, credential gates, seven secrets and nine quizzes.
     val fifth=DoomEngine(level=5)
     check(fifth.levelTitle=="ASALTO AL SERVIDOR"&&fifth.width==46&&fifth.height==39)
     check(fifth.secretTotal==7&&fifth.doors.count{it.kind==4}==7)
@@ -301,26 +300,24 @@ fun main(){
     check(fifth.loot.all{!fifth.solid(it.x,it.y,.10f)}){"E1M5 blocked loot: "+fifth.loot.filter{fifth.solid(it.x,it.y,.10f)}.map{it.kind.toString()+" at "+it.x+","+it.y}}
     check(fifth.owns(DoomWeapon.PISTOL)&&fifth.weapons.size==1)
     check(!fifth.powerRestored&&!fifth.hasKey&&!fifth.hasRedKey)
-    check(fifth.stairTier(14,8)<fifth.stairTier(14,5))
-    check(fifth.floorHeight(14.5f,6.5f)==.4f)
-    check(fifth.floorHeight(16.5f,9.5f)==0f)
-    check(fifth.stairTier(22,4)==4&&fifth.stairTier(37,16)==5)
-    check(fifth.notes.any{it.title.startsWith("03")&&fifth.floorHeight(it.x,it.y)>=.4f})
-    check(fifth.notes.any{it.title.startsWith("06")&&fifth.floorHeight(it.x,it.y)>=.5f})
+    // No invisible height collision, railings or leftover elevated entities.
+    check((0 until fifth.width).all{cx->(0 until fifth.height).all{cy->fifth.stairTier(cx,cy)==0}})
+    check(fifth.floorHeight(14.5f,6.5f)==0f&&fifth.floorHeight(37.5f,16.5f)==0f)
+    check(fifth.decor.none{it.kind==DoomDecorKind.RAILING})
+    check(fifth.notes.any{it.title.startsWith("03")})
+    check(fifth.notes.any{it.title.startsWith("06")})
     fifth.enemies.forEach{it.hp=0}
     route(fifth,8,18)
     check(fifth.owns(DoomWeapon.SHOTGUN)&&!fifth.owns(DoomWeapon.MINIGUN)&&!fifth.owns(DoomWeapon.PLASMA))
     openCheckpoint(fifth,10,18,9,18,0)
     openCheckpoint(fifth,17,11,17,12,1)
     route(fifth,25,3)
-    check(fifth.floorHeight(fifth.x,fifth.y)>.35f){"Blue key must require climbing the gallery stairs"}
     check(fifth.hasKey&&!fifth.hasRedKey&&fifth.missionObjective=="REACTIVA LOS RESPALDOS")
     openCheckpoint(fifth,29,6,28,6,2)
     route(fifth,40,8)
     check(fifth.hasRedKey&&!fifth.powerRestored)
     openCheckpoint(fifth,36,13,36,12,1)
     route(fifth,35,18)
-    check(fifth.floorHeight(fifth.x,fifth.y)>.45f){"Minigun must reward the backup mezzanine"}
     check(fifth.owns(DoomWeapon.MINIGUN)&&!fifth.owns(DoomWeapon.PLASMA))
     route(fifth,37,24);fifth.interact()
     check(!fifth.doors.first{it.x==37&&it.y==25}.open){"Backup switch must remain mandatory"}
@@ -340,13 +337,16 @@ fun main(){
     openCheckpoint(fifth,17,25,17,24,1)
     openCheckpoint(fifth,21,28,21,27)
     route(fifth,21,29)
-    check(fifth.floorHeight(fifth.x,fifth.y)>.45f){"Launcher must be hidden above the warehouse stairway"}
     check(fifth.owns(DoomWeapon.ROCKET)&&fifth.secrets==5)
     openCheckpoint(fifth,5,35,5,36)
     route(fifth,5,34)
     openCheckpoint(fifth,39,11,39,12)
     route(fifth,39,10)
     check(fifth.secrets==7)
+    // The gallery, warehouse and backup archive remain traversable with no stair system.
+    route(fifth,23,4)
+    route(fifth,35,18)
+    route(fifth,21,29)
     openCheckpoint(fifth,28,31,27,31,0)
     route(fifth,30,30)
     check(fifth.owns(DoomWeapon.PLASMA)&&fifth.owns(DoomWeapon.MINIGUN))
