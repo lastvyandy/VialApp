@@ -61,6 +61,9 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
     val width=when(level){3->30;4->34;5->46;else->22}
     val height=when(level){3->23;4->27;5->39;else->17}
     private val grid=IntArray(width*height){1}
+    // 2.5D data is immutable after map generation. Cache tiers once, rather than
+    // re-evaluating the stair layout thousands of times in the renderer.
+    private val serverTiers=ByteArray(width*height)
     private val random=Random(seed)
     val doors=mutableListOf<DoomDoor>()
     val enemies=mutableListOf<DoomEnemy>()
@@ -724,22 +727,27 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         x=3.5f;y=18.5f;angle=0f
         grid[exitY*width+exitX]=6
         message="Carvier: Las escuelas rivales tomaron el centro de datos. Busca la escopeta y lee los informes."
+        for(yy in 0 until height)for(xx in 0 until width)
+            serverTiers[yy*width+xx]=serverRawTier(xx,yy).toByte()
     }
-    /** Heightfield shared by movement, floor rendering and sprites. */
+    /** Immutable stage layout. Only its values, not this function, are used per frame. */
+    private fun serverRawTier(cx:Int,cy:Int):Int = when {
+        // Gallery: two flights reach the upper rack deck and the blue-key gate.
+        cx in 12..15&&cy in 6..10 -> (10-cy).coerceIn(0,4)
+        cx in 24..27&&cy==6 -> (28-cx).coerceIn(0,4)
+        cx in 14..26&&cy in 2..5 -> 4
+        // Archives: raised maintenance bay, with supplies and sightlines above.
+        cx in 31..34&&cy in 18..23 -> (23-cy).coerceIn(0,5)
+        cx in 34..39&&cy in 15..18 -> 5
+        // Warehouse: upper storage balcony leads to the secret launcher.
+        cx in 15..17&&cy in 30..35 -> (35-cy).coerceIn(0,5)
+        cx in 17..23&&cy in 27..30 -> 5
+        else->0
+    }
+    /** Cached stair tiers, shared by navigation, floor projection and collectibles. */
     fun stairTier(cx:Int,cy:Int):Int {
-        if(level==5)return when {
-            // Gallery: a western flight and an eastern descent to the exam doors.
-            cx in 12..15&&cy in 6..10 -> (10-cy).coerceIn(0,4)
-            cx in 24..27&&cy==6 -> (28-cx).coerceIn(0,4)
-            cx in 14..26&&cy in 2..5 -> 4
-            // Archives: a climb from the backup floor to the inspection balcony.
-            cx in 31..34&&cy in 18..23 -> (23-cy).coerceIn(0,5)
-            cx in 34..39&&cy in 15..18 -> 5
-            // Warehouse: staircase to the hidden launcher and upper walkway.
-            cx in 15..17&&cy in 30..35 -> (35-cy).coerceIn(0,5)
-            cx in 17..23&&cy in 27..30 -> 5
-            else->0
-        }
+        if(level==5)return if(cx in 0 until width&&cy in 0 until height)
+            serverTiers[cy*width+cx].toInt() else 0
         if(level!=4)return 0
         return when {
             cx in 12..16&&cy in 6..9 -> (cy-5).coerceIn(0,4)
@@ -748,9 +756,13 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             else->0
         }
     }
-    /** Server stairs are 0.10 world units per riser, high enough to see but not giant. */
-    fun floorHeight(px:Float,py:Float):Float =
-        if(level==5)stairTier(floor(px).toInt(),floor(py).toInt())*.10f else 0f
+    /** E1M5: query a cached tile; no map searches or dynamic allocations. */
+    fun floorHeight(px:Float,py:Float):Float {
+        if(level!=5)return 0f
+        val cx=floor(px).toInt();val cy=floor(py).toInt()
+        return if(cx in 0 until width&&cy in 0 until height)
+            serverTiers[cy*width+cx].toInt()*.10f else 0f
+    }
 
     private fun canMove(fromX:Float,fromY:Float,toX:Float,toY:Float,r:Float):Boolean {
         if(solid(toX,toY,r))return false
