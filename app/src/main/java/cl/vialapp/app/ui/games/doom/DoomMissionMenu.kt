@@ -29,15 +29,18 @@ private val pale=Color(0xFFE7E2D4)
 private val red=Color(0xFFC84F3C)
 
 @Composable
+// La idea es poder leer de qué trata cada nivel antes de entrar a jugar.
 internal fun DoomMissionMenu(
     unlocked:Int,
     record:Int,
     onBack:()->Unit,
     onStart:(Int)->Unit
 ){
+    // Cambiar la misión solo actualiza esta vista, no inicia el nivel al tiro.
     var selected by rememberSaveable{mutableIntStateOf(1)}
     var controlsOpen by rememberSaveable{mutableStateOf(false)}
     val brief=remember(selected){DoomStory.brief(selected)}
+    // Los niveles bloqueados igual se pueden mirar; jugar es otra cosa.
     val available=selected<=unlocked
     Column(
         modifier=Modifier.fillMaxSize().background(background)
