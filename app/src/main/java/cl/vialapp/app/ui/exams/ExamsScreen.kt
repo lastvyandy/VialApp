@@ -362,6 +362,13 @@ fun ExamsScreen(
                         }
                     }
                 }
+                if(!catalogSupported)item{
+                    Surface(color=c.surfaceVariant,shape=RoundedCornerShape(12.dp)){
+                        Text("No se pudo consultar el catálogo completo. Por ahora puedes ver y realizar los exámenes que ya tienes asignados.",
+                            modifier=Modifier.fillMaxWidth().padding(12.dp),
+                            fontSize=12.sp,color=c.onSurfaceVariant)
+                    }
+                }
                 if(testsLoading)item{
                     Box(Modifier.fillMaxWidth().height(65.dp),contentAlignment=Alignment.Center){
                         CircularProgressIndicator()
