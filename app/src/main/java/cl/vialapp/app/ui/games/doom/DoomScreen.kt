@@ -100,7 +100,7 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
             Button(onClick={run=DoomEngine(level=5);audio?.play("start")},enabled=unlocked>=5,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF672C31))){
                 Text(if(unlocked>=5)"E1M5 · ASALTO AL SERVIDOR" else "E1M5 · COMPLETA E1M4",fontWeight=FontWeight.Black)
             }
-            Text("E1M5: pasarelas, siete secretos, archivos para leer y sabotaje a los servidores.",color=White,fontSize=12.sp)
+            Text("E1M5: instalaciones tomadas, siete secretos, informes ocultos y exámenes de conducción.",color=White,fontSize=12.sp)
         }
     }else key(engine){DoomRun(engine,store,session,onMenu={run=null},onRetry={run=DoomEngine(level=engine.level);audio?.play("start")},onNext=if(engine.level<5){{run=DoomEngine(level=engine.level+1);audio?.play("start")}}else null,onComplete={unlockNext(engine.level)})}
 }
