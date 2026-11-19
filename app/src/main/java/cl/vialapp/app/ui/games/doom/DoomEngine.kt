@@ -489,6 +489,10 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         ))grid[yy*width+xx]=when((xx+yy)%3){0->2;1->3;else->4}
         connections()
 
+        // Open the actual stairs and upper landings instead of hiding them inside rack pillars.
+        for((xx,yy) in listOf(15 to 4,15 to 5,18 to 30,26 to 9))
+            if(grid[yy*width+xx]!=5)grid[yy*width+xx]=0
+
         // Additional damaged partitions create cover and stop the open rooms looking like empty boxes.
         // Every partition is optional cover; the inter-room gates remain the only mandatory locks.
         for((xx,yy) in listOf(
@@ -497,22 +501,43 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             8 to 30,8 to 31,19 to 31,34 to 30,34 to 31
         ))if(grid[yy*width+xx]==0)grid[yy*width+xx]=4
 
-        gate(10,18,0)
-        gate(17,11,0)
+        gate(10,18,0,DoomChallenge(
+            "CONTROL DE ACCESO · ¿Qué debes hacer antes de cambiar de pista?",
+            listOf("Señalizar y revisar espejos y punto ciego","Girar sin mirar","Acelerar para obligar a otros a frenar"),
+            0,"Antes de cambiar de pista, señaliza y comprueba espejos y punto ciego."))
+        gate(17,11,0,DoomChallenge(
+            "SALA DE SERVIDORES · Al aproximarte a un paso peatonal ocupado, ¿qué haces?",
+            listOf("Tocas la bocina y sigues","Reduces velocidad y cedes el paso","Adelantas al vehículo detenido"),
+            1,"Reduce la velocidad y deja cruzar a los peatones con seguridad."))
         gate(10,6,8,DoomChallenge(
             "BACKUP VIALAPP · Los rivales desconectaron el servicio. ¿Qué es más seguro?",
             listOf("Aislar el equipo comprometido y recuperar un respaldo verificado",
                 "Borrar todos los respaldos","Desactivar las alarmas y continuar"),
             0,"BACKUP RESTAURADO. Los servidores auxiliares responden otra vez."))
-        gate(29,6,2)   // blue credential from the gallery
-        gate(29,18,7)  // backup electricity required to enter archive
+        gate(29,6,2,DoomChallenge(
+            "NODO DE EXÁMENES · ¿Cómo debes conducir con lluvia intensa?",
+            listOf("Frenando de golpe","Aumentando velocidad","Reduciendo velocidad y aumentando la distancia"),
+            2,"Con lluvia, adapta la velocidad y aumenta la distancia de seguridad."))
+        gate(29,18,7,DoomChallenge(
+            "ARCHIVO DE RESPALDOS · Si viene una ambulancia en servicio de urgencia, ¿qué haces?",
+            listOf("Facilitar su paso sin maniobras peligrosas","Seguirla de cerca","Competir con ella"),
+            0,"Facilita el paso de los vehículos de emergencia sin generar otro riesgo."))
         gate(36,13,2,DoomChallenge(
             "NODO DE EXÁMENES · Semáforo rojo: ¿qué debes hacer?",
             listOf("Cruzar si está vacío","Detenerte antes de la línea","Acelerar"),
             1,"Luz roja: debes detenerte antes de la línea de detención."))
-        gate(17,25,0)
-        gate(28,31,6) // red credential unlocks core from storage
-        gate(37,25,6) // alternate core entrance from archive
+        gate(17,25,0,DoomChallenge(
+            "ALMACÉN · Si conduces con sueño, ¿qué debes hacer?",
+            listOf("Abrir la ventana y acelerar","Detenerte en un lugar seguro para descansar","Subir el volumen de la música"),
+            1,"Con fatiga, busca un sitio seguro y descansa antes de continuar."))
+        gate(28,31,6,DoomChallenge(
+            "ACCESO AL NÚCLEO · En una intersección con luz roja, ¿qué corresponde?",
+            listOf("Detenerse antes de la línea","Cruzar si parece despejada","Pasar rápidamente"),
+            0,"La luz roja exige detenerte antes de la línea de detención."))
+        gate(37,25,6,DoomChallenge(
+            "PUERTA DE SERVICIO · Si hay ciclistas al costado, ¿qué debes considerar?",
+            listOf("Adelantarlos sin distancia","Tocarles la bocina constantemente","Dejar espacio lateral y adelantarlos solo cuando sea seguro"),
+            2,"Respeta el espacio lateral de los ciclistas y no adelantes sin visibilidad."))
         // Every checkpoint spans its WHOLE passage. Otherwise a player can
         // simply walk around the locked tile in a three-cell-wide hallway.
         for((xx,yy) in listOf(
@@ -686,14 +711,12 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             11.2f to 32.0f,18.5f to 28.0f,42.8f to 28.4f
         ))prop(DoomDecorKind.FIBER_CABLE,xx,yy,.40f)
         // Railings outline two overhead service platforms. The ramps remain walkable.
-        for(xx in 17..25)if(xx!=20)prop(DoomDecorKind.RAILING,xx+.5f,5.8f,.45f,.64f)
-        for(xx in 35..41)prop(DoomDecorKind.RAILING,xx+.5f,18.0f,.42f,.85f)
-        for(xx in 18..22)prop(DoomDecorKind.RAILING,xx+.5f,29.6f,.38f,.66f)
-        for((xx,yy) in listOf(15.5f to 2.5f,23.5f to 2.5f,33.5f to 2.5f,
-            41.5f to 2.5f,15.5f to 13.5f,21.5f to 13.5f,
-            33.5f to 15.5f,41.5f to 15.5f,7.5f to 27.5f,
-            20.5f to 27.5f,31.5f to 27.5f,42.5f to 27.5f))
-            prop(DoomDecorKind.LAMP,xx,yy,.34f,.90f)
+        // Handrails stand ON the raised platforms. Their geometry is not levitating.
+        for(xx in 17..25)if(xx!=20)prop(DoomDecorKind.RAILING,xx+.5f,5.8f,.34f)
+        for(xx in 35..39)prop(DoomDecorKind.RAILING,xx+.5f,18.3f,.34f)
+        for(xx in 18..19)prop(DoomDecorKind.RAILING,xx+.5f,29.4f,.34f)
+        // Ceiling panels already contain the warning lights. Do not place floating
+        // lamp billboards in mid-air; they looked like disconnected items.
         for((xx,yy) in listOf(16.5f to 8.5f,25.5f to 7.5f,
             37.5f to 17.5f,8.5f to 34.5f,34.5f to 29.5f))
             explosives+=DoomExplosive(xx,yy,explosives.size%2==0)
@@ -702,27 +725,38 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         grid[exitY*width+exitX]=6
         message="Carvier: Las escuelas rivales tomaron el centro de datos. Busca la escopeta y lee los informes."
     }
-    /** Walkable terraced staircases in the damaged street. */
+    /** Heightfield shared by movement, floor rendering and sprites. */
     fun stairTier(cx:Int,cy:Int):Int {
         if(level==5)return when {
-            // Server gallery: ascent from the floor to the elevated rack inspection deck.
+            // Gallery: a western flight and an eastern descent to the exam doors.
             cx in 12..15&&cy in 6..10 -> (10-cy).coerceIn(0,4)
-            cx in 16..26&&cy in 2..5 -> 4
-            // Archives: emergency stair to the guarded backup mezzanine.
+            cx in 25..27&&cy in 6..9 -> (9-cy).coerceIn(0,3)
+            cx in 14..26&&cy in 2..5 -> 4
+            // Archives: a climb from the backup floor to the inspection balcony.
             cx in 31..34&&cy in 18..23 -> (23-cy).coerceIn(0,5)
-            cx in 35..41&&cy in 15..17 -> 5
-            // Lower warehouse: small elevated service walkway and hidden supplies.
+            cx in 34..39&&cy in 15..18 -> 5
+            // Warehouse: staircase to the hidden launcher and upper walkway.
             cx in 15..17&&cy in 30..35 -> (35-cy).coerceIn(0,5)
-            cx in 18..23&&cy in 27..29 -> 5
+            cx in 17..23&&cy in 27..30 -> 5
             else->0
         }
         if(level!=4)return 0
-        return when{
+        return when {
             cx in 12..16&&cy in 6..9 -> (cy-5).coerceIn(0,4)
             cx in 24..28&&cy in 12..16 -> (cy-11).coerceIn(0,4)
             cx in 25..30&&cy in 20..24 -> (cy-19).coerceIn(0,4)
             else->0
         }
+    }
+    /** Server stairs are 0.10 world units per riser, high enough to see but not giant. */
+    fun floorHeight(px:Float,py:Float):Float =
+        if(level==5)stairTier(floor(px).toInt(),floor(py).toInt())*.10f else 0f
+
+    private fun canMove(fromX:Float,fromY:Float,toX:Float,toY:Float,r:Float):Boolean {
+        if(solid(toX,toY,r))return false
+        // A vertical drop/ledge is not a staircase. The player and rivals must
+        // approach high balconies via the actual risers, never teleport through a wall.
+        return level!=5||abs(floorHeight(toX,toY)-floorHeight(fromX,fromY))<=.115f
     }
     fun cell(cx:Int,cy:Int):Int{
         if(cx !in 0 until width||cy !in 0 until height)return 1
@@ -881,7 +915,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             if(d.kind==3){secrets++;events+=DoomEvent.SECRET}
             if(d.kind==8){powerRestored=true;events+=DoomEvent.SWITCH}
             tell(q.explanation)}
-        else{events+=DoomEvent.WRONG;hurt(8);tell(q.explanation)}
+        else{events+=DoomEvent.WRONG;hurt(if(level==5)3 else 8);tell(q.explanation)}
     }
     fun dismissChallenge(){pending=null}
     private fun hurt(n:Int){if(finished||n<=0)return;val absorbed=min(armor,n/2);armor-=absorbed;hp=(hp-n+absorbed).coerceAtLeast(0);hurtFlash=.2f;facePain=.65f;events+=DoomEvent.HURT;if(hp<=0)events+=DoomEvent.DEFEAT}
@@ -993,10 +1027,10 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         val f=input.forward.coerceIn(-1f,1f);val s=input.strafe.coerceIn(-1f,1f);val norm=hypot(f,s).coerceAtLeast(1f)
         val speed=if(berserkActive)4.45f else 3.3f
         val dx=(cos(angle)*f-sin(angle)*s)*d*speed/norm;val dy=(sin(angle)*f+cos(angle)*s)*d*speed/norm
-        if(!solid(x+dx,y)&&enemies.none{it.hp>0&&hypot(it.x-x-dx,it.y-y)<.36f})x+=dx
-        if(!solid(x,y+dy)&&enemies.none{it.hp>0&&hypot(it.x-x,it.y-y-dy)<.36f})y+=dy
+        if(canMove(x,y,x+dx,y,.19f)&&enemies.none{it.hp>0&&hypot(it.x-x-dx,it.y-y)<.36f})x+=dx
+        if(canMove(x,y,x,y+dy,.19f)&&enemies.none{it.hp>0&&hypot(it.x-x,it.y-y-dy)<.36f})y+=dy
         if(abs(dx)+abs(dy)>.001f)walk+=d*9f
-        val rise=stairTier(floor(x).toInt(),floor(y).toInt())*.22f
+        val rise=if(level==5)floorHeight(x,y) else stairTier(floor(x).toInt(),floor(y).toInt())*.22f
         cameraElevation+=(rise-cameraElevation)*(d*9f).coerceIn(0f,1f)
         collect()
         if(level==5){
@@ -1046,8 +1080,8 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
                 val approach=if(distance>desired)1f else 0f
                 val vx=((x-e.x)*approach-(y-e.y)*lateral)/distance*e.kind.speed*d*difficulty
                 val vy=((y-e.y)*approach+(x-e.x)*lateral)/distance*e.kind.speed*d*difficulty
-                if(!solid(e.x+vx,e.y,.20f)&&enemies.none{it!==e&&it.hp>0&&hypot(it.x-e.x-vx,it.y-e.y)<.42f})e.x+=vx
-                if(!solid(e.x,e.y+vy,.20f)&&enemies.none{it!==e&&it.hp>0&&hypot(it.x-e.x,it.y-e.y-vy)<.42f})e.y+=vy
+                if(canMove(e.x,e.y,e.x+vx,e.y,.20f)&&enemies.none{it!==e&&it.hp>0&&hypot(it.x-e.x-vx,it.y-e.y)<.42f})e.x+=vx
+                if(canMove(e.x,e.y,e.x,e.y+vy,.20f)&&enemies.none{it!==e&&it.hp>0&&hypot(it.x-e.x,it.y-e.y-vy)<.42f})e.y+=vy
             }
             if(e.kind!=DoomKind.RUNNER&&distance<6f&&e.cooldown<=0f){
                 e.cooldown=(e.kind.attack+random.nextFloat()*.3f)/(if(e.kind==DoomKind.MINOXIDIL&&e.hp<bossMaxHp/3)1.9f else if((level==3&&e.kind==DoomKind.BOSS||level==5&&e.kind==DoomKind.ADMINISTRATOR)&&e.hp<bossMaxHp/2)1.75f else difficulty);e.attackFlash=.20f;e.pattern++;events+=DoomEvent.ENEMY_SHOT
