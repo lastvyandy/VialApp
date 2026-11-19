@@ -549,16 +549,16 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         ))grid[yy*width+xx]=4
 
         // Five small walled alcoves, each reachable ONLY via an unmarked wall.
-        fun secretPocket(cx:Int,cy:Int){
+        fun secretPocket(cx:Int,cy:Int,entranceDy:Int=1){
             for(yy in cy-1..cy+1)for(xx in cx-1..cx+1)grid[yy*width+xx]=4
             grid[cy*width+cx]=0
-            gate(cx,cy+1,4)
+            gate(cx,cy+entranceDy,4)
         }
         secretPocket(4,4)   // coolant: Berserk
-        secretPocket(20,4)  // servers: shells
+        secretPocket(20,4,-1)  // upper gallery secret; reached from balcony
         secretPocket(38,5)  // exams: chip/disc Supaplex easter egg
         secretPocket(39,19) // archives: armor
-        secretPocket(21,29) // storage: launcher
+        secretPocket(21,29,-1) // launcher above the warehouse stairs
         secretPocket(5,34)  // forgotten lower storage / medical supplies
         secretPocket(39,10) // rival instructor's hidden exam orders
 
