@@ -163,8 +163,14 @@ internal class DoomView(context:Context):View(context){
             val ray=e.ray(e.x,e.y,ca+planeX*p,sa+planeY*p)
             val d=ray.distance;depth[x]=d
             val wallHeight=if(e.level==5)1.65f else 1f
+            val wallBase=if(e.level==5){
+                // Anchor wall textures to the floor on the player's side of the
+                // wall. Raised platforms must not make the walls sink below them.
+                val contact=(d-.035f).coerceAtLeast(.01f)
+                e.floorHeight(e.x+contact*(ca+planeX*p),e.y+contact*(sa+planeY*p))
+            }else 0f
             val lineHeight=(focal*wallHeight/d).coerceAtMost(5000f)
-            val top=if(e.level==5)horizon+focal*(eyeHeight-wallHeight)/d else horizon-lineHeight*.5f
+            val top=if(e.level==5)horizon+focal*(eyeHeight-wallBase-wallHeight)/d else horizon-lineHeight*.5f
             val tx=(ray.u*64).toInt().coerceIn(0,63)
             val door=if(ray.cell==5)e.doors.firstOrNull{it.x==ray.mapX&&it.y==ray.mapY} else null
             val tex=when{
