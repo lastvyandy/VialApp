@@ -39,6 +39,7 @@ internal fun DoomStoryScreen(level:Int,onStart:()->Unit,onBack:()->Unit){
     LaunchedEffect(level,page){
         for(index in 1..current.text.length){
             delay(18)
+            if(revealed>=current.text.length)break
             revealed=index
         }
     }
@@ -191,6 +192,34 @@ private fun DoomStoryboardArt(level:Int,page:Int,modifier:Modifier=Modifier){
                 block(.37f,.44f,.24f,.12f,Color(0xFF3D6158))
                 block(.40f,.46f,.17f,.03f,sceneAmber)
                 block(.45f,.52f,.07f,.015f,sceneRed)
+            }
+        }
+        // The three storyboards are distinct: alert, enemy revelation, and
+        // Don Pelao's mission. These overlays are drawn once per static scene.
+        when(page){
+            0->{
+                block(.035f,.57f,.18f,.09f,Color(0xFF262B2C))
+                block(.047f,.59f,.15f,.012f,sceneAmber)
+                block(.047f,.615f,.10f,.01f,sceneRed)
+                block(.047f,.634f,.13f,.008f,Color(0xFF728079))
+            }
+            1->{
+                block(.17f,.28f,.14f,.20f,Color(0xFF232B30))
+                block(.185f,.31f,.115f,.125f,Color(0xFF526164))
+                block(.20f,.345f,.026f,.023f,sceneRed)
+                block(.26f,.345f,.026f,.023f,sceneRed)
+                block(.18f,.49f,.12f,.13f,Color(0xFF262A2D))
+                block(.16f,.51f,.025f,.12f,Color(0xFF42474A))
+            }
+            else->{
+                // Don Pelao seen from behind at the threshold of each mission.
+                block(.14f,.50f,.15f,.28f,Color(0xFF242A2D))
+                block(.16f,.39f,.11f,.13f,Color(0xFFAB806A))
+                block(.15f,.375f,.13f,.042f,Color(0xFF202226))
+                block(.12f,.60f,.05f,.15f,Color(0xFF2D3436))
+                block(.27f,.60f,.05f,.15f,Color(0xFF2D3436))
+                block(.16f,.75f,.045f,.05f,Color(0xFF17191B))
+                block(.245f,.75f,.045f,.05f,Color(0xFF17191B))
             }
         }
         for(i in 0..11)block(0f,i/12f,.99f,.002f,Color(0x15101010))
