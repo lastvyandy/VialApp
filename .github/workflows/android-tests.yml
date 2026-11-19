@@ -38,7 +38,7 @@ jobs:
       - name: Run headless shooter simulation
         shell: bash
         run: |
-          kotlinc app/src/main/java/cl/vialapp/app/ui/games/doom/DoomEngine.kt app/src/main/java/cl/vialapp/app/ui/games/doom/DoomRivalSpriteArt.kt tools/doom-smoke.kt -include-runtime -d "$RUNNER_TEMP/doom-smoke.jar"
+          kotlinc app/src/main/java/cl/vialapp/app/ui/games/doom/DoomEngine.kt app/src/main/java/cl/vialapp/app/ui/games/doom/DoomStory.kt app/src/main/java/cl/vialapp/app/ui/games/doom/DoomRivalSpriteArt.kt tools/doom-smoke.kt -include-runtime -d "$RUNNER_TEMP/doom-smoke.jar"
           java -jar "$RUNNER_TEMP/doom-smoke.jar"
   build:
     runs-on: ubuntu-latest
