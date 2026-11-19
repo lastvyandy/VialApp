@@ -621,93 +621,14 @@ private class DoomArt{
             box(4,35,13,42,0xa33d2e);box(51,35,60,42,0xa33d2e)
             box(12,47,52,52,0x4a2224);box(16,48,48,50,0xb45234)
         },
-        // SABOTEUR: human raider with dark side-parted hair, dirty orange work vest.
-        sprite{
-            oval(7,58,56,64,0x111219)
-            box(12,44,27,61,0x222831);box(36,44,51,61,0x212630)
-            box(9,58,27,63,0x454243);box(36,58,55,63,0x454243)
-            poly(0x24272e,8,29,15,19,48,19,56,30,49,50,15,50)
-            poly(0x9b4730,14,27,22,22,44,22,50,28,45,45,18,45)
-            box(27,26,36,45,0xd4a44c);box(20,30,24,40,0xddc06d)
-            box(6,29,14,45,0x7d503f);box(49,29,57,44,0x7d503f)
-            box(13,7,51,25,0x18151a);box(15,12,49,35,0x9e684e)
-            // Side-parted hair, sideburns and unshaven jaw.
-            poly(0x181217,12,13,21,4,43,5,54,14,49,20,39,15,32,13,22,19,15,29)
-            poly(0x4c3024,17,10,38,7,49,12,39,13,25,12)
-            box(20,21,28,24,0x26222a);box(35,21,43,24,0x26222a)
-            box(24,31,40,34,0x40302c);box(21,29,24,31,0x4d3025)
-            // Steel pistol held against torso.
-            box(25,37,51,43,0x1a252b);box(41,34,59,38,0x68777b)
-        },
-        // HACKER: long, spiky hair; exposed pale face and burgundy hoodie.
-        sprite{
-            oval(6,57,58,64,0x15121a)
-            box(15,43,28,62,0x1d2534);box(37,42,52,62,0x202837)
-            poly(0x341a35,7,29,17,17,46,17,58,30,50,51,13,51)
-            poly(0x77304c,13,28,23,24,42,24,52,34,45,46,18,46)
-            box(30,24,34,44,0xc77970);box(10,35,18,48,0x54243a)
-            box(50,34,58,49,0x54243a)
-            poly(0x1b182b,12,22,8,7,19,13,22,2,31,9,36,0,44,9,53,4,49,22,43,19,30,16,20,28)
-            poly(0x30243b,18,18,23,12,38,10,45,17,40,25,27,30,18,26)
-            oval(21,20,45,39,0xbe8c73);box(22,26,30,28,0x15191d)
-            box(35,26,43,28,0x15191d);box(27,34,39,36,0x6b393b)
-            box(14,40,21,46,0xcaa6a1)
-            box(39,40,58,44,0x1a222e);box(42,36,55,40,0x465459)
-        },
-        // RIVAL_GUARD: messy visible brown hair, broad armored silhouette, shotgun.
-        sprite{
-            oval(3,56,61,64,0x111718)
-            box(9,42,26,61,0x263033);box(37,42,55,61,0x263033)
-            box(9,59,27,64,0x7d746b);box(38,59,56,64,0x7d746b)
-            poly(0x171c22,4,25,12,13,53,13,61,28,56,52,8,52)
-            poly(0x536052,10,26,19,20,43,20,54,29,50,49,13,48)
-            box(19,30,46,41,0x202c30);box(22,33,44,37,0x7a847a)
-            box(4,30,15,48,0x585848);box(49,30,61,48,0x585848)
-            oval(17,10,48,34,0xc48f68)
-            poly(0x281b16,14,17,17,5,25,11,30,2,40,8,47,4,51,17,43,14,32,13,24,18,19,29)
-            box(20,22,29,25,0x242225);box(35,22,44,25,0x242225)
-            box(23,30,41,33,0x48352e)
-            box(21,38,56,45,0x161d25);box(34,35,61,39,0x949b93)
-            box(15,42,21,47,0x9e6b53)
-        },
-        // CORRUPT_TECH: long dark hair escaping a cracked visor, grim white lab coat.
-        sprite{
-            oval(6,57,59,64,0x131417)
-            box(13,45,28,62,0x253036);box(37,45,52,62,0x293038)
-            poly(0x202b30,5,30,17,17,47,17,60,32,52,52,13,52)
-            poly(0x9faaa0,12,30,22,23,41,23,53,31,49,47,16,48)
-            poly(0x3e4b4d,20,27,29,29,31,44,20,45)
-            poly(0x334348,34,28,44,25,43,45,34,45)
-            box(29,27,36,44,0x9b282b)
-            oval(19,10,47,36,0x8f6352)
-            poly(0x101a20,12,19,15,4,24,8,36,2,48,9,52,22,47,33,42,18,25,18,21,34)
-            poly(0x273039,15,11,22,6,42,5,45,13,34,13,21,18)
-            box(18,19,48,26,0x1d2a34);box(21,20,44,24,0x70bdaf)
-            box(26,27,39,30,0x4d292d)
-            box(2,33,17,45,0x6f7770);box(49,32,62,46,0x6f7770)
-            box(47,38,58,44,0x193b41);box(50,35,54,51,0x8dc2a5)
-        },
-        // ADMINISTRATOR: tall human rival, huge slicked-back hair and armored red coat.
-        sprite{
-            oval(0,56,63,64,0x150f13)
-            box(8,43,25,64,0x1e202b);box(39,42,57,64,0x1c2027)
-            box(7,58,28,64,0x74716b);box(39,58,59,64,0x74716b)
-            poly(0x24232c,2,30,10,14,20,10,47,11,57,21,63,34,55,56,8,56)
-            poly(0x85282c,7,29,15,19,48,17,57,31,49,53,13,51)
-            poly(0xc14631,15,27,22,22,44,22,50,31,46,47,18,46)
-            box(29,31,36,51,0xd0a45c);box(22,36,43,39,0x27252b)
-            oval(16,7,49,36,0xb77758)
-            // A very explicit HAIR silhouette: prominent black pompadour and sideburns.
-            poly(0x0e1119,12,17,10,4,19,7,23,0,33,4,43,0,51,6,55,19,48,16,44,14,32,15,21,23,17,33)
-            poly(0x34303b,15,12,24,3,42,4,49,11,40,12,29,11,21,17)
-            box(19,21,30,25,0x192127);box(35,21,47,25,0x192127)
-            box(21,22,29,24,0xb6bdad);box(37,22,45,24,0xb6bdad)
-            poly(0x352123,23,30,38,30,42,34,30,35)
-            box(3,25,15,48,0x812b2d);box(50,25,62,48,0x812b2d)
-            box(3,30,13,37,0x394048);box(52,30,61,38,0x394048)
-            box(6,42,17,48,0x4e5558);box(49,42,60,48,0x4e5558)
-            box(16,49,52,53,0x1f252c)
-        })
+        // E1M5: distinct human rivals with detailed retro pixel art.
+        // Indexed sprites are preloaded only once and keep the APK lightweight.
+        DoomRivalSpriteArt.get(DoomKind.SABOTEUR),
+        DoomRivalSpriteArt.get(DoomKind.HACKER),
+        DoomRivalSpriteArt.get(DoomKind.RIVAL_GUARD),
+        DoomRivalSpriteArt.get(DoomKind.CORRUPT_TECH),
+        DoomRivalSpriteArt.get(DoomKind.ADMINISTRATOR))
+
     val loot=Array(DoomLootKind.entries.size){i->sprite{
         when(DoomLootKind.entries[i]){
             DoomLootKind.COIN->{oval(15,12,49,59,0x87531a);oval(12,9,46,56,0xe0a82c);oval(17,14,41,51,0xffd759);box(28,23,32,43,0x9a6b21)}
@@ -740,6 +661,23 @@ private class DoomArt{
     }
     // Sculpted highlights on original sprites, with a four-frame mechanical walk cycle.
     private fun detail(src:IntArray,frame:Int,kind:Int):IntArray{
+        // Keep new human portraits sharp and colorful; animation moves individual
+        // leg bands and the torso without re-shading the already detailed artwork.
+        if(kind in DoomKind.SABOTEUR.ordinal..DoomKind.ADMINISTRATOR.ordinal) {
+            if(frame==0)return src
+            val animated=IntArray(4096)
+            for(y in 0..63)for(x in 0..63) {
+                val sx=when {
+                    y in 44..61 && x<32 -> x+(if(frame==1)2 else if(frame==3)-2 else 0)
+                    y in 44..61 -> x+(if(frame==1)-2 else if(frame==3)2 else 0)
+                    y in 15..43 -> x+(if(frame==1)-1 else if(frame==3)1 else 0)
+                    else -> x
+                }
+                val sy=if(frame==2&&y in 13..58)(y+1).coerceAtMost(63) else y
+                if(sx in 0..63)animated[y*64+x]=src[sy*64+sx]
+            }
+            return animated
+        }
         val out=IntArray(4096)
         for(y in 0..63)for(x in 0..63){
             val shift=if(kind!=1&&y>=44&&y<61&&frame%2==1){if(x<32)if(frame==1)2 else -2 else if(frame==1)-2 else 2}else 0
@@ -757,8 +695,22 @@ private class DoomArt{
     }
     val enemyFrames=Array(enemies.size){kind->Array(4){frame->detail(enemies[kind],frame,kind)}}
     val enemyAttack=Array(enemies.size){kind->detail(enemies[kind],0,kind).also{a->
-        val cx=when(kind){0->7;1->32;2->32;3->53;4->50;else->32}
-        val cy=when(kind){0->35;1->30;2->28;3->35;4->42;else->27}
+        // The muzzle flash must come from the weapon, not from an enemy's face.
+        val cx=when(DoomKind.entries[kind]){
+            DoomKind.GUARD->7;DoomKind.SHOTGUNNER->53;DoomKind.HEAVY->50
+            DoomKind.SABOTEUR->49;DoomKind.HACKER->50
+            DoomKind.RIVAL_GUARD->54;DoomKind.CORRUPT_TECH->50
+            DoomKind.ADMINISTRATOR->52
+            else->32
+        }
+        val cy=when(DoomKind.entries[kind]){
+            DoomKind.GUARD->35;DoomKind.DRONE->30;DoomKind.BOSS->28
+            DoomKind.SHOTGUNNER->35;DoomKind.HEAVY->42
+            DoomKind.SABOTEUR->25;DoomKind.HACKER->30
+            DoomKind.RIVAL_GUARD->25;DoomKind.CORRUPT_TECH->29
+            DoomKind.ADMINISTRATOR->31
+            else->27
+        }
         for(y in (cy-7).coerceAtLeast(0)..(cy+7).coerceAtMost(63))for(x in (cx-7).coerceAtLeast(0)..(cx+7).coerceAtMost(63)){
             val d=abs(x-cx)+abs(y-cy)
             if(d<9)a[y*64+x]=if(d<4)0xffffe6a0.toInt()else 0xffef7035.toInt()
