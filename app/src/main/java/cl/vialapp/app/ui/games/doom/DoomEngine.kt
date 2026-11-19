@@ -18,7 +18,7 @@ internal enum class DoomWeaponPhase { READY, LOWERING, RAISING, FIRING, PUMPING,
 internal data class DoomExplosive(val x:Float,val y:Float,val crate:Boolean,var hp:Int=24,var exploded:Boolean=false)
 internal data class DoomExplosion(val x:Float,val y:Float,var time:Float=.52f)
 internal enum class DoomLootKind { COIN, AMMO, SHELLS, CELL, MEDKIT, ARMOR, SHOTGUN, PLASMA, KEY, MINIGUN, ROCKET, BELT, ROCKET_AMMO, BERSERK, RED_KEY }
-internal data class DoomEnemy(val id:Int,val kind:DoomKind,var x:Float,var y:Float,var hp:Int=kind.hp,var cooldown:Float=.8f,var flash:Float=0f,var alert:Boolean=false,var attackFlash:Float=0f,var pattern:Int=0,var deathAge:Float=0f)
+internal data class DoomEnemy(val id:Int,val kind:DoomKind,var x:Float,var y:Float,var hp:Int=kind.hp,var cooldown:Float=.8f,var flash:Float=0f,var alert:Boolean=false,var attackFlash:Float=0f,var pattern:Int=0,var deathAge:Float=0f,var moving:Boolean=false,var walkPhase:Float=0f)
 internal data class DoomLoot(val kind:DoomLootKind,val x:Float,val y:Float,var taken:Boolean=false)
 internal enum class DoomDecorKind { BARREL, CRATE, TERMINAL, LAMP, WRECK,
     CAR_BLUE, CAR_RED, CAR_YELLOW, SIGN_STOP, SIGN_YIELD, SIGN_PEDESTRIAN, CONE,
@@ -1065,6 +1065,7 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
         val newMinions=ArrayList<DoomEnemy>()
         for(e in enemies){
             if(e.hp<=0)continue
+            e.moving=false
             e.flash=(e.flash-d).coerceAtLeast(0f);e.attackFlash=(e.attackFlash-d).coerceAtLeast(0f);e.cooldown-=d
             val distance=hypot(x-e.x,y-e.y)
             val sees=distance<8f&&visible(e.x,e.y,x,y)
@@ -1077,11 +1078,15 @@ internal class DoomEngine(seed:Int=19,val level:Int=1){
             val lateral=when{e.kind==DoomKind.FLESH_STALKER||e.kind==DoomKind.HACKER->sin(elapsed*4.2f+e.id)*.72f;e.kind==DoomKind.DRONE||e.kind==DoomKind.MINOXIDIL||level==3&&e.kind==DoomKind.BOSS->sin(elapsed*2.7f+e.id)*.82f;else->0f}
             val difficulty=when(level){3->1.17f;4->1.13f;5->1.06f;else->1f}
             if(distance>.05f&&(distance>desired||lateral!=0f)){
+                val oldX=e.x;val oldY=e.y
                 val approach=if(distance>desired)1f else 0f
                 val vx=((x-e.x)*approach-(y-e.y)*lateral)/distance*e.kind.speed*d*difficulty
                 val vy=((y-e.y)*approach+(x-e.x)*lateral)/distance*e.kind.speed*d*difficulty
                 if(canMove(e.x,e.y,e.x+vx,e.y,.20f)&&enemies.none{it!==e&&it.hp>0&&hypot(it.x-e.x-vx,it.y-e.y)<.42f})e.x+=vx
                 if(canMove(e.x,e.y,e.x,e.y+vy,.20f)&&enemies.none{it!==e&&it.hp>0&&hypot(it.x-e.x,it.y-e.y-vy)<.42f})e.y+=vy
+                val traveled=hypot(e.x-oldX,e.y-oldY)
+                e.moving=traveled>.0015f
+                if(e.moving)e.walkPhase+=traveled*12f
             }
             if(e.kind!=DoomKind.RUNNER&&distance<6f&&e.cooldown<=0f){
                 e.cooldown=(e.kind.attack+random.nextFloat()*.3f)/(if(e.kind==DoomKind.MINOXIDIL&&e.hp<bossMaxHp/3)1.9f else if((level==3&&e.kind==DoomKind.BOSS||level==5&&e.kind==DoomKind.ADMINISTRATOR)&&e.hp<bossMaxHp/2)1.75f else difficulty);e.attackFlash=.20f;e.pattern++;events+=DoomEvent.ENEMY_SHOT
