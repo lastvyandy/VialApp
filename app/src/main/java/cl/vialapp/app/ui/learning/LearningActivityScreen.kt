@@ -39,6 +39,7 @@ internal fun LearningActivityScreen(
     val store = remember(context, userKey) { GameProgressStore(context, userKey) }
     val scope = rememberCoroutineScope()
     val chapterWasCompleted = remember(activity) { initialProgress.completed }
+    // Buscamos dónde quedó el alumno para no obligarlo a repetir toda la lección.
     val start = remember(activity) { resumeIndex(activity.steps.map { it.id }, initialProgress, activity.review) }
     var index by remember(activity) { mutableIntStateOf(start) }
     var choice by remember(activity, index) { mutableIntStateOf(-1) }
@@ -58,6 +59,7 @@ internal fun LearningActivityScreen(
     BackHandler { leave() }
     LaunchedEffect(index) { list.scrollToItem(0) }
 
+    // Mandamos la respuesta una sola vez y esperamos la corrección antes de avanzar.
     fun submit() {
         val current = step ?: return
         val selected = choice
