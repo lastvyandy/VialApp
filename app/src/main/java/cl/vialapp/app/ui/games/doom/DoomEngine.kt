@@ -24,7 +24,7 @@ internal enum class DoomDecorKind { BARREL, CRATE, TERMINAL, LAMP, WRECK,
     CAR_BLUE, CAR_RED, CAR_YELLOW, SIGN_STOP, SIGN_YIELD, SIGN_PEDESTRIAN, CONE,
     BUS_STOP, TREE, CAPILLARY_AD, DEMON_TOTEM, ROAD_BARRIER,
     SERVER_RACK, BROKEN_RACK, CRT_MONITOR, FIBER_CABLE, CHIP_PANEL, SUPAPLEX_DISK,
-    VIALAPP_SERVER, TRAFFIC_TERMINAL, COOLANT_TANK, WARNING_PANEL, SERVER_FAN, RAILING }
+    VIALAPP_SERVER, TRAFFIC_TERMINAL, COOLANT_TANK, WARNING_PANEL, SERVER_FAN, RAILING, DOCUMENT }
 internal data class DoomDecor(val kind:DoomDecorKind,val x:Float,val y:Float,val scale:Float,val lift:Float=0f)
 internal data class DoomNote(val x:Float,val y:Float,val title:String,val body:String,var read:Boolean=false)
 internal data class DoomRocket(var x:Float,var y:Float,val vx:Float,val vy:Float,var life:Float=2.2f)
