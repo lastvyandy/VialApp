@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -66,13 +67,15 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
     val store=remember(context,userKey){GameProgressStore(context,userKey)}
     val session=remember(context){SessionManager(context)}
     var run by remember{mutableStateOf<DoomEngine?>(null)}
+    var introLevel by rememberSaveable{mutableIntStateOf(0)}
+    fun showStory(level:Int){introLevel=level}
     val levels=remember(context,userKey){context.getSharedPreferences("doom_levels",android.content.Context.MODE_PRIVATE)}
     var unlocked by remember(userKey){mutableIntStateOf(if(levels.getBoolean(userKey+"_level5",false))5 else if(levels.getBoolean(userKey+"_level4",false))4 else if(levels.getBoolean(userKey+"_level3",false))3 else if(levels.getBoolean(userKey+"_level2",false))2 else 1)}
     fun unlockNext(level:Int){if(level<5&&unlocked<level+1){unlocked=level+1;levels.edit().putBoolean(userKey+"_level"+unlocked,true).apply()}}
     val engine=run
-    cl.vialapp.app.ui.GameLandscape(active=engine!=null)
+    cl.vialapp.app.ui.GameLandscape(active=engine!=null||introLevel!=0)
     val audio=LocalGameAudio.current
-    if(engine==null){
+    if(engine==null&&introLevel==0){
         BackHandler{onBack()}
         Column(Modifier.fillMaxSize().background(Dark).verticalScroll(rememberScrollState()).padding(18.dp),
             verticalArrangement=Arrangement.spacedBy(12.dp)){
@@ -85,24 +88,45 @@ fun DoomScreen(userKey:String,onBack:()->Unit){
             Text("Pantalla: stick izquierdo para moverse, desliza para mirar, mantén pulsado para disparar y toca las puertas para usar.",color=White,fontSize=13.sp)
             Text("Mando Xbox Bluetooth: stick izquierdo mover · derecho mirar · RT disparar o golpear · LT puños berserk · A usar · X recargar · Y/RB cambiar arma · LB arma anterior · START pausar.",color=Gold,fontSize=12.sp)
             Text("Récord: "+store.getHighScore(GameProgressStore.PELAO_DOOM)+" · Prototipo jugable",color=Gold,fontSize=12.sp)
-            Button(onClick={run=DoomEngine();audio?.play("start")},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
+            Button(onClick={showStory(1)},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
                 Text("E1M1 · ESTACIONAMIENTO INFERNAL",fontWeight=FontWeight.Black,color=Color.White)
             }
-            Button(onClick={run=DoomEngine(level=2);audio?.play("start")},enabled=unlocked>=2,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
+            Button(onClick={showStory(2)},enabled=unlocked>=2,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
                 Text(if(unlocked>=2)"E1M2 · TUNEL BAJO CONTROL" else "E1M2 · COMPLETA E1M1",fontWeight=FontWeight.Black)
             }
-            Button(onClick={run=DoomEngine(level=3);audio?.play("start")},enabled=unlocked>=3,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
+            Button(onClick={showStory(3)},enabled=unlocked>=3,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Red)){
                 Text(if(unlocked>=3)"E1M3 · LA FORTALEZA VIAL" else "E1M3 · COMPLETA E1M2",fontWeight=FontWeight.Black)
             }
-            Button(onClick={run=DoomEngine(level=4);audio?.play("start")},enabled=unlocked>=4,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF187D86))){
+            Button(onClick={showStory(4)},enabled=unlocked>=4,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF187D86))){
                 Text(if(unlocked>=4)"E1M4 · ZONA CERO CAPILAR" else "E1M4 · COMPLETA E1M3",fontWeight=FontWeight.Black)
             }
-            Button(onClick={run=DoomEngine(level=5);audio?.play("start")},enabled=unlocked>=5,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF672C31))){
+            Button(onClick={showStory(5)},enabled=unlocked>=5,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF672C31))){
                 Text(if(unlocked>=5)"E1M5 · ASALTO AL SERVIDOR" else "E1M5 · COMPLETA E1M4",fontWeight=FontWeight.Black)
             }
             Text("E1M5: instalaciones tomadas, siete secretos, informes ocultos y exámenes de conducción.",color=White,fontSize=12.sp)
         }
-    }else key(engine){DoomRun(engine,store,session,onMenu={run=null},onRetry={run=DoomEngine(level=engine.level);audio?.play("start")},onNext=if(engine.level<5){{run=DoomEngine(level=engine.level+1);audio?.play("start")}}else null,onComplete={unlockNext(engine.level)})}
+    }else if(engine==null){
+        DoomStoryScreen(
+            level=introLevel,
+            onStart={
+                val selected=introLevel
+                introLevel=0
+                run=DoomEngine(level=selected)
+                audio?.play("start")
+            },
+            onBack={introLevel=0}
+        )
+    }else key(engine){
+        DoomRun(engine,store,session,
+            onMenu={run=null},
+            onRetry={run=DoomEngine(level=engine.level);audio?.play("start")},
+            onNext=if(engine.level<5){{
+                introLevel=engine.level+1
+                run=null
+            }}else null,
+            onComplete={unlockNext(engine.level)}
+        )
+    }
 }
 
 @Composable
