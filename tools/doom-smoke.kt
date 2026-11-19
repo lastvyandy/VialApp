@@ -254,7 +254,8 @@ fun main(){
     // E1M5: nonlinear server infiltration, hard credential gates, five actual secrets.
     val fifth=DoomEngine(level=5)
     check(fifth.levelTitle=="ASALTO AL SERVIDOR"&&fifth.width==46&&fifth.height==39)
-    check(fifth.secretTotal==5&&fifth.doors.count{it.kind==4}==5)
+    check(fifth.secretTotal==7&&fifth.doors.count{it.kind==4}==7)
+    check(fifth.notes.size==9&&fifth.notesRead==0)
     check(fifth.enemies.size>=28&&fifth.enemies.last().kind==DoomKind.ADMINISTRATOR)
     check(fifth.enemies.all{it.kind in setOf(DoomKind.SABOTEUR,DoomKind.HACKER,DoomKind.RIVAL_GUARD,DoomKind.CORRUPT_TECH,DoomKind.ADMINISTRATOR)})
     check(fifth.enemies.all{!fifth.solid(it.x,it.y,.18f)}){"E1M5 blocked enemies: "+fifth.enemies.filter{fifth.solid(it.x,it.y,.18f)}.map{it.kind.toString()+" at "+it.x+","+it.y}}
@@ -262,6 +263,7 @@ fun main(){
     check(fifth.owns(DoomWeapon.PISTOL)&&fifth.weapons.size==1)
     check(!fifth.powerRestored&&!fifth.hasKey&&!fifth.hasRedKey)
     check(fifth.stairTier(14,8)>fifth.stairTier(14,5))
+    check(fifth.stairTier(22,4)==4&&fifth.stairTier(37,16)==5)
     fifth.enemies.forEach{it.hp=0}
     route(fifth,8,18)
     check(fifth.owns(DoomWeapon.SHOTGUN)&&!fifth.owns(DoomWeapon.MINIGUN)&&!fifth.owns(DoomWeapon.PLASMA))
@@ -294,11 +296,23 @@ fun main(){
     openCheckpoint(fifth,21,30,21,31)
     route(fifth,21,29)
     check(fifth.owns(DoomWeapon.ROCKET)&&fifth.secrets==5)
+    openCheckpoint(fifth,5,35,5,36)
+    route(fifth,5,34)
+    openCheckpoint(fifth,39,11,39,12)
+    route(fifth,39,10)
+    check(fifth.secrets==7)
     openCheckpoint(fifth,28,31,27,31)
     route(fifth,30,30)
     check(fifth.owns(DoomWeapon.PLASMA)&&fifth.owns(DoomWeapon.MINIGUN))
     route(fifth,42,33);fifth.interact()
-    check(fifth.won&&fifth.questionsCorrect==2&&fifth.secretTotal==5)
+    check(fifth.won&&fifth.questionsCorrect==2&&fifth.secretTotal==7)
+    val dossier=DoomEngine(level=5)
+    dossier.enemies.forEach{it.hp=0}
+    route(dossier,4,19)
+    dossier.interact()
+    check(dossier.activeNote!=null&&dossier.notesRead==1)
+    dossier.closeNote()
+    check(dossier.activeNote==null)
     // Boss at full and half health has distinct 3/7-shot volleys.
     val bossFive=DoomEngine(level=5)
     val administrator=bossFive.enemies.last()
