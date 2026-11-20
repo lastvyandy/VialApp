@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Configuramos Retrofit y cookies. Sí, el nombre tiene una errata antigua: no lo renombres sin revisar las referencias.
+
 import android.content.Context
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit

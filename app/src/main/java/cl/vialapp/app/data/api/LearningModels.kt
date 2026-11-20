@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Capítulos y pasos del camino a la licencia. Clase C tiene etapas de moto propias.
+
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 

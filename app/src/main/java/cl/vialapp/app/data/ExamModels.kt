@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Modelos para preguntas y resultados. Si cambia el backend, revisa estos campos antes de culpar al formulario, jajaj.
+
 import com.google.gson.annotations.SerializedName
 
 

@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Peticiones y respuestas de acceso. Nunca registres contraseñas ni tokens en Logcat.
+
 import com.google.gson.annotations.SerializedName
 
 data class RegistrationRequest(

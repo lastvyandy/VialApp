@@ -1,5 +1,8 @@
 package cl.vialapp.app
 
+// GUÍA DEL ARCHIVO:
+// Acá arranca VialApp: prepara la sesión, el tema y la navegación. El volumen es del teléfono, no del Pelao.
+
 import android.os.Bundle
 import android.content.Intent
 import android.view.KeyEvent
