@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.career
 
+// GUÍA DEL ARCHIVO:
+// Construcción de mallas 3D; acá va geometría, no botones de navegación.
+
 import kotlin.math.*
 
 /** Small, deterministic 3D mesh; x=width, y=height, z=length (nose +z). */

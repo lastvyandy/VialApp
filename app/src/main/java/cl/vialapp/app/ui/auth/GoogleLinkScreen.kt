@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.auth
 
+// GUÍA DEL ARCHIVO:
+// Vincula Google a una cuenta existente para no crear dos perfiles por accidente.
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll

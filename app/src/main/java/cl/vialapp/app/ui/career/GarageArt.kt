@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.career
 
+// GUÍA DEL ARCHIVO:
+// Estilos visuales reutilizables del garaje y sus autos.
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable

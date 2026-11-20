@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.career
 
+// GUÍA DEL ARCHIVO:
+// Garaje y personalización. El servidor dice qué hay disponible; no regalemos autos por abrir una tarjeta, jajaj.
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

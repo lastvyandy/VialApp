@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.career
 
+// GUÍA DEL ARCHIVO:
+// Piezas y modificaciones que se pueden mostrar o equipar en vehículos.
+
 import android.content.SharedPreferences
 import androidx.compose.ui.graphics.Color
 

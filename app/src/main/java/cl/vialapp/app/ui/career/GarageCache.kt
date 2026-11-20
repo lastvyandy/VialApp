@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.career
 
+// GUÍA DEL ARCHIVO:
+// Caché de gráficos caros. Menos reconstrucciones innecesarias, menos tirones al mover el auto.
+
 import android.content.Context
 import cl.vialapp.app.data.api.CareerState
 
