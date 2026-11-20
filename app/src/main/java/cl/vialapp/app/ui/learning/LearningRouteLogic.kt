@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.learning
 
+// GUÍA DEL ARCHIVO:
+// Elige siguiente capítulo y dónde retomar. El orden de la interfaz no reemplaza los permisos del servidor.
+
 import cl.vialapp.app.data.api.LearningChapterSummary
 import cl.vialapp.app.data.api.LearningProgress
 

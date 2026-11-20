@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.exams
 
+// GUÍA DEL ARCHIVO:
+// Catálogo por temas e historial. Que aparezca un examen no significa que esté desbloqueado.
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

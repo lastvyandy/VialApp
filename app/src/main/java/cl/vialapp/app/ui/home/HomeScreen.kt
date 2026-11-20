@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.home
 
+// GUÍA DEL ARCHIVO:
+// Inicio prioriza el camino a la licencia y la práctica siguiente, no una lista infinita de botones.
+
 import cl.vialapp.app.ui.rewards.LocalRewards
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

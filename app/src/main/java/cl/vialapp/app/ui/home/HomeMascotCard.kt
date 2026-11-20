@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.home
 
+// GUÍA DEL ARCHIVO:
+// Mascota y mensajes de Inicio, sin tapar los accesos importantes.
+
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

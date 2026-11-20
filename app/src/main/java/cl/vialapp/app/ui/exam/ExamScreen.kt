@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.exam
 
+// GUÍA DEL ARCHIVO:
+// Control del intento, tiempo y respuestas. Si ya hay un examen activo, no partamos otro encima, po.
+
 import cl.vialapp.app.ui.rewards.LocalRewards
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
