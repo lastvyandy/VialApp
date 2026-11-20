@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.mascot
 
+// GUÍA DEL ARCHIVO:
+// Reglas para decidir cuándo la mascota reacciona, separadas de las tarjetas.
+
 import cl.vialapp.app.data.api.GamificationEventResponse
 
 enum class MascotReaction(val expression: String) {

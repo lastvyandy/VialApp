@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.navigation
 
+// GUÍA DEL ARCHIVO:
+// Acá conectamos las pantallas. Si agregas una ruta, revisa cómo entrar y salir para no quedar perdido, jajaj.
+
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

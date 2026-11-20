@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.library
 
+// GUÍA DEL ARCHIVO:
+// Recursos de estudio que podemos abrir sin conexión.
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*

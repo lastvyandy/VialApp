@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.library
 
+// GUÍA DEL ARCHIVO:
+// Organiza los contenidos de la biblioteca vial y sus secciones.
+
 import java.text.Normalizer
 import java.util.Locale
 

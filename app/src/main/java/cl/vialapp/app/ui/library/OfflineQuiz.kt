@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.library
 
+// GUÍA DEL ARCHIVO:
+// Preguntas locales de repaso. Esto no reemplaza un examen formal del servidor.
+
 internal data class OfflineQuestion(val articleId:String,val prompt:String,val options:List<String>,val correct:Int,val explanation:String)
 
 internal object OfflineQuiz {
