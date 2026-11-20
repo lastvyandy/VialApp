@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.doom
 
+// GUÍA DEL ARCHIVO:
+// Sprites de los enemigos humanos. Ojo con halos blancos y poses de disparo permanente.
+
 import java.util.Base64
 import java.util.zip.Inflater
 

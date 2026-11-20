@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.doom
 
+// GUÍA DEL ARCHIVO:
+// Une menú, historia, controles, notas y partida. Si abrimos el mapa, el motor se pausa.
+
 import android.app.Activity
 import android.content.ContextWrapper
 import cl.vialapp.app.MainActivity

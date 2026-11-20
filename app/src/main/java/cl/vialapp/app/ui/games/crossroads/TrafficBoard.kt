@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.crossroads
 
+// GUÍA DEL ARCHIVO:
+// Dibuja autos, calles y señales del cruce. La lógica de choque no debería estar escondida en el Canvas.
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.aspectRatio

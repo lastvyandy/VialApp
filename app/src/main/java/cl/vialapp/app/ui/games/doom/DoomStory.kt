@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.doom
 
+// GUÍA DEL ARCHIVO:
+// Historia de los cinco niveles y las notas. No inventes textos en la pantalla: van acá.
+
 /** Narrative is deliberately independent of Compose so it can be checked by the
  * headless Doom smoke test. Nothing is downloaded while playing. */
 internal data class DoomStoryCard(val heading:String,val text:String)

@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.doom
 
+// GUÍA DEL ARCHIVO:
+// Sprites de los golpes. La animación no debe cambiar el daño calculado por el motor.
+
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color

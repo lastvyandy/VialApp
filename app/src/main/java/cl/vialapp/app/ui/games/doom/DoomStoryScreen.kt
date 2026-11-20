@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.doom
 
+// GUÍA DEL ARCHIVO:
+// Cinemáticas livianas antes de jugar, con imágenes retro y texto progresivo.
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
