@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// GUÍA DEL ARCHIVO:
+// Indicaciones cortas de conducción; son datos que la pantalla puede mostrar de varias formas.
+
 /** The signal is derived solely from the engine; no UI-side traffic rules. */
 internal enum class DriveCue { NORMAL, STOP, WAIT, GO, STOP_DONE, SCHOOL_AHEAD, SCHOOL }
 internal fun driveCue(frame:DriveFrame):DriveCue = when {

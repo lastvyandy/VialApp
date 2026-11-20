@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// GUÍA DEL ARCHIVO:
+// Reglas del minijuego de señales, separadas de su dibujo.
+
 import kotlin.random.Random
 
 // Educational renderings checked against the CONASET Libro para la conducción en Chile,

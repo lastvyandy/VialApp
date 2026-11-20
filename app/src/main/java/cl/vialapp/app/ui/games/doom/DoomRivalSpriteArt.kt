@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.doom
 
+// GUÍA DEL ARCHIVO:
+// Sprites de los enemigos humanos. Ojo con halos blancos y poses de disparo permanente.
+
 import java.util.Base64
 import java.util.zip.Inflater
 
@@ -60,6 +63,7 @@ internal object DoomRivalSpriteArt {
         else -> error("Unsupported E1M5 enemy sprite: $kind")
     }]
 
+    // Descomprimimos el sprite una vez; hacerlo en cada fotograma mataría el rendimiento.
     private fun decode(encoded: String): IntArray {
         val raw = Base64.getDecoder().decode(encoded)
         val count = raw[0].toInt() and 0xff

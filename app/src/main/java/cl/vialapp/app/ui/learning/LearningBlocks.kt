@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.learning
 
+// GUÍA DEL ARCHIVO:
+// Dibuja los bloques educativos que devuelve el backend, según su tipo.
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

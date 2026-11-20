@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// GUÍA DEL ARCHIVO:
+// Señales y avisos para las situaciones del juego de manejo.
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape

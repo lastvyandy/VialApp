@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// GUÍA DEL ARCHIVO:
+// Sprites de Don Pelao. Si cambia una pose, revisa que caminar y atacar sigan viéndose distintos.
+
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable

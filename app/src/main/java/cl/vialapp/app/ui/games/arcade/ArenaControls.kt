@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// GUÍA DEL ARCHIVO:
+// Controles de la arena; deben funcionar sin tapar media pantalla.
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

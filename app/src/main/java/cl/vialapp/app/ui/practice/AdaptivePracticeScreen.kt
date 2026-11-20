@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.practice
 
+// GUÍA DEL ARCHIVO:
+// Entrenamiento basado en errores reales, no en recomendaciones inventadas.
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

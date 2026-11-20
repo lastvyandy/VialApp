@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.gamification
 
+// GUÍA DEL ARCHIVO:
+// Tarjetas de recompensas y niveles. La idea es motivar a estudiar, no reemplazar el aprendizaje.
+
 import cl.vialapp.app.ui.rewards.LocalRewards
 import cl.vialapp.app.ui.games.GameRecordThumbnail
 import cl.vialapp.app.ui.games.GameCatalog

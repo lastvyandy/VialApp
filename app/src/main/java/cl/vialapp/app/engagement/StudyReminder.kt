@@ -1,5 +1,8 @@
 package cl.vialapp.app.engagement
 
+// GUÍA DEL ARCHIVO:
+// Notificaciones para practicar. Respetamos horarios y permisos; no queremos un despertador cargante.
+
 import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationChannel

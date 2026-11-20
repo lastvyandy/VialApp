@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.simulator
 
+// GUÍA DEL ARCHIVO:
+// Reglas de una decisión separadas del dibujo del simulador.
+
 /** One immutable state for the current decision and its animation transition. */
 internal data class ScenarioDecisionState(
     val attempts: List<List<Int>>,

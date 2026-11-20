@@ -1,5 +1,8 @@
 package cl.vialapp.app.engagement
 
+// GUÍA DEL ARCHIVO:
+// Fechas de los recordatorios, para no depender de cómo se muestran en pantalla.
+
 import cl.vialapp.app.data.settings.ReminderFrequency
 import java.time.DayOfWeek
 import java.time.LocalDate

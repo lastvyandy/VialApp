@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games
 
+// GUÍA DEL ARCHIVO:
+// Catálogo de minijuegos y sus identificadores. No dependas del nombre visible para guardar progreso.
+
 import cl.vialapp.app.data.games.GameProgressStore
 
 /** The current playable lineup. Retired games retain saved scores but are not advertised. */

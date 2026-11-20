@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Configuramos Retrofit y cookies. Sí, el nombre tiene una errata antigua: no lo renombres sin revisar las referencias.
+
 import android.content.Context
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -8,6 +11,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
 
+    // Este es el servidor que usa el APK. Cambiar el repositorio no despliega el backend automáticamente.
     private const val BASE_URL =
         "https://api.vialapp.cl/api/v1/"
 

@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.exam
 
+// GUÍA DEL ARCHIVO:
+// Control del intento, tiempo y respuestas. Si ya hay un examen activo, no partamos otro encima, po.
+
 import cl.vialapp.app.ui.rewards.LocalRewards
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
@@ -628,6 +631,7 @@ fun ExamScreen(
 
 
             val response =
+                // Pedimos un intento autorizado. Si hay otro abierto, el servidor nos lo tiene que decir.
                 ApiClient.api.startExam(
                     authorization =
                         "Bearer $token",

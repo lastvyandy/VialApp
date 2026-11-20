@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.career
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Pruebas del dibujo en profundidad del auto para prevenir artefactos visuales.
+
 import org.junit.Assert.*
 import org.junit.Test
 import kotlin.math.*

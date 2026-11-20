@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.rally
 
+// GUÍA DEL ARCHIVO:
+// Renderizado OpenGL del Rally. El Android View y las mallas deben mantenerse separados de las reglas de física.
+
 import android.content.Context
 import android.opengl.GLES20 as GL
 import android.opengl.GLSurfaceView
@@ -38,6 +41,7 @@ private val rivalLoadouts=listOf(
             setEGLConfigChooser(8,8,8,8,16,0)
             preserveEGLContextOnPause=true
             setRenderer(renderer)
+            // Dibujamos cuando cambia la escena, para no gastar GPU con fotogramas idénticos.
             renderMode=GLSurfaceView.RENDERMODE_WHEN_DIRTY
         }
     }

@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Persistencia de cookies. Ojo: las sesiones no se comparten ni se escriben en logs.
+
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken

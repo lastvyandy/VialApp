@@ -1,5 +1,8 @@
 package cl.vialapp.app.engagement
 
+// GUÍA DEL ARCHIVO:
+// Widget de XP y racha. RemoteViews no usa los mismos recortes que Compose, ojo ahí.
+
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -42,6 +45,7 @@ class StudyWidget:AppWidgetProvider(){
             }
         }
 
+        // Leemos el último avance local. El widget no debería quedar congelado esperando internet.
         private fun render(c:Context,manager:AppWidgetManager,id:Int){
             val user=EngagementState.activeUser(c)
             val xp=user?.let{EngagementState.xp(c,it)}

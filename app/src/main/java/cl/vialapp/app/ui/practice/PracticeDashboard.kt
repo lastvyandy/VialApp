@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.practice
 
+// GUÍA DEL ARCHIVO:
+// Estudio adaptativo: alumno nuevo ve diagnóstico, y quien ya respondió ve temas para reforzar.
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.practice
 
+// GUÍA DEL ARCHIVO:
+// Entrada a Practicar. Aunque el backend tarde, la pantalla debe seguir siendo útil.
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import cl.vialapp.app.data.api.ApiClient

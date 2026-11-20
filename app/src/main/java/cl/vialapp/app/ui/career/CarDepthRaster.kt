@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.career
 
+// GUÍA DEL ARCHIVO:
+// Dibujo con profundidad de los vehículos, separado del estado del garaje.
+
 import kotlin.math.ceil
 import kotlin.math.floor
 

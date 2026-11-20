@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.crossroads
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Prueba los cruces y colisiones del tránsito, no solo si los autos se dibujan.
+
 import org.junit.Assert.*
 import org.junit.Test
 

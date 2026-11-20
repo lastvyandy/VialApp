@@ -1,5 +1,8 @@
 package cl.vialapp.app
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Prueba de Android que necesita emulador o teléfono; no corre igual que las unitarias de JVM.
+
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
 

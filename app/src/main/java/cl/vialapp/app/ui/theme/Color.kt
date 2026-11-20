@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.theme
 
+// GUÍA DEL ARCHIVO:
+// Colores base que podemos reutilizar en otras pantallas.
+
 import androidx.compose.ui.graphics.Color
 
 val Purple80 = Color(0xFFD0BCFF)

@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.settings
 
+// GUÍA DEL ARCHIVO:
+// Explica el widget y cómo agregarlo, antes de pedirle al usuario que lo pruebe.
+
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context

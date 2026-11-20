@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Modelos de progreso y recompensas de los minijuegos.
+
 import com.google.gson.annotations.SerializedName
 
 data class GamificationProgressResponse(

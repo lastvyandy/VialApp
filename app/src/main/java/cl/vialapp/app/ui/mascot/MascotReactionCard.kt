@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.mascot
 
+// GUÍA DEL ARCHIVO:
+// Reacciones de la mascota. Don Pelao puede tirar una talla, pero no tapar las preguntas, jajaj.
+
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.profile
 
+// GUÍA DEL ARCHIVO:
+// Datos del alumno después del registro, incluida la clase de licencia.
+
 import cl.vialapp.app.ui.auth.AuthAction
 import cl.vialapp.app.ui.auth.authResponseError
 import cl.vialapp.app.ui.auth.authNetworkError

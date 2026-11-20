@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Prueba daños, combate y enemigos de la arena de Don Pelao.
+
 import org.junit.Assert.*
 import org.junit.Test
 

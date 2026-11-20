@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Comprueba indicaciones de conducción para no mostrar señales equivocadas.
+
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Medallas que informa el servidor; la pantalla las muestra, pero no decide cuándo se ganan.
+
 import com.google.gson.annotations.SerializedName
 
 data class AchievementItem(

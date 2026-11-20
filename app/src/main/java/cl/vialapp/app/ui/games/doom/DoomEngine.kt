@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.doom
 
+// GUÍA DEL ARCHIVO:
+// Motor de Pelao Doom: movimiento, enemigos, armas, puertas y objetivos. El dibujo va aparte, por favor jajaj.
+
 import kotlin.math.*
 import kotlin.random.Random
 

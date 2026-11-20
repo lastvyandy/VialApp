@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// GUÍA DEL ARCHIVO:
+// Combate de la arena, enemigos y daños. Las reglas no deberían depender de cómo se ven los sprites.
+
 import kotlin.math.abs
 import kotlin.random.Random
 

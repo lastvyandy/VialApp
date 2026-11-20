@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.theme
 
+// GUÍA DEL ARCHIVO:
+// Guarda si el alumno prefiere modo claro, oscuro o el del sistema.
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*

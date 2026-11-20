@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.games
 
+// GUÍA DEL ARCHIVO:
+// Avance local de juegos, XP y recompensas. No perdamos una partida solo porque internet se fue.
+
 import android.content.Context
 import cl.vialapp.app.data.api.GamificationEventResponse
 import cl.vialapp.app.data.api.GamificationGameEventRequest
@@ -75,6 +78,7 @@ class GameProgressStore(
     // Rally se desbloquea con exámenes reales, no solo por entrar varias veces al juego.
     fun rallyExamCount():Int = preferences.getInt("rally_confirmed_exams",0).coerceIn(0,3)
 
+    // Solo aumentamos el número confirmado; no se desbloquea Rally por entrar al menú varias veces.
     private fun confirmRallyExams(count:Int?){
         if(count!=null)preferences.edit().putInt("rally_confirmed_exams",maxOf(rallyExamCount(),count.coerceIn(0,3))).apply()
     }

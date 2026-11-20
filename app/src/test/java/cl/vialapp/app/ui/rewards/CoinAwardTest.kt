@@ -1,4 +1,7 @@
 package cl.vialapp.app.ui.rewards
+
+// QUÉ PROTEGE ESTA PRUEBA:
+// Evita cálculos incorrectos de monedas; el Pelao no es un banco, jajaj.
 import org.junit.Assert.assertEquals
 import org.junit.Test
 class CoinAwardTest{

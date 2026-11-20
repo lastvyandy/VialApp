@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.learning
 
+// GUÍA DEL ARCHIVO:
+// Paso de una lección: guardamos el avance para retomar sin empezar todo de cero.
+
 import cl.vialapp.app.ui.rewards.LocalRewards
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke

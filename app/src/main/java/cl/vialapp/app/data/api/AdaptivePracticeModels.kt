@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Datos de práctica personalizada separados de la interfaz.
+
 import com.google.gson.annotations.SerializedName
 
 data class AdaptivePracticeSession(

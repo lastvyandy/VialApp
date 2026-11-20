@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.exam
 
+// GUÍA DEL ARCHIVO:
+// Resumen de un examen terminado y acceso a revisar las respuestas.
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background

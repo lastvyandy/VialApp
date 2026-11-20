@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.profile
 
+// GUÍA DEL ARCHIVO:
+// Cambios de foto con permisos, estados de carga y errores.
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable

@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.rally
 
+// GUÍA DEL ARCHIVO:
+// Pantalla de carrera, HUD, controles y conexión con las reglas del Rally.
+
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*

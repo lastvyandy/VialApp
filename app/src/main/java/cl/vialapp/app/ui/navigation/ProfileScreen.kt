@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.profile
 
+// GUÍA DEL ARCHIVO:
+// Perfil del usuario, datos de la cuenta y licencia.
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState

@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.mascot
 
+// GUÍA DEL ARCHIVO:
+// Retrato de la mascota con el tamaño y recorte que le toca.
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

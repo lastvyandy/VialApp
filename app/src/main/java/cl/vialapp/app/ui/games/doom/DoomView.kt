@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.doom
 
+// GUÍA DEL ARCHIVO:
+// Renderizado retro de Pelao Doom. El motor calcula lo que ocurre; esta vista lo dibuja. Si baja el FPS, revisa el trabajo por fotograma.
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas

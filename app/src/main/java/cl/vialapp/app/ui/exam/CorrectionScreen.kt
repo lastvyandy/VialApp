@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.exam
 
+// GUÍA DEL ARCHIVO:
+// Corrección detallada. No sirve solo marcar rojo: hay que explicar qué salió mal.
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable

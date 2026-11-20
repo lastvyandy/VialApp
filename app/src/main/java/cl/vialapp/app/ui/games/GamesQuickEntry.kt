@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games
 
+// GUÍA DEL ARCHIVO:
+// Accesos rápidos a los juegos; conviene que apunten al mismo destino que el menú principal.
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape

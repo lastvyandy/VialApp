@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.library
 
+// GUÍA DEL ARCHIVO:
+// Navegación visual por la biblioteca, temas y licencias.
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri

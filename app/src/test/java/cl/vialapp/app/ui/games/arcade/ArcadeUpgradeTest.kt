@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Verifica mejoras y progresión de arcade sin duplicar recompensas.
+
 import org.junit.Assert.*
 import org.junit.Test
 

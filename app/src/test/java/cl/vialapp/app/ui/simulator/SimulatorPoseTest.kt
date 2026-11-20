@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.simulator
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Valida la representación del simulador en distintas situaciones.
+
 import org.junit.Assert.*
 import org.junit.Test
 

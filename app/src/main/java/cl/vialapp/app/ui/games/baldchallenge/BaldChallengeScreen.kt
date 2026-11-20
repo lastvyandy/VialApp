@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.baldchallenge
 
+// GUÍA DEL ARCHIVO:
+// Reto clásico del Pelao. Carga preguntas reales y lleva el avance de la partida.
+
 import cl.vialapp.app.ui.games.arcade.LocalGameAudio
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility

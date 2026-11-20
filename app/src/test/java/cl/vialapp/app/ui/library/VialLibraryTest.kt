@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.library
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Revisa la estructura y consistencia de los contenidos de biblioteca.
+
 import org.junit.Assert.*
 import org.junit.Test
 

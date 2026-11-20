@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.progress
 
+// GUÍA DEL ARCHIVO:
+// Indicador de preparación. No prometamos que va a aprobar solo por ver una barra verde.
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*

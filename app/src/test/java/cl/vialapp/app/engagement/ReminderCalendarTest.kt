@@ -1,5 +1,8 @@
 package cl.vialapp.app.engagement
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Verifica fechas de recordatorio. Un error acá puede molestar al usuario a una hora absurda.
+
 import cl.vialapp.app.data.settings.ReminderFrequency
 import org.junit.Assert.assertEquals
 import org.junit.Test

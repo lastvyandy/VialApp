@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.learning
 
+// GUÍA DEL ARCHIVO:
+// Resumen de la ruta: Clase C tiene moto y etapas propias, no es un complemento inferior a Clase B.
+
 import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background

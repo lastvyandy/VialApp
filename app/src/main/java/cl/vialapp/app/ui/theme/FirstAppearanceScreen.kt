@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.theme
 
+// GUÍA DEL ARCHIVO:
+// Primera elección de apariencia antes de entrar a estudiar.
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

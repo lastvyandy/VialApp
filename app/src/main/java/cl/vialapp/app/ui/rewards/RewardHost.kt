@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.rewards
 
+// GUÍA DEL ARCHIVO:
+// Animaciones de recompensa. Ojo con entregarla dos veces porque algo se dibujó de nuevo, jajaj.
+
 import cl.vialapp.app.ui.games.arcade.ArenaAudio
 import cl.vialapp.app.ui.games.arcade.LocalGameAudio
 import androidx.compose.ui.platform.LocalContext

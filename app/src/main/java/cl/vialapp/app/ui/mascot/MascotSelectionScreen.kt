@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.mascot
 
+// GUÍA DEL ARCHIVO:
+// El usuario escoge a Carvier o Don Pelao, y guardamos esa elección.
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

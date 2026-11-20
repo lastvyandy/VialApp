@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.auth
 
+// GUÍA DEL ARCHIVO:
+// Convertimos errores del backend en mensajes que el alumno pueda entender.
+
 import com.google.gson.JsonParser
 import java.util.Locale
 import retrofit2.Response

@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.premium
 
+// GUÍA DEL ARCHIVO:
+// Muestra opciones Premium, pero la confirmación de beneficios la hace el backend.
+
 import android.app.Activity
 import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler

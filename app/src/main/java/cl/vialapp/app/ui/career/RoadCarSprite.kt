@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.career
 
+// GUÍA DEL ARCHIVO:
+// Dibujo liviano de autos para vistas que no necesitan toda la escena 3D.
+
 import android.graphics.Bitmap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size

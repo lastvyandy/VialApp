@@ -1,5 +1,8 @@
 package cl.vialapp.app
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Prueba de ejemplo para comprobar la configuración del runner de JVM.
+
 import org.junit.Test
 
 import org.junit.Assert.*

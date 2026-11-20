@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Acá van los endpoints. Si cambias una ruta, revisa el backend; no hacemos magia por Wi-Fi, jajaj.
+
 import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Response
@@ -105,6 +108,7 @@ interface VialApi {
     @GET("tests/datos_tests")
     suspend fun getExamCatalogCounts(): Response<List<ExamCategoryCount>>
 
+    // El catálogo trae títulos e IDs. Las preguntas siguen protegidas hasta que el servidor autorice el intento.
     @GET("tests/catalogo")
     suspend fun getExamCatalogPage(
         @Header("Authorization") authorization: String,
@@ -125,6 +129,7 @@ interface VialApi {
         @Body request: ExtraExamRequest
     ): Response<AssignedTest>
 
+    // La API decide si puede empezar o repetir. Un botón habilitado nunca salta esta validación.
     @POST("tests/{testId}/attempts/start")
     suspend fun startExam(
         @Header("Authorization") authorization: String,

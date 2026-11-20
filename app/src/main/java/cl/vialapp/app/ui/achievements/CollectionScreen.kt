@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.achievements
 
+// GUÍA DEL ARCHIVO:
+// Colección de medallas. Mostrar una recompensa no significa entregarla de nuevo.
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image

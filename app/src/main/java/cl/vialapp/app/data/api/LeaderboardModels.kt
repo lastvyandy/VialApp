@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Posiciones del ranking: ojo con mezclar jugadores o semanas.
+
 import com.google.gson.annotations.SerializedName
 
 data class LeaderboardEntryResponse(

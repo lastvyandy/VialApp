@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Datos usados para estadísticas e historial de exámenes.
+
 import com.google.gson.annotations.SerializedName
 
 

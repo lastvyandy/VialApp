@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Prueba poses de Don Pelao; el sprite debe corresponder al estado correcto.
+
 import org.junit.Assert.*
 import org.junit.Test
 

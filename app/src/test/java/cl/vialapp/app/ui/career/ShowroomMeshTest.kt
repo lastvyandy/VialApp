@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.career
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Comprueba la geometría del garaje; que el vehículo no termine flotando otra vez, porfi.
+
 import org.junit.Assert.*
 import org.junit.Test
 

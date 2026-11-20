@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.auth
 
+// GUÍA DEL ARCHIVO:
+// Inicio de sesión con Google; la identidad siempre debe comprobarse con el servidor.
+
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper

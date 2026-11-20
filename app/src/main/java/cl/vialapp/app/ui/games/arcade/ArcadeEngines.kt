@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// GUÍA DEL ARCHIVO:
+// Lógica compartida de juegos de arcade. Las reglas van acá y la interfaz las dibuja aparte.
+
 import kotlin.math.abs
 import kotlin.random.Random
 

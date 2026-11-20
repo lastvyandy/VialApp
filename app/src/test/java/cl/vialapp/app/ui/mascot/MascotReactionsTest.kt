@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.mascot
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Comprueba que la mascota reaccione al estado correcto, no al azar.
+
 import cl.vialapp.app.data.api.GamificationEventResponse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

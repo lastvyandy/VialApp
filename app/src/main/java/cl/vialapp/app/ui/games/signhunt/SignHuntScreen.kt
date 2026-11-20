@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.signhunt
 
+// GUÍA DEL ARCHIVO:
+// Juego de buscar señales; conecta las pistas visuales con las respuestas del alumno.
+
 import cl.vialapp.app.ui.games.arcade.LocalGameAudio
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState

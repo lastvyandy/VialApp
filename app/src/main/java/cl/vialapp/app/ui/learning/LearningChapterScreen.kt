@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.learning
 
+// GUÍA DEL ARCHIVO:
+// Vista del capítulo con lecciones, desafíos y progreso guardado.
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image

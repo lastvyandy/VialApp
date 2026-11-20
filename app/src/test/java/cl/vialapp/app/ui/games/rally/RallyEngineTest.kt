@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.rally
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Verifica físicas, rivales y resultados de Rally sin necesitar OpenGL.
+
 import org.junit.Assert.*
 import org.junit.Test
 import kotlin.math.abs

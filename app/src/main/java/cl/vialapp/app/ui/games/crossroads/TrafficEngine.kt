@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.crossroads
 
+// GUÍA DEL ARCHIVO:
+// Reglas del tránsito y colisiones del juego. Si un auto hace algo raro, partamos por acá.
+
 import kotlin.random.Random
 
 internal enum class TrafficAxis { VERTICAL, HORIZONTAL }

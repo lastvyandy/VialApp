@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.leaderboard
 
+// GUÍA DEL ARCHIVO:
+// Ranking semanal. Ojo con mezclar resultados de semanas distintas.
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn

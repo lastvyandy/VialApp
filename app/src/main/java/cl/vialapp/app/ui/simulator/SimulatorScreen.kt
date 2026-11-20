@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.simulator
 
+// GUÍA DEL ARCHIVO:
+// Maneja las decisiones y avance del simulador vial.
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween

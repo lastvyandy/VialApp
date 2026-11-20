@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games
 
+// GUÍA DEL ARCHIVO:
+// Portadas y arte de minijuegos. Los gráficos deberían ayudar a reconocer el juego, no pesar medio giga, jajaj.
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
