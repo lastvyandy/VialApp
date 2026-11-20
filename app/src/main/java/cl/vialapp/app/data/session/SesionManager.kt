@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.session
 
+// GUÍA DEL ARCHIVO:
+// Sesión de cada cuenta y tokens. Nunca copies estos datos a Logcat ni a una tarjeta.
+
 import android.content.Context
 
 class SessionManager(context: Context) {

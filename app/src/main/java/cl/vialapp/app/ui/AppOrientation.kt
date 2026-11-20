@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui
 
+// GUÍA DEL ARCHIVO:
+// Orientación de pantallas: algunos juegos giran, pero estudiar no debería obligar a girar el teléfono.
+
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper

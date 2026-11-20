@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.session
 
+// GUÍA DEL ARCHIVO:
+// Lecturas autenticadas. Si el token falla, lo manejamos consistente y no en cada pantalla a su manera.
+
 import android.util.Log
 import cl.vialapp.app.data.api.ApiClient
 import kotlinx.coroutines.CancellationException

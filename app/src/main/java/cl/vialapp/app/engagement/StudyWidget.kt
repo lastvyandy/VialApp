@@ -1,5 +1,8 @@
 package cl.vialapp.app.engagement
 
+// GUÍA DEL ARCHIVO:
+// Widget de XP y racha. RemoteViews no usa los mismos recortes que Compose, ojo ahí.
+
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName

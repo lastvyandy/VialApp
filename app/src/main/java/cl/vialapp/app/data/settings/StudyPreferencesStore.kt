@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.settings
 
+// GUÍA DEL ARCHIVO:
+// Ajustes de estudio persistentes. No deberían reiniciarse por cerrar una pantalla.
+
 import android.content.Context
 
 

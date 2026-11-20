@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.auth
 
+// GUÍA DEL ARCHIVO:
+// Acceso y registro. Si internet falla, no dejamos el botón cargando hasta el fin de los tiempos.
+
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler

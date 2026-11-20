@@ -1,5 +1,8 @@
 package cl.vialapp.app.engagement
 
+// GUÍA DEL ARCHIVO:
+// Actividad del día y rachas que usan varias partes de VialApp.
+
 import android.content.Context
 import cl.vialapp.app.data.session.SessionManager
 import cl.vialapp.app.data.api.GamificationProgressResponse
