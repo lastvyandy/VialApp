@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.crossroads
 
+// GUÍA DEL ARCHIVO:
+// Pantalla del caos en cruces, donde las decisiones del jugador afectan el tránsito.
+
 import cl.vialapp.app.ui.games.arcade.LocalGameAudio
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke

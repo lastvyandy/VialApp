@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// GUÍA DEL ARCHIVO:
+// Preguntas usadas en la arena. La parte educativa y los golpes deben poder cambiarse por separado.
+
 import kotlin.random.Random
 
 internal enum class ArenaIllustration { STOP,YIELD,ROUNDABOUT,RED_LIGHT,PHONE,BELT,SCHOOL,DISTANCE,RAIN,SPEED }
