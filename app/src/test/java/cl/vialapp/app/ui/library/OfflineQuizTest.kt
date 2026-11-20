@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.library
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Asegura que la práctica local siga funcionando sin conexión.
+
 import org.junit.Assert.*
 import org.junit.Test
 

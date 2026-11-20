@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.practice
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// La prioridad de práctica necesita una muestra suficiente: una sola mala no determina el plan.
+
 import cl.vialapp.app.data.api.CategoryStatResponse
 import org.junit.Assert.*
 import org.junit.Test

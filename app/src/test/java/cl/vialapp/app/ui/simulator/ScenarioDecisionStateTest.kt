@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.simulator
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Comprueba las consecuencias de cada decisión del simulador.
+
 import org.junit.Assert.*
 import org.junit.Test
 

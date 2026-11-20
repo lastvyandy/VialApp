@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.learning
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Verifica qué capítulo toca y cuáles se pueden abrir.
+
 import cl.vialapp.app.data.api.LearningChapterSummary
 import cl.vialapp.app.data.api.LearningProgress
 import org.junit.Assert.*

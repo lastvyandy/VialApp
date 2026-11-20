@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.learning
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Comprueba que el alumno retome su camino sin empezar de cero.
+
 import cl.vialapp.app.data.api.*
 import org.junit.Assert.*
 import org.junit.Test

@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.simulator
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Valida poses y posiciones de los escenarios adicionales.
+
 import org.junit.Assert.*
 import org.junit.Test
 
