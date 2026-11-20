@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.rally
 
+// GUÍA DEL ARCHIVO:
+// Reglas de carrera, autos e IA. Acá calculamos el movimiento, no dibujamos los vehículos.
+
 import kotlin.math.*
 import kotlin.random.Random
 

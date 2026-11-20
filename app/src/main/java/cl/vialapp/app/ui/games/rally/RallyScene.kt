@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.rally
 
+// GUÍA DEL ARCHIVO:
+// Elementos de la pista y escena del Rally, para que no todo termine dentro del motor.
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember

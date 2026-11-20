@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.rally
 
+// GUÍA DEL ARCHIVO:
+// Construcción de pistas y geometría 3D. Ojo con agregar miles de polígonos porque después anda a cinco FPS, jajaj.
+
 import androidx.compose.ui.graphics.Color
 import cl.vialapp.app.ui.career.GarageKit
 import cl.vialapp.app.ui.career.V3
