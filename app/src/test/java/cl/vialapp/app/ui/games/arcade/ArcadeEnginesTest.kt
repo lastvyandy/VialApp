@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Protege las reglas compartidas de los juegos arcade.
+
 import org.junit.Assert.*
 import org.junit.Test
 

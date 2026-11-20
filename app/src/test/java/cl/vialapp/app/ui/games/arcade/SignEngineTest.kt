@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Comprueba las reglas del juego de señales independientemente de su dibujo.
+
 import org.junit.Assert.*
 import org.junit.Test
 

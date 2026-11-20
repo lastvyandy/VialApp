@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.auth
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Evita que errores de autenticación terminen en mensajes confusos.
+
 import org.junit.Assert.*
 import org.junit.Test
 
