@@ -11,6 +11,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
 
+    // Este es el servidor que usa el APK. Cambiar el repositorio no despliega el backend automáticamente.
     private const val BASE_URL =
         "https://api.vialapp.cl/api/v1/"
 

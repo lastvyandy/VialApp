@@ -45,6 +45,7 @@ class StudyWidget:AppWidgetProvider(){
             }
         }
 
+        // Leemos el último avance local. El widget no debería quedar congelado esperando internet.
         private fun render(c:Context,manager:AppWidgetManager,id:Int){
             val user=EngagementState.activeUser(c)
             val xp=user?.let{EngagementState.xp(c,it)}

@@ -631,6 +631,7 @@ fun ExamScreen(
 
 
             val response =
+                // Pedimos un intento autorizado. Si hay otro abierto, el servidor nos lo tiene que decir.
                 ApiClient.api.startExam(
                     authorization =
                         "Bearer $token",

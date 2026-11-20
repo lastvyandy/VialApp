@@ -32,6 +32,8 @@ internal data class RallyTrack(val id:String,val name:String,val level:Int,val t
         val angle=atan2(v.y,v.x);val t=(s-lengths[lo])/(lengths[lo+1]-lengths[lo]).coerceAtLeast(.01f)
         return (a+v*t+V2(-sin(angle),cos(angle))*lateral) to angle
     }
+    // Buscamos el punto cercano a la posición anterior de la pista, no cualquiera.
+    // Si usamos solo distancia, un circuito que se cruza podría teletransportar el auto, jajaj.
     fun nearest(pos:V2,prior:Float):RoadProjection{
         val wrapped=((prior%length)+length)%length
         var best=Float.MAX_VALUE;var progress=wrapped;var near=V2(0f,0f)

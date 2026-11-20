@@ -39,6 +39,7 @@ internal fun DoomStoryScreen(level:Int,onStart:()->Unit,onBack:()->Unit){
     var revealed by remember(page){mutableIntStateOf(0)}
     val current=cards[page]
     BackHandler(onBack=onBack)
+    // El texto aparece de a poco; cuando cambiamos de escena se reinicia la escritura.
     LaunchedEffect(level,page){
         for(index in 1..current.text.length){
             delay(18)
@@ -46,6 +47,7 @@ internal fun DoomStoryScreen(level:Int,onStart:()->Unit,onBack:()->Unit){
             revealed=index
         }
     }
+    // Primer toque muestra el párrafo completo. El siguiente pasa a otra escena o empieza a jugar.
     fun advance(){
         if(revealed<current.text.length){revealed=current.text.length;return}
         if(page<cards.lastIndex)page++ else onStart()
