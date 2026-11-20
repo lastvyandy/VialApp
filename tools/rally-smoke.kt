@@ -1,5 +1,9 @@
 package cl.vialapp.app.ui.games.rally
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Carrera simulada sin OpenGL. Probamos físicas y progreso antes de confiar en una partida real.
+
+
 import kotlin.math.*
 
 /** Headless smoke test: execute the same engine as Android without the Android SDK. */

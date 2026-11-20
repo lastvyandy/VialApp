@@ -1,5 +1,9 @@
 package cl.vialapp.app.ui.games.doom
 
+// QUÉ PROTEGE ESTA PRUEBA:
+// Simulación de Pelao Doom sin Android: puertas, armas, preguntas y secretos deben funcionar aunque el gráfico se vea lindo.
+
+
 import kotlin.math.*
 
 private fun walk(e:DoomEngine,x:Float,y:Float){
