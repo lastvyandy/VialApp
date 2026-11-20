@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Datos del perfil recibidos desde la API; no deberían contener secretos.
+
 import com.google.gson.annotations.SerializedName
 
 data class UserResponse(

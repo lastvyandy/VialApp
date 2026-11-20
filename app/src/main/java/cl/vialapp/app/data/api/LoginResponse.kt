@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Respuesta de autenticación; después la sesión se encarga de los tokens.
+
 import com.google.gson.annotations.SerializedName
 
 data class LoginResponse(

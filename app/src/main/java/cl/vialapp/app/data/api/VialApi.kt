@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Acá van los endpoints. Si cambias una ruta, revisa el backend; no hacemos magia por Wi-Fi, jajaj.
+
 import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Response

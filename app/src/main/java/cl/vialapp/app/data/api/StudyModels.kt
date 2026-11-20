@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Modelos de estudio que llegan desde el backend.
+
 import com.google.gson.annotations.SerializedName
 
 data class StudyTestResponse(

@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Modelos de práctica y recomendaciones que comparten varias pantallas.
+
 import com.google.gson.annotations.SerializedName
 
 

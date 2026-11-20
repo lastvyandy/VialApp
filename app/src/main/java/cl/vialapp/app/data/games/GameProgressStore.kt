@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.games
 
+// GUÍA DEL ARCHIVO:
+// Avance local de juegos, XP y recompensas. No perdamos una partida solo porque internet se fue.
+
 import android.content.Context
 import cl.vialapp.app.data.api.GamificationEventResponse
 import cl.vialapp.app.data.api.GamificationGameEventRequest

@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Preparación estimada; no significa que alguien tenga asegurado aprobar el examen real.
+
 import com.google.gson.annotations.SerializedName
 
 data class ExamReadinessResponse(

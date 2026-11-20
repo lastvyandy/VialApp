@@ -1,5 +1,8 @@
 package cl.vialapp.app.data.api
 
+// GUÍA DEL ARCHIVO:
+// Datos de los escenarios y decisiones del simulador vial.
+
 import com.google.gson.annotations.SerializedName
 
 data class SimulatorCatalog(
