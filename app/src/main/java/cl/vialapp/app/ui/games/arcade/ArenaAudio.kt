@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games.arcade
 
+// GUÍA DEL ARCHIVO:
+// Sonidos de combate. No reproduzcamos el mismo efecto sin parar cada fotograma, porfi.
+
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool

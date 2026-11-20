@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.games
 
+// GUÍA DEL ARCHIVO:
+// Menú de juegos. Debe mostrarse al tiro aunque el backend siga sincronizando estadísticas.
+
 import cl.vialapp.app.ui.games.arcade.GameAudioSetting
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
