@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.profile
 
+// GUÍA DEL ARCHIVO:
+// Elección de Clase B o C sin confundir ni borrar rutas de aprendizaje.
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

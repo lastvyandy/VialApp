@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.practice
 
+// GUÍA DEL ARCHIVO:
+// Recomendaciones con suficientes respuestas. Una respuesta mala no significa que el alumno no sepa manejar, po.
+
 import cl.vialapp.app.data.api.CategoryStatResponse
 
 /** Necesitamos varias respuestas antes de decirle al alumno que este tema le cuesta. */

@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.profile
 
+// GUÍA DEL ARCHIVO:
+// Avatar del perfil en distintos tamaños y tarjetas.
+
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache

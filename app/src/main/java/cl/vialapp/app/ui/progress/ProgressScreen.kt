@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.progress
 
+// GUÍA DEL ARCHIVO:
+// Resultados e historial; el botón Repetir abre ese examen, pero la autorización es del servidor.
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn

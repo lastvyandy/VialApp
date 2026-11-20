@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.profile
 
+// GUÍA DEL ARCHIVO:
+// Prepara fotos sin cargar archivos enormes en memoria sin necesidad.
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
