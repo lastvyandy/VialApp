@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.theme
 
+// GUÍA DEL ARCHIVO:
+// Tema global. Si algo sale blanco en modo oscuro, revisa esto antes de culpar al teléfono, jajaj.
+
 import android.app.Activity
 import android.content.Context
 import androidx.compose.foundation.layout.fillMaxSize

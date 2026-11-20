@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.simulator
 
+// GUÍA DEL ARCHIVO:
+// Dibujamos cruces, calles y elementos del simulador sin poner las respuestas correctas en el dibujo.
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth

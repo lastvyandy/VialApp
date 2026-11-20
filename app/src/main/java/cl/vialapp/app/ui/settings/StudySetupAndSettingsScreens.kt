@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.settings
 
+// GUÍA DEL ARCHIVO:
+// Ajustes de estudio y preferencias. Cambiar un tema o meta no debería reiniciar todo lo demás.
+
 import android.app.TimePickerDialog
 import android.Manifest
 import android.app.Activity

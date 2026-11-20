@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.theme
 
+// GUÍA DEL ARCHIVO:
+// Paletas de VialApp: usa colores del tema, no fondos blancos fijos, po.
+
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 

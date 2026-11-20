@@ -1,5 +1,8 @@
 package cl.vialapp.app.ui.simulator
 
+// GUÍA DEL ARCHIVO:
+// Escenarios adicionales para practicar decisiones concretas de tránsito.
+
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
